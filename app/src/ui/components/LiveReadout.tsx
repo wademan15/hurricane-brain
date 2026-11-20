@@ -4,7 +4,7 @@
  * with its reason; frames that stop arriving show as not measured, never as the last value.
  */
 import { useEffect, useState } from 'react';
-import type { Cascade, ChanceLevel, HeartFrame, Measured, SlowFrame } from '../../engine/frames';
+import type { Cascade, HeartFrame, SlowFrame } from '../../engine/frames';
 import { useServices } from '../state/app';
 import { measuredLine, notMeasuredText, showMeasured, summarizeSignal } from '../measured';
 import { Val } from './kit';
@@ -41,12 +41,6 @@ export function useLive(): Live {
   return { slow: slowStale ? null : l.slow, heart: heartStale ? null : l.heart, slowStale, heartStale };
 }
 
-const NO_FRAME: Measured = { v: null, se: null, why: 'no_data' };
-
-function chanceText(c: ChanceLevel): Measured {
-  return c.closeness;
-}
-
 function AlignCell({ kind, c, live, chanceDriver }: { kind: 'phi' | 'oct'; c: Cascade | null; live: Live; chanceDriver: 'a' | 'b' }) {
   const label = kind === 'phi' ? 'Golden ratio alignment' : 'Octave alignment';
   const closeness = c ? c.closeness : live.slowStale ? { v: null, se: null, why: 'no_data' as const } : undefined;
@@ -68,20 +62,19 @@ function AlignCell({ kind, c, live, chanceDriver }: { kind: 'phi' | 'oct'; c: Ca
 export function AlignmentTrio({ live, chanceDriver }: { live: Live; chanceDriver: 'a' | 'b' }) {
   const phi = live.slow?.cascades.phi ?? null;
   const oct = live.slow?.cascades.octave ?? null;
-  const miss = NO_FRAME;
   return (
     <div className="trio" aria-label="Golden ratio alignment, octave alignment and chance level, side by side">
       <AlignCell kind="phi" c={phi} live={live} chanceDriver={chanceDriver} />
       <AlignCell kind="oct" c={oct} live={live} chanceDriver={chanceDriver} />
       <div className="cellbox" data-testid="cell-chance">
         <div className="k">Chance level (same procedure)</div>
-        <div className="v" style={{ fontSize: '0.9rem' }}>
-          A: <Val m={phi ? chanceText(phi.chance.a) : live.slowStale ? miss : undefined} /> / <Val m={oct ? chanceText(oct.chance.a) : live.slowStale ? miss : undefined} />
-        </div>
-        <div className="s">
-          golden / octave. B: {phi ? measuredLine(phi.chance.b.closeness) : notMeasuredText('no_frame')} / {oct ? measuredLine(oct.chance.b.closeness) : notMeasuredText('no_frame')}
-        </div>
-        <div className="s">p (A): {phi ? measuredLine(phi.chance.a.p) : notMeasuredText('no_frame')}</div>
+        <dl className="chance-list">
+          <dt>A, golden</dt><dd>{phi ? measuredLine(phi.chance.a.closeness) : live.slowStale ? notMeasuredText('stale') : notMeasuredText('no_frame')}</dd>
+          <dt>A, octave</dt><dd>{oct ? measuredLine(oct.chance.a.closeness) : live.slowStale ? notMeasuredText('stale') : notMeasuredText('no_frame')}</dd>
+          <dt>B, golden</dt><dd>{phi ? measuredLine(phi.chance.b.closeness) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
+          <dt>B, octave</dt><dd>{oct ? measuredLine(oct.chance.b.closeness) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
+          <dt>p (A), golden</dt><dd>{phi ? measuredLine(phi.chance.a.p) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
+        </dl>
       </div>
     </div>
   );

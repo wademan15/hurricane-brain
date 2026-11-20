@@ -426,6 +426,8 @@ export class SessionController {
         this.set({ engine: 'ready', engineInfo: info });
       })
       .catch((e: unknown) => {
+        // A connection that was closed while its engine was still starting is not an error to show.
+        if (this.link !== link || gen !== link.initGen) return;
         link.queue.length = 0;
         this.set({ engine: 'error', engineError: e instanceof Error ? e.message : String(e), notice: `The signal engine could not start: ${e instanceof Error ? e.message : String(e)}` });
       });

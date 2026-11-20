@@ -5,7 +5,8 @@ import {
 } from '../../training';
 import { Badge, Button, Card, Field, Note, PageHeader } from '../components/kit';
 import { fmtDuration } from '../measured';
-import { useController, useProfile, useServices } from '../state/app';
+import { useController, useProfile } from '../state/app';
+import { useStarter } from '../state/start';
 
 const GROUPS: { title: string; blurb: string; families: Program['family'][] }[] = [
   { title: 'Getting started', blurb: 'Teach the app your signals and find what suits you.', families: ['calibration', 'profiling'] },
@@ -132,7 +133,7 @@ function VariableInput({ v, value, onChange }: { v: VariableSpec; value: VarValu
 }
 
 export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: string) => void }) {
-  const { controller } = useServices();
+  const { begin } = useStarter(navigate);
   const st = useController();
   const profile = useProfile();
   const program = getProgram(id);
@@ -196,7 +197,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
     setError(null);
     try {
       const sh = Number(sleepHours);
-      await controller.startProgram({
+      await begin({ kind: 'program', req: {
         programId: program.id,
         values,
         level: program.ladder ? currentLevel : undefined,
@@ -204,8 +205,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
         posture,
         anchorId: anchorId || undefined,
         checkIn: { caffeine, ...(sleepHours && Number.isFinite(sh) ? { sleepHours: sh } : {}), ...(mood ? { mood: Number(mood) } : {}), ...(energy ? { energy: Number(energy) } : {}) },
-      });
-      navigate('session');
+      } });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

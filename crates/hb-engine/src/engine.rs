@@ -1149,9 +1149,13 @@ impl Engine {
     // Slow path
     // -----------------------------------------------------------------------------
 
+    fn fixed_band_edges() -> BandMap<[f64; 2]> {
+        BandMap { delta: [1.0, 4.0], theta: [4.0, 8.0], alpha: [8.0, 13.0], beta: [13.0, 30.0], gamma: [30.0, 45.0] }
+    }
+
     fn band_edges(&self) -> BandMap<[f64; 2]> {
         match self.iaf {
-            None => BandMap { delta: [1.0, 4.0], theta: [4.0, 8.0], alpha: [8.0, 13.0], beta: [13.0, 30.0], gamma: [30.0, 45.0] },
+            None => Self::fixed_band_edges(),
             Some(i) => BandMap { delta: [1.0, 0.4 * i], theta: [0.4 * i, 0.8 * i], alpha: [0.8 * i, 1.2 * i], beta: [1.2 * i, 30.0], gamma: [30.0, 45.0] },
         }
     }
@@ -1783,16 +1787,13 @@ impl Engine {
         }
         let keep_s = p.integration_s.max(2.0 * p.slow_window_s);
         for (k, nn, z, sur, strong) in tests {
-            if sur.is_none() && !self.harmonics.contains_key(&k) {
-                continue;
-            }
             let e = self.harmonics.entry(k).or_insert_with(|| fresh(nn));
             if e.n != nn {
                 *e = fresh(nn);
             }
-            if sur.is_some() {
-                e.done = e.done.saturating_add(1);
-            }
+            // A window with the upper track outside the harmonic's band is a test too (and
+            // one it failed).
+            e.done = e.done.saturating_add(1);
             e.tests.push_back((t, z, sur));
             while e.tests.front().is_some_and(|(t0, _, _)| t - *t0 > keep_s) {
                 e.tests.pop_front();
@@ -1844,6 +1845,22 @@ impl Engine {
                 by_base.entry(lo).or_default().push(hi);
             }
         }
+        // Pending also covers a pair that sits at an integer ratio by its integrated
+        // frequencies and has no test behind it yet (a track just born or just resumed).
+        for (i, a) in self.tracks.iter().enumerate() {
+            for b in self.tracks.iter().skip(i + 1) {
+                let (Some((fa, _)), Some((fb, _))) = (a.f_int, b.f_int) else { continue };
+                let (lo, hi, r) = if fa <= fb { (a.id, b.id, fb / fa) } else { (b.id, a.id, fa / fb) };
+                let nn = m::round(r);
+                if nn < 2.0 || nn as usize > p.harmonic_max_n || m::ln(r / nn).abs() > 2.0 * p.tolerance {
+                    continue;
+                }
+                let tested = self.harmonics.get(&(lo, hi)).is_some_and(|h| h.done as usize >= p.harmonic_pending_tests);
+                if !tested {
+                    out.insert(key(lo, hi));
+                }
+            }
+        }
         for ups in by_base.values() {
             for (i, a) in ups.iter().enumerate() {
                 for b in &ups[i + 1..] {
@@ -1890,7 +1907,7 @@ impl Engine {
                 self.chance.thr_a = [None, None];
             }
             let us = p.slow_update_s;
-            let need = (p.chance_b_history_s / us) as usize;
+            let need = (p.chance_b_need_s() / us) as usize;
             let min_lag = (m::round(p.chance_b_min_lag_s / us) as usize).max(1);
             let by_id: BTreeMap<u32, &TrackInt> = self.tracks.iter().map(|t| (t.id, t)).collect();
             let hists: Vec<ratios::History> = scored
@@ -2143,6 +2160,7 @@ impl Engine {
     fn site_output(&self, s: usize, a: &Result<SiteAnalysis, Reason>, edges: &BandMap<[f64; 2]>, p: &Params) -> SiteSpectrum {
         let name = self.sites[s].name.clone();
         let df_out = p.spectrum_out_df_hz;
+        let fixed = Self::fixed_band_edges();
         match a {
             Err(w) => SiteSpectrum {
                 site: name,
@@ -2155,6 +2173,7 @@ impl Engine {
                 bg_offset: Measured::null(*w),
                 k: 0,
                 bands: spectral::null_bands(*w),
+                bands_fixed: spectral::null_bands(*w),
             },
             Ok(an) => {
                 let df = self.mt.df;
@@ -2177,6 +2196,10 @@ impl Engine {
                             let [lo, hi] = *edges.get(b);
                             spectral::band_summary(&an.spec, &an.bg, df, lo, hi)
                         }),
+                        bands_fixed: BandMap::from_fn(|b| {
+                            let [lo, hi] = *fixed.get(b);
+                            spectral::band_summary(&an.spec, &an.bg, df, lo, hi)
+                        }),
                     },
                     Err(w) => SiteSpectrum {
                         site: name,
@@ -2190,6 +2213,12 @@ impl Engine {
                         k: an.spec.k as u32,
                         bands: BandMap::from_fn(|b| {
                             let [lo, hi] = *edges.get(b);
+                            let mut bs = spectral::band_summary(&an.spec, &an.spec.s, df, lo, hi);
+                            bs.above_bg_db = Measured::null(w);
+                            bs
+                        }),
+                        bands_fixed: BandMap::from_fn(|b| {
+                            let [lo, hi] = *fixed.get(b);
                             let mut bs = spectral::band_summary(&an.spec, &an.spec.s, df, lo, hi);
                             bs.above_bg_db = Measured::null(w);
                             bs

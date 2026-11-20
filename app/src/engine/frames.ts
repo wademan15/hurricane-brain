@@ -86,7 +86,15 @@ export interface SiteSpectrum {
   bg_offset: Measured;
   /** Independent estimates averaged per bin (K in spec 6.1). */
   k: number;
+  /** Band summaries over the band edges in force (`band_edges`: scaled to the IAF when one is set). */
   bands: Record<BandName, BandSummary>;
+  /**
+   * The same over the fixed textbook edges (1-4, 4-8, 8-13, 13-30, 30-45 Hz). The engine always
+   * emits it (identical to `bands` while no IAF is set), so sessions can be compared whatever
+   * their individual alpha frequency. Optional here only so that hand-built test frames need
+   * not carry it. Proposed by the signal architect, November 2026.
+   */
+  bands_fixed?: Record<BandName, BandSummary>;
 }
 
 export interface BandSummary {

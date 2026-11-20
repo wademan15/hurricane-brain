@@ -31,7 +31,7 @@ function CascadeCell({ cls, title, cascades, active, forS, live }: { cls: string
         <div className="s" key={c.target}>
           {cascades.length > 1 ? `${c.target === 'phi' ? 'golden' : 'octave'}: ` : ''}
           {c.steps} step{c.steps === 1 ? '' : 's'}, held {fmtDuration(c.held_s)}
-          . chance A {measuredLine(c.chance.a.closeness)}, B {measuredLine(c.chance.b.closeness)}
+          . chance A {measuredLine(c.chance.a.closeness)}{c.chance.b.closeness.v !== null ? `, B ${measuredLine(c.chance.b.closeness)}` : ''}
         </div>
       ))}
       <div className="s">{active ? 'in this condition' : 'out of it'} for {fmtDuration(forS)}</div>

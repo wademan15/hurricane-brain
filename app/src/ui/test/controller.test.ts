@@ -358,3 +358,19 @@ describe('live stream out', () => {
     expect(log.at(-1)).toBe('disconnect');
   });
 });
+
+describe('closing a connection while its engine is starting', () => {
+  it('is not reported as an engine error', async () => {
+    const h = makeDeps();
+    h.deps.createEngine = () => { const e = new FakeEngine(); e.hangInit = true; h.engines.push(e); return e; };
+    const c = new SessionController(h.deps);
+    const bytes = buildRecording({ seconds: 6, notes: [{ afterInput: 3, json: freeStart }] });
+    await c.startReplay(bytes, { label: 'x', speed: 'fast' });
+    await vi.waitFor(() => expect(h.engines[0].configs.length).toBe(1));
+    expect(c.getState().engine).toBe('starting');
+    await c.closeReplay(); // closed while init is still pending
+    await new Promise((r) => setTimeout(r, 50));
+    expect(c.getState().notice).toBeNull();
+    expect(c.getState().engine).not.toBe('error');
+  });
+});

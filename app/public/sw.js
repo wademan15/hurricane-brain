@@ -7,7 +7,7 @@
  * The page asks the worker to cache what it has already loaded (see main.tsx warm-up).
  * Nothing is sent anywhere: no analytics, no third-party requests.
  */
-const CACHE = 'hurricane-brain-v1';
+const CACHE = 'hurricane-brain-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -49,7 +49,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      const cached = (await cache.match(req)) || (req.mode === 'navigate' ? await cache.match('./') : undefined);
+      const cached = (await cache.match(req, { ignoreVary: true })) || (req.mode === 'navigate' ? await cache.match('./', { ignoreVary: true }) : undefined);
       const network = fetch(req)
         .then((res) => {
           if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()).catch(() => undefined);
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
       const res = await network;
       if (res) return res;
       if (req.mode === 'navigate') {
-        const shell = await cache.match('./');
+        const shell = await cache.match('./', { ignoreVary: true });
         if (shell) return shell;
       }
       return new Response('Offline and not cached yet.', { status: 503, statusText: 'Offline' });

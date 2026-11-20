@@ -29,8 +29,13 @@ export class FakeEngine implements EngineClient {
   /** Lets a test shape the slow frames (for example to switch a state on for a while). */
   hook: ((f: SlowFrame) => SlowFrame) | null = null;
 
+  /** When set, init stays pending until disposed, and then rejects (as the real worker client does). */
+  hangInit = false;
+  private rejectInit: ((e: Error) => void) | null = null;
+
   async init(config: EngineConfig): Promise<void> {
     this.configs.push(config);
+    if (this.hangInit) await new Promise<void>((_res, rej) => { this.rejectInit = rej; });
     this.channels = config.streams.eeg?.channels.length ?? 4;
     this.nextFrameT = 0.25;
   }
@@ -71,6 +76,7 @@ export class FakeEngine implements EngineClient {
   }
   dispose(): void {
     this.disposed = true;
+    this.rejectInit?.(new Error('engine disposed'));
   }
   private emit(f: Frame): void {
     this.emitted.push(f.t);

@@ -110,7 +110,7 @@ params! {
     /// Longest gap repaired by linear interpolation, samples (spec 3).
     gap_repair_max_samples: usize = 12,
     /// Repaired samples allowed in an analysed window, fraction (spec 3).
-    repaired_max_fraction: f64 = 0.02,
+    repaired_max_fraction: f64 = 0.04,
     /// High-pass corner, Hz (spec 5.1).
     highpass_hz: f64 = 0.5,
     /// Mains exclusion half-width around the line and its harmonics, Hz (spec 5.1).
@@ -170,8 +170,12 @@ params! {
     surrogates: usize = 200,
     /// Minimum lag for chance B, s (spec 8.5).
     chance_b_min_lag_s: f64 = 10.0,
-    /// Track history needed for chance B, s (spec 8.5).
-    chance_b_history_s: f64 = 120.0,
+    /// Track history needed for chance B, s (spec 8.5). 0 (the default) means it follows the
+    /// integration time: `chance_b_history_corr` correlation times of an integrated frequency.
+    chance_b_history_s: f64 = 0.0,
+    /// Track history needed for chance B, in correlation times (integration time plus one
+    /// slow window): 3 is 114 s at the default 30 s integration.
+    chance_b_history_corr: f64 = 3.0,
     /// Chance refresh interval, s (spec 8.5).
     chance_refresh_s: f64 = 5.0,
     /// Slow update time budget, ms (spec 11). Informational; the engine reads no clock.
@@ -311,6 +315,34 @@ impl Params {
         }
         p.validate()?;
         Ok(p)
+    }
+
+    /// Track history chance B needs, s (spec 8.5).
+    pub fn chance_b_need_s(&self) -> f64 {
+        if self.chance_b_history_s > 0.0 {
+            self.chance_b_history_s
+        } else {
+            self.chance_b_history_corr * (self.integration_s + self.slow_window_s)
+        }
+    }
+
+    /// Names of the presets `preset` knows (spec 15).
+    pub const PRESETS: [&'static str; 4] = ["steady", "quicker", "slower", "child"];
+
+    /// A named set of overrides (spec 15), to be merged into `EngineConfig.params`. The three
+    /// response speeds set the integration time and what must follow it; everything derived
+    /// from the integration time (the chance levels, the resolved rule through the larger
+    /// uncertainty, the chance B history) follows by itself. "child" widens only the
+    /// plausibility limit on amplitude; it combines with any speed.
+    pub fn preset(name: &str) -> Option<BTreeMap<String, ParamValue>> {
+        let pairs: &[(&str, f64)] = match name {
+            "steady" => &[("integration_s", 30.0), ("track_resume_s", 30.0)],
+            "quicker" => &[("integration_s", 15.0), ("track_resume_s", 15.0)],
+            "slower" => &[("integration_s", 60.0), ("track_resume_s", 60.0)],
+            "child" => &[("quality_sd_max_uv", 200.0)],
+            _ => return None,
+        };
+        Some(pairs.iter().map(|(k, v)| (k.to_string(), ParamValue::Num(*v))).collect())
     }
 
     pub fn validate(&self) -> Result<(), String> {

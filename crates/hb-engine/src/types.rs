@@ -209,7 +209,12 @@ pub struct SiteSpectrum {
     pub bg_exponent: Measured,
     pub bg_offset: Measured,
     pub k: u32,
+    /// Band summaries over the band edges in force (`band_edges`: scaled to the individual
+    /// alpha frequency when one is set).
     pub bands: BandMap<BandSummary>,
+    /// The same over the fixed textbook edges (1-4, 4-8, 8-13, 13-30, 30-45 Hz), always, so a
+    /// session can be compared with others whatever its individual alpha frequency.
+    pub bands_fixed: BandMap<BandSummary>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

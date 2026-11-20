@@ -1,6 +1,6 @@
 # Signal engine specification
 
-Status: draft 1, 20 November 2026, amended by the milestone review of the Rust engine on the same date (sections 6.2, 6.4, 7, 8.4, 8.5, 9 and 14; each amendment is marked "Review"). Awaiting the owner's approval (roadmap gate 1).
+Status: draft 1, 20 November 2026, amended by the milestone review of the Rust engine on the same date (sections 6.2, 6.4, 7, 8.4, 8.5, 9 and 14; each amendment is marked "Review"), and then by the decisions taken on the bake-off report and the whole-app fake test (sections 3, 5, 6.5, 6.6, 8, 9, 10, 11, 14 and 15; marked "Decision"). Awaiting the owner's approval (roadmap gate 1).
 Owner of this document: the signal architect. Changes go through a pull request reviewed at the Fable tier.
 
 This document says what the signal engine must measure, what it must output, which methods are candidates for each stage, and how we will choose between them by testing. It is written so that an implementer can build the engine without redesigning it.
@@ -53,6 +53,8 @@ Requirements on the device layer, restated here because the engine depends on th
 
 Gap handling in the engine (provisional): a gap of at most 12 samples (one Classic packet, about 47 ms) is filled by linear interpolation and marked "repaired". A longer gap is marked invalid. A window with more than 2% repaired samples or any invalid sample is not analysed.
 
+Decision: two changes. A lost sample is a lost sample however it reaches the engine: a jump in the sample index, or a row in which no channel holds a number (the lab's fixtures mark lost packets that way). Both are the same gap and get the same repair. Before, rows without numbers were voided one at a time and never repaired, and 1% packet loss in a fixture left 67% of windows without a spectrum. And the repaired limit is 4%, not 2%: at 1% loss an 8 s window holds 1.7 lost packets on average and 4 or more (over 2%) in 9% of windows, so the 2% limit could not meet the 1% mark in 10.3 G; at 4% (7 packets) it is 0.2% of windows. Two packets lost in a row (24 samples) are still not repaired, and the windows that hold that hole give no spectrum: about 8 s once in 8 minutes at 1% loss.
+
 A clock error between headset and host scales every frequency by the same factor. Ratios are unaffected. An error of 0.1% moves a 10 Hz reading by 0.01 Hz, which is well inside our precision.
 
 ## 4. Pipeline overview
@@ -103,6 +105,17 @@ Per channel, updated once a second, each with a measured value and a pass or fai
 
 A channel that fails is excluded from everything until it has passed for 3 seconds in a row (provisional).
 
+### 5.4 Children
+
+The owner measures children as well as adults. What differs, and what the engine does about each (all of it unverified against recordings of children, which we do not have yet):
+
+- **A slower alpha rhythm.** A young child's posterior rhythm sits near 6 to 8 Hz and reaches the adult 10 Hz around the age of ten (textbook values, recalled, not checked against a source in this review). With the fixed band labels such a rhythm is called theta. Nothing in peak confirmation, tracking, ratios or cascades uses band names, so the measurements are unaffected. Three things do use the bands: the labels on screen, the band summaries, and the placement of chance A surrogates. All three follow the individual alpha frequency when one is set (the bands become delta up to 0.4 of it, theta 0.4 to 0.8, alpha 0.8 to 1.2). So for a child the individual alpha frequency must be set, from the baseline minute, before band-based training or the chance level is read. Band summaries over the fixed edges are output as well (`bands_fixed`), so sessions can still be compared.
+- **Larger amplitudes.** Children's EEG is larger than adults'. The gating thresholds for blinks, steps, muscle and movement are all multiples of the person's own reference levels, so they scale by themselves. The one adult-only constant is the plausibility limit in 5.2 (standard deviation over 100 µV fails the channel). The "child" preset raises it to 200 µV (provisional).
+- **More movement.** Movement is gated against the person's own resting level, taken as the 25th percentile of the first minute so that a child who is moving from the start does not set a high reference. The cost is honest: more of the session is gated, and the display says so. The blink and muscle references are still medians of the first minute, and a first minute full of artifacts raises them (see 5.3); for a restless child the baseline minute should be repeated until it is calm.
+- **Shorter sessions.** The "quicker" response setting (section 15) suits short attention, with its stated cost in precision.
+
+No threshold is loosened for a child to make structure appear. A child's session with too little clean signal reads as null, with the reason.
+
 ### 5.3 Artifact gating
 
 Gating produces a validity mask per channel and a reason code. Candidate detectors, all to be tuned on recorded artifacts in the bake-off:
@@ -110,8 +123,8 @@ Gating produces a validity mask per channel and a reason code. Candidate detecto
 | Artifact | Where it shows | Detector (provisional) |
 | --- | --- | --- |
 | Blink, eye movement | AF7 and AF8, large slow deflection, delta and theta range | Amplitude step above a threshold scaled to the channel's own running median, frontal pair moving together |
-| Jaw, forehead, neck muscle | All channels, broadband above 20 Hz | Ratio of 30 to 45 Hz power to the fitted background, and spectral flatness |
-| Head movement | Any | Accelerometer and gyroscope energy above the resting level |
+| Jaw, forehead, neck muscle | All channels, broadband above 20 Hz | Power between 65 and 95 Hz against the channel's own resting level (6 dB over its median). Decision: the first build used 30 to 45 Hz and gated genuine beta and gamma rhythms as muscle (bake-off, set E). Muscle is broadband and a rhythm is not, so the band above the tracked range tells them apart. Unverified on a real headset: this needs the headset to pass 65 to 95 Hz |
+| Head movement | Any | Accelerometer and gyroscope energy above the resting level. Decision: the resting level is the 25th percentile of the first minute, not its median, so movement that starts early is not taken as rest |
 | Electrode pop or shift | One channel | Single-channel step with no partner |
 
 Rules:
@@ -230,6 +243,8 @@ Still open: for rhythms 1 Hz wide and wider the centre itself is biased, by abou
 
 Peaks are linked across windows into tracks so that "the alpha peak" has a stable identity. A new window's peak joins the track whose predicted frequency is nearest, if within 3 standard errors or 1 Hz, whichever is larger (provisional). Each track has an id, a birth time, its history of frequency, height and width, and its integrated frequency. Two tracks that converge are merged and the event is recorded. A track that splits, such as a double alpha peak, becomes two tracks.
 
+Decision: a track that ends resumes. Real rhythms wax and wane. A rhythm that fades fails persistence, and its track ends after the hold time; when it returned it used to be a new track with a new id, starting again from one window's uncertainty. On the lab's 120 s cascade recordings each planted rhythm went through 3 to 6 ids, pairs were unresolved most of the time, and the three-member cascade was in the aligned state in 14 of 480 frames. Now a peak confirmed within the joining distance of a track that ended less than 30 s ago (provisional, equal to the integration time) continues that track: same id, its window estimates of the last integration time (the pause simply contributes none) and its history. While the rhythm is away the track is not output: no confirmed peak, no track. With this change the same recording is in the state in 114 of 480 frames and the five-member one in 330.
+
 Tracks are named by frequency only. Band names (delta 1 to 4, theta 4 to 8, alpha 8 to 13, beta 13 to 30, gamma 30 to 45 Hz) are labels for display and training targets. They are never used to force one peak per band.
 
 ### 6.6 The harmonic trap
@@ -238,7 +253,20 @@ A rhythm that is not a pure sine has harmonics. A 10 Hz alpha rhythm with a slig
 
 For every pair of tracks whose ratio is within tolerance of an integer, the engine tests whether the upper one is a harmonic of the lower: the two frequencies move together over time at exactly that integer ratio, and their phases are locked (bicoherence, or phase locking of the upper track to the lower track's phase multiplied by the integer). A pair that passes is marked "harmonic". It is shown, it is excluded from octave alignment and from cascades by default, and the exclusion is a visible setting.
 
-Review: the phase test compares the locking with the locking of time-shifted copies, and passes a pair whose locking exceeds the shifted copies' by a margin. That alone misses the plainest harmonic there is. A strictly periodic waveform is its own shifted copy, so its locking is as high after the shift as before and the excess is nil. A 4 Hz train of small pulses on the forehead was credited as an octave pair (4 and 8 Hz) in 513 of 720 frames. The rule now has a second arm: a pair is also marked harmonic when the locking of the shifted copies is itself above the locking limit, that is, when both lines hold exactly the integer ratio steadily for the whole window. Two independent rhythms that steady cannot be told from one waveform by any test on that window, and section 10.4 says which way to err. Still open: the "frequencies move together over time" half of the test is not implemented, and a broad rhythm with a weak harmonic is missed in most frames (section 10.3 test D is not met; see the engine notes).
+Decision (bake-off and fake test), replacing the first build's rule. The first build marked a pair when one window's locking was at least 0.7 and at least 0.3 above the locking of time-shifted copies, and dropped the mark 2 s after the last such window. It failed in three ways, each measured:
+
+- A strictly periodic waveform is its own shifted copy, so its locking is as high after the shift as before and the excess is nil. A 4 Hz train of small pulses on the forehead was credited as an octave pair (4 and 8 Hz) in 513 of 720 frames.
+- A real harmonic of a broad rhythm locks at 0.4 to 0.6 in one window, under the 0.7 limit, while the shifted copies sit at 0.2. On the lab's harmonic recording the mark was present in 111 of 360 frames, an octave step was credited in 173, and the octave state was on in 44.
+- The candidate test used the alignment tolerance on one window's frequencies, which for a broad rhythm are off by more than 3%, so many windows were never tested at all.
+
+The rule now:
+
+1. **Candidate.** The upper track is a candidate harmonic of the lower when it sits inside the band where the harmonic would be (n times as wide as the lower rhythm) or within the error of the two centres, and never further than twice the tolerance from the integer ratio. The phase test is made at exactly n times the lower frequency.
+2. **Evidence adds over time.** Each window gives a locking vector: its length is the locking and its angle is the phase at which the upper rhythm sits against n times the lower one's phase. A waveform's harmonic keeps that angle from window to window. Two rhythms that are not locked do not. The engine averages the vectors over the last integration time and marks the pair when unlocked rhythms would reach that length with probability at most 1% (judged against the shifted copies' level); the mark comes off when that probability rises above 20%. One decisive window (the old rule, or locking that survives the shifts) also sets the mark at once.
+3. **Pending.** A pair at an integer ratio is kept out of octave alignment and cascades until 12 tests have been made (3 s). Until it has been tested it has not been shown not to be a harmonic.
+4. **Family.** Two harmonics of one fundamental (2f and 3f) are one waveform. Their pair is kept out of scoring too, so it cannot count as a 1.5 control pair or as anything else.
+
+Measured after the change: the lab's harmonic recording is marked in 297 of 297 frames in which the harmonic is tracked, with no octave step and no octave state; the pulse train is marked in 656 of 657; synthetic harmonics of a wandering rhythm are marked in 100% of frames at moderate wander and 95% at strong wander (27% before). The cost: two independent rhythms an octave apart are marked in 0.6 to 0.8% of frames (4 of 16 files at some moment), and keep their octave step in 99%. Still open: "the two frequencies move together" is used only through the candidate band, not as a test of its own; and two rhythms that really are phase-locked at 2:1 are, by this rule, one waveform. The engine cannot tell those apart and says "harmonic".
 
 ## 7. Fast path: tracking
 
