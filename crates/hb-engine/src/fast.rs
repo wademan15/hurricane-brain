@@ -77,6 +77,8 @@ pub struct DemodTracker {
     settle_left: usize,
     settle_len: usize,
     block_gated: bool,
+    /// Whether gated input has ever reached this tracker (to name the settling reason).
+    seen_gated: bool,
     /// Recent per-block frequency readings and weights, for the 1 s agreement test.
     recent: VecDeque<(f64, f64)>,
     bad_s: f64,
@@ -101,6 +103,7 @@ impl DemodTracker {
             settle_left: 0,
             settle_len: 0,
             block_gated: false,
+            seen_gated: false,
             recent: VecDeque::new(),
             bad_s: 0.0,
             good_s: 0.0,
@@ -165,6 +168,7 @@ impl Tracker for DemodTracker {
         let x = if gated { 0.0 } else { x };
         if gated {
             self.block_gated = true;
+            self.seen_gated = true;
             self.settle_left = self.settle_len;
         } else if self.settle_left > 0 {
             self.settle_left -= 1;
@@ -189,7 +193,8 @@ impl Tracker for DemodTracker {
         let gated = self.block_gated;
         self.block_gated = false;
         if gated || self.settle_left > 0 {
-            let why = if gated || self.settle_len > 0 && self.recent.is_empty() && !self.locked { if gated { Reason::Artifact } else { Reason::WarmingUp } } else { Reason::Artifact };
+            // Settling after creation is warm-up; settling after gated input is the artifact's tail.
+            let why = if gated || self.seen_gated { Reason::Artifact } else { Reason::WarmingUp };
             let n = Measured::null(why);
             return FastReading { freq: n, amp_uv: n, height_db: n, phase: n, locked: self.locked, delay_s: delay };
         }
@@ -261,7 +266,7 @@ mod tests {
         let mut t = DemodTracker::new(fp, &tgt);
         let mut last = None;
         for n in 0..(256 * 4) {
-            let x = 20.0 * m::sin(m::TAU * 10.2 * n as f64 / 256.0);
+            let x = 20.0 * m::sin(m::TAU * 10.1 * n as f64 / 256.0);
             t.push(x, false);
             if (n + 1) % 8 == 0 {
                 last = Some(t.read());
@@ -269,7 +274,7 @@ mod tests {
         }
         let r = last.unwrap();
         assert!(r.locked);
-        assert!((r.freq.v.unwrap() - 10.2).abs() < 0.02, "{:?}", r.freq);
+        assert!((r.freq.v.unwrap() - 10.1).abs() < 0.02, "{:?}", r.freq);
         assert!((r.amp_uv.v.unwrap() - 20.0).abs() < 1.0, "{:?}", r.amp_uv);
         assert!(r.delay_s <= 0.3 + 1e-9, "{}", r.delay_s);
     }

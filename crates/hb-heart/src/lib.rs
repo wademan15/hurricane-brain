@@ -31,17 +31,11 @@ use std::collections::BTreeMap;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Engine configuration.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct HeartConfig {
     /// Seed for surrogates. Stored with the session.
     pub seed: u64,
     pub params: HeartParams,
-}
-
-impl Default for HeartConfig {
-    fn default() -> Self {
-        HeartConfig { seed: 0, params: HeartParams::default() }
-    }
 }
 
 impl HeartConfig {
@@ -263,9 +257,9 @@ impl HeartEngine {
     }
 
     fn source_at(&self, t: f64) -> HeartSource {
-        if self.strap.last_t().map_or(false, |lt| t - lt <= self.p.strap_fresh_s) {
+        if self.strap.last_t().is_some_and(|lt| t - lt <= self.p.strap_fresh_s) {
             HeartSource::ChestStrap
-        } else if self.ppg_beats.last_t().map_or(false, |lt| t - lt <= self.p.ppg_fresh_s) {
+        } else if self.ppg_beats.last_t().is_some_and(|lt| t - lt <= self.p.ppg_fresh_s) {
             HeartSource::HeadsetPpg
         } else {
             HeartSource::None
@@ -374,7 +368,7 @@ impl HeartEngine {
         let (hr, hr_ok) = match series {
             Some(s) => {
                 let in_win = s.window((g0 as f64 - 1.0) / fs - p.clean_max_rr_ms / 1000.0, t);
-                let r = hrv::resample(in_win, SeriesKind::HeartRateBpm, fs, g0, g_end);
+                let r = hrv::resample(in_win, SeriesKind::HeartRateBpm, fs, g0, g_end, p.resample_cubic != 0.0);
                 let ok: Vec<bool> = (0..r.v.len()).map(|i| r.valid[i] && !r.bridged[i]).collect();
                 (r.v, ok)
             }

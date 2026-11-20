@@ -115,6 +115,8 @@ heart_params! {
     // ---- resampled series and spectra ----
     /// Even resampling rate of the interval series, Hz.
     resample_hz: 4.0,
+    /// 1: natural cubic spline through clean beats; 0: linear interpolation.
+    resample_cubic: 1.0,
     /// Spectral window (LF, HF, resonance, breathing), s.
     spec_window_s: 120.0,
     /// Spectral measures are null when two consecutive clean beats in the window are further apart than this, s.

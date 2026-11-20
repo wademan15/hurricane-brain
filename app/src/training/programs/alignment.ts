@@ -175,7 +175,7 @@ export const FRONTAL_BALANCE: Program = program({
   family: 'asymmetry',
   state: 'approach',
   summary: 'Experimental: frontal alpha balance, a rough marker linked to approach and positive mood.',
-  description: 'Feedback follows right-minus-left frontal alpha above background. Relatively more alpha on the right goes with relatively more activity on the left, which research links to approach and positive mood. On this headset the forehead sensors are near, not at, the classic sites, the measure is noisy, and eye movements dominate the forehead, so eyes stay closed and still and blinks are removed. Experimental: treat it as a personal experiment.',
+  description: 'Feedback follows right-minus-left frontal alpha above background. Relatively more alpha on the right goes with relatively more activity on the left, which research links to approach and positive mood. On this headset the forehead sensors are near, not at, the classic sites, the measure is noisy, and eye movements dominate the forehead, so eyes stay closed and still and blinks are removed. Experimental: consider it a personal experiment.',
   evidence: { grade: 'C', summary: 'Frontal asymmetry is a real but small and noisy marker; one controlled study shifted mood by training it. On this headset it is approximate.', sources: ['Allen, Harmon-Jones and Cavender 2001', 'Coan and Allen 2004'] },
   experimental: true,
   requires: { eeg: true, heart: 'optional', signature: false, anchor: false },

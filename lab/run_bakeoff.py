@@ -54,6 +54,7 @@ def agg_A(rows, cfg):
                                    for r in rs])) if rs else None
         false_mem = sum(r["casc_phi_false_members_all"] > 0 for r in rs)
         fpw = sum(r["false_peak_windows"] for r in rs)
+        dpw = sum(r["dup_peak_windows"] for r in rs)
         nel = sum(r["n_elig"] for r in rs)
         z = [c[3] for r in rs for c in r["cal"] if c[3] is not None]
         by_n = {}
@@ -71,6 +72,7 @@ def agg_A(rows, cfg):
             "cascade_length_correct_late_windows": round(casc_late, 4) if casc_late is not None else None,
             "files_with_false_cascade_member": frac(false_mem, len(rs)),
             "false_peak_window_rate": frac(fpw, nel),
+            "duplicate_peak_window_rate": frac(dpw, nel),
             "z_sd": round(float(np.std(z)), 3) if len(z) > 2 else None,
             "z_within_1.96": frac(sum(abs(v) <= 1.96 for v in z), len(z)),
             "n_z": len(z),
@@ -105,6 +107,8 @@ def agg_B(rows, cfg):
         "golden_files_labelled_octave": {rule: frac(sum(r["states"]["octave"][rule]["entered"] or r["casc_octave_max"] >= 3
                                                          for r in phis), len(phis)) for rule in RULES},
         "octave_files_marked_harmonic": frac(sum(r.get("windows_with_harmonic_mark", 0) > 0 for r in octs), len(octs)),
+        "octave_windows_marked_harmonic": frac(sum(r.get("windows_with_harmonic_mark", 0) for r in octs),
+                                               sum(r["n_win"] for r in octs)),
     }
     ratio_ok = {}
     for rule in RULES:
@@ -170,6 +174,9 @@ def agg_D(rows, cfg):
         pw = sum(r["harm_pair_windows"][int(m)] if int(m) in r["harm_pair_windows"] else r["harm_pair_windows"].get(m, 0) for r in rs)
         mk = sum(r["harm_marked_windows"][int(m)] if int(m) in r["harm_marked_windows"] else r["harm_marked_windows"].get(m, 0) for r in rs)
         out[f"marked_x{m}"] = frac(mk, pw)
+    for m in (2, 3):
+        vals = [r["harm_marked_majority"][m] for r in rs if r["harm_marked_majority"][m] is not None]
+        out[f"marked_majority_files_x{m}"] = frac(sum(vals), len(vals))
     out["octave_state_entered"] = {rule: frac(sum(r["states"]["octave"][rule]["entered"] for r in rs), len(rs)) for rule in RULES}
     out["octave_cascade_files"] = frac(sum(r["casc_octave_max"] >= 2 for r in rs), len(rs))
     out["c1.5_state_entered"] = {rule: frac(sum(r["states"]["c1.5"][rule]["entered"] for r in rs), len(rs)) for rule in RULES}
@@ -310,7 +317,7 @@ def main():
     # ---- 1. tuning thresholds on tuning seeds only
     tune_jobs = B.jobs_tuning(6 if q else 48)
     tune_cfgs = sorted({n for n in cfgs if n in B.STAGE_CONFIGS and B.STAGE_CONFIGS[n].get("thr_mode") != "analytic"
-                        and n in ("S1-P1", "S2-P1", "S3-P1", "S1-P2", "S1-P3", "S1-P4")})
+                        and n in ("S1-P1", "S2-P1", "S3-P1", "S1W1-P1", "S1-P2", "S1-P3", "S1-P4")})
     print("tuning thresholds:", tune_cfgs, flush=True)
     tr = B.run_pool([(j, tune_cfgs, {}) for j in tune_jobs], a.procs, "tune")
     thresholds = {}

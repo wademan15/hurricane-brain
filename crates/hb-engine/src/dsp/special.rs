@@ -90,7 +90,7 @@ pub fn chi2_isf(p: f64, dof: f64) -> f64 {
 /// Trigamma function psi'(x) for x > 0.
 pub fn trigamma(mut x: f64) -> f64 {
     let mut r = 0.0;
-    while x < 6.0 {
+    while x < 10.0 {
         r += 1.0 / (x * x);
         x += 1.0;
     }

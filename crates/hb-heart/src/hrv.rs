@@ -30,10 +30,12 @@ pub struct Resampled {
     pub max_span_s: f64,
 }
 
-/// Linear interpolation of the clean beats' values onto the grid [g0, g1]. Flagged beats are never
-/// used as values. Samples between two clean beats that are not consecutive (an excluded beat or a
+/// Interpolation of the clean beats' values onto the grid [g0, g1]: a natural cubic spline through
+/// the clean beats when `cubic` (the usual choice for heart rhythm spectra; linear interpolation
+/// attenuates a 0.1 Hz rhythm by about 5% in power at 65 beats a minute), else linear. Flagged beats
+/// are never used as values. Samples between two clean beats that are not consecutive (an excluded beat or a
 /// dropout between them) are marked `bridged`.
-pub fn resample(beats: &[BeatRec], kind: SeriesKind, fs: f64, g0: i64, g1: i64) -> Resampled {
+pub fn resample(beats: &[BeatRec], kind: SeriesKind, fs: f64, g0: i64, g1: i64, cubic: bool) -> Resampled {
     let n = if g1 >= g0 { (g1 - g0 + 1) as usize } else { 0 };
     let mut out = Resampled { g0, fs, v: vec![0.0; n], valid: vec![false; n], bridged: vec![false; n], max_span_s: 0.0 };
     // Clean beats with their position in `beats`.
@@ -45,6 +47,9 @@ pub fn resample(beats: &[BeatRec], kind: SeriesKind, fs: f64, g0: i64, g1: i64) 
         SeriesKind::IntervalMs => b.ibi_ms,
         SeriesKind::HeartRateBpm => 60000.0 / b.ibi_ms,
     };
+    let xs: Vec<f64> = clean.iter().map(|(_, b)| b.t).collect();
+    let ys: Vec<f64> = clean.iter().map(|(_, b)| val(b)).collect();
+    let m2 = if cubic { natural_spline_m(&xs, &ys) } else { vec![0.0; xs.len()] };
     let mut j = 0usize;
     for k in 0..n {
         let t = (g0 + k as i64) as f64 / fs;
@@ -59,13 +64,49 @@ pub fn resample(beats: &[BeatRec], kind: SeriesKind, fs: f64, g0: i64, g1: i64) 
         if t < a.t || t > b.t {
             continue;
         }
-        let w = if b.t > a.t { (t - a.t) / (b.t - a.t) } else { 0.0 };
-        out.v[k] = val(a) + w * (val(b) - val(a));
+        let h = b.t - a.t;
+        out.v[k] = if h > 0.0 {
+            // Spline segment; with all second derivatives zero this is the straight line.
+            let (u, w) = ((b.t - t) / h, (t - a.t) / h);
+            u * ys[j] + w * ys[j + 1] + ((u * u * u - u) * m2[j] + (w * w * w - w) * m2[j + 1]) * h * h / 6.0
+        } else {
+            ys[j]
+        };
         out.valid[k] = true;
         out.bridged[k] = !(ib == ia + 1 && b.contiguous);
         out.max_span_s = out.max_span_s.max(b.t - a.t);
     }
     out
+}
+
+/// Second derivatives of the natural cubic spline through (x, y) (x strictly increasing).
+fn natural_spline_m(x: &[f64], y: &[f64]) -> Vec<f64> {
+    let n = x.len();
+    let mut m = vec![0.0; n];
+    if n < 3 {
+        return m;
+    }
+    // Tridiagonal system for interior points (Thomas algorithm).
+    let mut c_prime = vec![0.0; n];
+    let mut d_prime = vec![0.0; n];
+    for i in 1..n - 1 {
+        let h0 = x[i] - x[i - 1];
+        let h1 = x[i + 1] - x[i];
+        if h0 <= 0.0 || h1 <= 0.0 {
+            return vec![0.0; n];
+        }
+        let a = h0 / 6.0;
+        let b = (h0 + h1) / 3.0;
+        let c = h1 / 6.0;
+        let d = (y[i + 1] - y[i]) / h1 - (y[i] - y[i - 1]) / h0;
+        let den = b - a * c_prime[i - 1];
+        c_prime[i] = c / den;
+        d_prime[i] = (d - a * d_prime[i - 1]) / den;
+    }
+    for i in (1..n - 1).rev() {
+        m[i] = d_prime[i] - c_prime[i] * m[i + 1];
+    }
+    m
 }
 
 /// Fraction of intervals flagged in a set of beats (0 when empty).
@@ -205,7 +246,7 @@ pub fn window_series(p: &HeartParams, beats_all: &[BeatRec], first_t: Option<f64
     }
     let g0 = (clean[0].t * fs).ceil() as i64;
     let g1 = (clean[clean.len() - 1].t * fs).floor() as i64;
-    let r = resample(&in_win, SeriesKind::IntervalMs, fs, g0, g1);
+    let r = resample(&in_win, SeriesKind::IntervalMs, fs, g0, g1, p.resample_cubic != 0.0);
     if (r.v.len() as f64) < p.hrv_min_cover * window_s * fs || r.valid.iter().any(|v| !v) {
         return Err(Reason::Gap);
     }

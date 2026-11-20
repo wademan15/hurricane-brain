@@ -100,7 +100,7 @@ describe('Classic pipeline (synthetic packets through the real decode path)', ()
     expect(g[0].estimated).toBe(true);
     // second session started 7 s after the first; first ran 4 s -> about 3 s (768 samples) missing
     expect(Math.abs(g[0].samples - 768)).toBeLessThan(40);
-    const firstOfB = got.eeg.find((e) => e.firstIndex > 1000)!;
+    const firstOfB = got.eeg.find((e) => e.firstIndex >= 1024)!;
     expect(firstOfB.firstIndex).toBe(g[0].at + g[0].samples);
   });
 });
@@ -128,7 +128,7 @@ describe('Athena pipeline (synthetic packets through the real decode path)', () 
   it('lost subpackets become gaps of exactly their samples, including a loss longer than the counter range', () => {
     const drop = new Set<number>([10, 11, 12, 300]);
     for (let k = 1000; k < 1000 + 600; k++) drop.add(k); // 600 subpackets = 1200 samples > 256-count range
-    const syn = synthAthena({ seconds: 12, dropEeg: drop, ppg: false, motion: false });
+    const syn = synthAthena({ seconds: 14, dropEeg: drop, ppg: false, motion: false });
     const { got } = runPipelines(syn.inputs);
     const gaps = got.gap.filter((g) => g.stream === 'eeg').map((g) => [g.at, g.samples]);
     expect(gaps).toEqual([[20, 6], [600, 2], [2000, 1200]]);
@@ -146,7 +146,7 @@ describe('Athena pipeline (synthetic packets through the real decode path)', () 
 });
 
 describe('Athena pipeline on real captures', () => {
-  const fixtures = import.meta.glob('./fixtures/*.{txt,hex}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  const fixtures = import.meta.glob(['./fixtures/*.{txt,hex}', '!./fixtures/SOURCES.txt'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
   function inputsFrom(text: string, withTimes: boolean): DeviceInput[] {
     const ls = text.split('\n').filter((l) => l.trim());
@@ -178,7 +178,7 @@ describe('Athena pipeline on real captures', () => {
 
   for (const key of ['p1034', 'p1035', 'p1041', 'p21']) {
     it(`OpenMuse ${key} capture: contiguous EEG, ordered optics and motion, no gaps`, () => {
-      const name = Object.keys(fixtures).find((n) => n.includes(key))!;
+      const name = Object.keys(fixtures).find((n) => n.includes(`openmuse_data_${key}.`))!;
       const { got, muse } = runPipelines(inputsFrom(fixtures[name], true));
       expect(got.gap).toEqual([]);
       let next = 0;

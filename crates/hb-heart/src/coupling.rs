@@ -3,8 +3,12 @@
 //! Both series live on the same 4 Hz grid over the coupling window. For each brain series two
 //! measures are computed:
 //!
-//! - **correlation**: Pearson correlation between the linearly detrended heart rate series and the
-//!   linearly detrended brain series, over samples where both are valid.
+//! - **correlation**: Pearson correlation between the heart rate series and the brain series, both
+//!   band-passed to `coupling_lo_hz..coupling_hi_hz`, over samples where both are valid and at least
+//!   `coupling_edge_s` from the window ends. Band-passing is required for an honest null: two
+//!   unrelated random walks correlate strongly by accident, and a circular shift of a drifting series
+//!   does not reproduce that (measured: 14.5% false positives at alpha 0.05 on detrended random
+//!   walks, against 5% after band-passing; see NOTES.md).
 //! - **phase_locking**: phase locking value |mean(exp(i(phi_heart - phi_brain)))| of the two series'
 //!   analytic signals in `coupling_lo_hz..coupling_hi_hz`, over samples where both are valid and at
 //!   least `coupling_edge_s` from the ends of the window.
@@ -21,11 +25,9 @@ use crate::types::{Coupling, Measured, Reason};
 
 /// Prepared inputs for one pair of series (window length N, same grid).
 pub struct Prepared {
-    /// Detrended values (0 where invalid).
+    /// Band-passed values (real part of the analytic signal).
     pub hr: Vec<f64>,
-    pub hr_ok: Vec<bool>,
     pub br: Vec<f64>,
-    pub br_ok: Vec<bool>,
     /// Analytic signals, unit phasors (0 where unusable).
     pub hr_ph: Vec<(f64, f64)>,
     pub hr_ph_ok: Vec<bool>,
@@ -33,6 +35,7 @@ pub struct Prepared {
     pub br_ph_ok: Vec<bool>,
 }
 
+/// Returns (band-passed values, unit phasors, usable mask).
 fn prepare_one(x: &[f64], ok: &[bool], fs: f64, lo: f64, hi: f64, edge: usize) -> (Vec<f64>, Vec<(f64, f64)>, Vec<bool>) {
     let n = x.len();
     let mut d = detrend(x, Some(ok));
@@ -51,24 +54,24 @@ fn prepare_one(x: &[f64], ok: &[bool], fs: f64, lo: f64, hi: f64, edge: usize) -
             ph_ok[i] = true;
         }
     }
-    (d, ph, ph_ok)
+    (re, ph, ph_ok)
 }
 
 pub fn prepare(p: &HeartParams, fs: f64, hr: &[f64], hr_ok: &[bool], br: &[f64], br_ok: &[bool]) -> Prepared {
     let edge = (p.coupling_edge_s * fs).round() as usize;
     let (h, hp, hpo) = prepare_one(hr, hr_ok, fs, p.coupling_lo_hz, p.coupling_hi_hz, edge);
     let (b, bp, bpo) = prepare_one(br, br_ok, fs, p.coupling_lo_hz, p.coupling_hi_hz, edge);
-    Prepared { hr: h, hr_ok: hr_ok.to_vec(), br: b, br_ok: br_ok.to_vec(), hr_ph: hp, hr_ph_ok: hpo, br_ph: bp, br_ph_ok: bpo }
+    Prepared { hr: h, br: b, hr_ph: hp, hr_ph_ok: hpo, br_ph: bp, br_ph_ok: bpo }
 }
 
-/// Pearson correlation of hr[i] with br[(i + lag) mod N] over jointly valid samples.
+/// Pearson correlation of band-passed hr[i] with br[(i + lag) mod N] over jointly usable samples.
 /// Returns (r, number of joint samples).
 pub fn correlation_at(pr: &Prepared, lag: usize) -> (f64, usize) {
     let n = pr.hr.len();
     let (mut c, mut sx, mut sy) = (0usize, 0.0, 0.0);
     for i in 0..n {
         let j = (i + lag) % n;
-        if pr.hr_ok[i] && pr.br_ok[j] {
+        if pr.hr_ph_ok[i] && pr.br_ph_ok[j] {
             c += 1;
             sx += pr.hr[i];
             sy += pr.br[j];
@@ -81,7 +84,7 @@ pub fn correlation_at(pr: &Prepared, lag: usize) -> (f64, usize) {
     let (mut sxy, mut sxx, mut syy) = (0.0, 0.0, 0.0);
     for i in 0..n {
         let j = (i + lag) % n;
-        if pr.hr_ok[i] && pr.br_ok[j] {
+        if pr.hr_ph_ok[i] && pr.br_ph_ok[j] {
             let (dx, dy) = (pr.hr[i] - mx, pr.br[j] - my);
             sxy += dx * dy;
             sxx += dx * dx;
@@ -168,6 +171,7 @@ pub fn with_surrogates(
 /// Both coupling measures for one brain series. `seed` is the session seed; the surrogate stream is
 /// derived from it, the series name and the window's end grid index, so it does not depend on
 /// call history.
+#[allow(clippy::too_many_arguments)]
 pub fn couple(
     p: &HeartParams,
     seed: u64,

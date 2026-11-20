@@ -542,7 +542,7 @@ mod tests {
         let phi = (1.0 + 5f64.sqrt()) / 2.0;
         let t = [
             ScoreTrack { id: 1, f: 10.0 / phi, se: 0.02 },
-            ScoreTrack { id: 2, f: 8.0, se: 0.02 },
+            ScoreTrack { id: 2, f: 8.5, se: 0.02 },
             ScoreTrack { id: 3, f: 10.0, se: 0.02 },
             ScoreTrack { id: 4, f: 10.0 * phi, se: 0.02 },
         ];

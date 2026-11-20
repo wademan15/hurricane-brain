@@ -308,10 +308,17 @@ fn ppg_beats_within_15_ms() {
     let got: Vec<_> = frames.iter().flat_map(|f| f.beats.iter().copied()).collect();
     assert!(frames.iter().filter(|f| !f.beats.is_empty()).all(|f| f.source == HeartSource::HeadsetPpg));
     let mut errs = Vec::new();
+    let mut matched = std::collections::BTreeSet::new();
     for b in &got {
-        let tp = peaks.iter().min_by(|x, y| (*x - b.t).abs().total_cmp(&(*y - b.t).abs())).unwrap();
+        let (k, tp) = peaks.iter().enumerate().min_by(|x, y| (x.1 - b.t).abs().total_cmp(&(y.1 - b.t).abs())).unwrap();
+        assert!(matched.insert(k), "two detected beats for one true pulse at {tp}");
         errs.push((b.t - tp) * 1000.0);
     }
+    // Every true pulse after the 4 s start-up and before the 0.75 s latency at the end was found.
+    let last_t = got.last().unwrap().t;
+    let missing: Vec<f64> = peaks.iter().enumerate().filter(|(k, &p)| p > 5.0 && p < last_t && !matched.contains(k)).map(|(_, &p)| p).collect();
+    println!("ppg: first detected beat {:.2} s, last {:.2} s, true pulses missed {:?}", got[0].t, last_t, missing);
+    assert!(missing.is_empty());
     let max_abs = errs.iter().map(|x| x.abs()).fold(0.0, f64::max);
     let mean = errs.iter().sum::<f64>() / errs.len() as f64;
     let expected = peaks.iter().filter(|&&p| p > 5.0 && p < 119.0).count();
@@ -326,7 +333,6 @@ fn ppg_beats_within_15_ms() {
         println!("flagged ppg beat at {:.3} s, ibi {:.1} ms", b.t, b.ibi_ms);
     }
     assert!(max_abs < 15.0, "max error {max_abs} ms");
-    assert!(got.len() >= expected, "missed beats");
     assert!(got.iter().all(|b| !b.flagged));
     // Best channel chosen: channel 2 (the clean one).
     let q = e.ppg_quality();
@@ -434,7 +440,7 @@ fn high_hrv_state_relative_to_baseline() {
     assert!(ex < en);
     assert!(f.high_hrv.active);
     // Entered only after the dwell: first active frame is at least dwell after the first frame above entry.
-    let first_above = frames.iter().find(|f| f.high_hrv.stat.v.map_or(false, |s| s >= en)).unwrap().t;
+    let first_above = frames.iter().find(|f| f.high_hrv.stat.v.is_some_and(|s| s >= en)).unwrap().t;
     let first_active = frames.iter().find(|f| f.high_hrv.active).unwrap().t;
     println!("first above entry {first_above:.2} s, first active {first_active:.2} s");
     assert!(first_active - first_above >= 5.0 - 1e-9);
@@ -524,7 +530,7 @@ fn json_shape_matches_contract() {
 /// Intervals with a breathing rhythm whose rate wanders (rate_hz +- 8%), plus AR noise.
 fn rr_breathing(seed: u64, dur: f64, mean: f64, amp: f64, rate_hz: f64, noise_sd: f64) -> Vec<f64> {
     let mut rng = hb_heart::dsp::Rng::new(seed);
-    let (mut t, mut ph, mut ar) = (0.0, rng.uniform() * 6.28, 0.0);
+    let (mut t, mut ph, mut ar) = (0.0, rng.uniform() * std::f64::consts::TAU, 0.0);
     let mut out = Vec::new();
     while t < dur {
         ar = 0.5 * ar + noise_sd * rng.normal();
@@ -571,4 +577,48 @@ fn breath_estimate_detection_and_false_rates() {
     assert!(fpr < 0.05, "false breath estimates {fpr}");
     assert!(det > 0.8, "breath detection {det}");
     assert!(br_err_max < 1.5);
+}
+
+/// Throughput: one hour with chest strap, 3-channel PPG and 4 brain series. Run with
+/// `cargo test -p hb-heart --release -- --ignored --nocapture throughput`.
+#[test]
+#[ignore]
+fn throughput_one_hour() {
+    let dur = 3600.0;
+    let fs = 64.0;
+    let ibis = rr_series(31, dur, 850.0, 30.0, 0.1, 15.0);
+    let beats = beats_from_ibis(0.0, &ibis);
+    let peaks: Vec<f64> = beats.iter().map(|b| b.0 + 0.2).collect();
+    let sig = ppg_signal(31, &peaks, dur, fs);
+    let mut e = engine(31);
+    let names = ["alpha.above_bg_db@temporal", "theta.above_bg_db@temporal", "alpha.above_bg_db@frontal", "track:1.height_db"];
+    let start = std::time::Instant::now();
+    let (mut bi, mut notif, mut frames) = (0usize, 1.0, 0usize);
+    let n = sig.len() / 3;
+    let mut i = 0;
+    let mut gk = 0usize;
+    while i < n {
+        let k = 16.min(n - i);
+        let tc = i as f64 / fs;
+        while notif <= tc {
+            let mut rr = Vec::new();
+            while bi < beats.len() && beats[bi].0 <= notif {
+                rr.push(beats[bi].1 as f32);
+                bi += 1;
+            }
+            e.push_rr(notif, &rr);
+            notif += 1.0;
+        }
+        while (gk as f64) * 0.25 <= tc {
+            for (j, nm) in names.iter().enumerate() {
+                e.push_brain(gk as f64 * 0.25, nm, Some(((gk + j) as f64 * 0.01).sin()));
+            }
+            gk += 1;
+        }
+        e.push_ppg(tc, &sig[i * 3..(i + k) * 3], 3);
+        frames += e.drain().len();
+        i += k;
+    }
+    let el = start.elapsed().as_secs_f64();
+    println!("one hour processed in {el:.2} s ({:.3} ms per session second), {frames} frames", el * 1000.0 / dur);
 }

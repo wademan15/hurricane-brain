@@ -7,7 +7,7 @@ use crate::dsp::fft::{next_pow2, Fft, C};
 use crate::dsp::special::{chi2_isf, trigamma};
 use crate::m;
 use crate::params::Params;
-use crate::types::{BandMap, BandName, BandSummary, Measured, Reason};
+use crate::types::{BandMap, BandSummary, Measured, Reason};
 
 /// Multitaper estimator with tapers precomputed for every stretch length it accepts.
 #[derive(Clone, Debug)]

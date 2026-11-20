@@ -32,6 +32,7 @@ STAGE_CONFIGS = {
     "S1-P1-analytic": {"spectrum": "S1", "confirm": "P1", "thr_mode": "analytic"},
     "S2-P1": {"spectrum": "S2", "confirm": "P1"},
     "S3-P1": {"spectrum": "S3", "confirm": "P1"},
+    "S1W1-P1": {"spectrum": "S1W1", "confirm": "P1"},
     # confirmation stage (spectrum S1)
     "S1-P2": {"spectrum": "S1", "confirm": "P2"},
     "S1-P3": {"spectrum": "S1", "confirm": "P3"},
@@ -42,7 +43,7 @@ STAGE_CONFIGS = {
     "S1-P1-parabolic": {"spectrum": "S1", "confirm": "P1", "freq": "parabolic"},
 }
 DEFAULT = "S1-P1"
-TUNED_KEYS = ["S1/P1", "S2/P1", "S3/P1", "S1/P2", "S1/P3", "S1/P4"]
+TUNED_KEYS = ["S1/P1", "S2/P1", "S3/P1", "S1W1/P1", "S1/P2", "S1/P3", "S1/P4"]
 
 # deliberately broken builds: each should fail the test named beside it
 BROKEN = {
@@ -231,11 +232,16 @@ def _truth_at(pk, t, span):
     return float(np.mean(tr[a:b])) if a < len(tr) else float(tr[-1])
 
 
-def _match(f, truths, rel=0.05, abs_hz=0.6):
+def _match(f, truths, rel=0.05, abs_hz=0.6, widths=None):
+    """Index of the planted rhythm this frequency belongs to: within 0.6 Hz, 5 %, or 1.5 times the
+    rhythm's own spectral sd (a lump inside a broad rhythm's bump belongs to that rhythm)."""
+    best, bd = None, None
     for k, tf in enumerate(truths):
-        if abs(f - tf) <= max(abs_hz, rel * tf):
-            return k
-    return None
+        tol = max(abs_hz, rel * tf, 1.5 * widths[k] if widths is not None and k < len(widths) else 0.0)
+        d = abs(f - tf)
+        if d <= tol and (bd is None or d < bd):
+            best, bd = k, d
+    return best
 
 
 def _state_summary(res, t_from=40.0):
@@ -280,23 +286,34 @@ def summarize(job, rec, res, clean=None):
     elig = [w for w in win if w["t"] >= 24.0 and not w["null"]]
     false_win = 0
     n_false = 0
+    dup_win = 0
     det = np.zeros((len(truth_peaks), max(len(elig), 1)), bool)
+    widths = [pk["bw"] for pk in truth_peaks]
     for wi, w in enumerate(elig):
         tf = [_truth_at(pk, w["t"], 8) * scale for pk in truth_peaks]
         extra = rec.truth.get("harmonics", [])
         tf_all = tf + list(extra)
+        wd = widths + [m * truth_peaks[0]["bw"] for m in (2, 3)][:len(extra)] if truth_peaks else None
         fw = 0
+        seen = set()
+        dup = 0
         for pk in w.get("peaks", []):
-            m = _match(pk[0], tf_all)
+            m = _match(pk[0], tf_all, widths=wd)
             if m is None:
                 fw += 1
-            elif m < len(tf):
-                det[m, wi] = True
+            else:
+                if m in seen:
+                    dup += 1
+                seen.add(m)
+                if m < len(tf):
+                    det[m, wi] = True
         n_false += fw
         false_win += fw > 0
+        dup_win += dup > 0
     s["n_elig"] = len(elig)
     s["false_peak_windows"] = false_win
     s["false_peaks"] = n_false
+    s["dup_peak_windows"] = dup_win
     s["any_peak_windows"] = sum(1 for w in elig if w.get("peaks"))
     s["det_rate"] = det.mean(axis=1).tolist() if truth_peaks else []
     # integrated frequencies at three late times, for accuracy and calibration
@@ -367,6 +384,7 @@ def summarize(job, rec, res, clean=None):
                         n_marked[mult] += 1
         s["harm_pair_windows"] = n_pair
         s["harm_marked_windows"] = n_marked
+        s["harm_marked_majority"] = {m: (n_marked[m] >= 0.5 * n_pair[m]) if n_pair[m] else None for m in (2, 3)}
     if "harmonic" in str(job.get("kind")) or job["set"] == "B":
         hp_any = sum(1 for w in win if w.get("harmonic"))
         s["windows_with_harmonic_mark"] = hp_any
@@ -428,7 +446,10 @@ def compare_to_clean(rec, res, clean):
     out["recovery"] = [rec_ok, rec_n]
     # G: integrated frequencies vs the clean run at the final window
     dif = []
-    lw, lc = res["windows"][-1], clean["windows"][-1]
+    both = [(w, cw[w["t"]]) for w in res["windows"] if w["t"] in cw and w.get("tracks") and cw[w["t"]].get("tracks")
+            and not w["null"]]
+    lw, lc = both[-1] if both else ({}, {})
+    out["compared_at_t"] = lw.get("t")
     if "tracks" in lw and "tracks" in lc:
         for q in lc["tracks"]:
             m = min(lw["tracks"], key=lambda r: abs(r[1] - q[1]), default=None)
@@ -608,7 +629,7 @@ def run_trackers():
         # delay: +0.5 Hz step at 15 s on a clean, narrow 10 Hz rhythm; mean over seeds; 50 % crossing
         outs = []
         for i in range(10):
-            x, info = make_tracker_signal(TEST_BASE + 95_000 + i, f0=10.0, snr_db=20, bw=0.05, duration=25.0,
+            x, info = make_tracker_signal(TEST_BASE + 95_000 + i, f0=10.0, snr_db=25, bw=0.2, duration=25.0,
                                           step_at=15.0, step_hz=0.5)
             fr, amp = fn(x, 10.0, hw)
             outs.append(fr)
@@ -619,7 +640,7 @@ def run_trackers():
         half = pre + 0.5 * (post - pre)
         idx = np.flatnonzero((tfr >= 15) & (m >= half))
         res["step_delay_ms"] = float((tfr[idx[0]] - 15.0) * 1000) if idx.size else None
-        res["step_measured_hz"] = float(post - pre)
+        res["step_measured_hz"] = float(post - pre)   # true step 0.5 Hz: the ratio is the step gain
         res["us_per_sample"] = 1e6 * t_cost / max(n_samp, 1)
         res["amp_floor_uv"] = floors[name]
         out[name] = res

@@ -170,7 +170,7 @@ impl PpgDetector {
             _ => None,
         };
         if let Some(c) = chosen {
-            if self.quality[c].map_or(true, |q| q < p.ppg_min_quality) {
+            if self.quality[c].is_none_or(|q| q < p.ppg_min_quality) {
                 chosen = None;
             }
         }

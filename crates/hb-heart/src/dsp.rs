@@ -163,7 +163,7 @@ pub fn fft(re: &mut [f64], im: &mut [f64], inverse: bool) {
 pub fn fit_line(x: &[f64], mask: Option<&[bool]>) -> Option<(f64, f64)> {
     let (mut n, mut si, mut sx) = (0.0, 0.0, 0.0);
     for (i, &v) in x.iter().enumerate() {
-        if mask.map_or(true, |m| m[i]) {
+        if mask.is_none_or(|m| m[i]) {
             n += 1.0;
             si += i as f64;
             sx += v;
@@ -175,7 +175,7 @@ pub fn fit_line(x: &[f64], mask: Option<&[bool]>) -> Option<(f64, f64)> {
     let (mi, mx) = (si / n, sx / n);
     let (mut sii, mut six) = (0.0, 0.0);
     for (i, &v) in x.iter().enumerate() {
-        if mask.map_or(true, |m| m[i]) {
+        if mask.is_none_or(|m| m[i]) {
             let di = i as f64 - mi;
             sii += di * di;
             six += di * (v - mx);
@@ -319,7 +319,7 @@ impl Spectrum {
         let mut best: Option<usize> = None;
         for k in (a + 1)..b {
             let p = self.psd[k];
-            if p > self.psd[k - 1] && p >= self.psd[k + 1] && best.map_or(true, |j| p > self.psd[j]) {
+            if p > self.psd[k - 1] && p >= self.psd[k + 1] && best.is_none_or(|j| p > self.psd[j]) {
                 best = Some(k);
             }
         }

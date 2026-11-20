@@ -7,7 +7,7 @@ import { concatBytes, encodeAthenaPacket } from './encoder';
 // Real captures, as text: muse-rs tests/fixtures (Apache-2.0) and OpenMuse tests/test_data (MIT).
 // Each *.ref.json was produced by test/tools/make_reference.py, which decodes every notification
 // with BOTH reference decoders and stores their (agreeing) output.
-const fixtures = import.meta.glob('./fixtures/*.{txt,hex}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const fixtures = import.meta.glob(['./fixtures/*.{txt,hex}', '!./fixtures/SOURCES.txt'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const refs = import.meta.glob('./fixtures/*.ref.json', { import: 'default', eager: true }) as Record<
   string,
   { notifications: { tag: number; counter: number; raw: number[] }[][] }

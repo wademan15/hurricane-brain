@@ -270,14 +270,22 @@ def harmonic_plv(xw, f_lo, f_hi, n_mult, w_lo, rng):
     zh = np.fft.ifft(X * g_hi, axis=1)
     edge = int(0.5 * FS)
     zl, zh = zl[:, edge:-edge], zh[:, edge:-edge]
+    # amplitude-weighted phase locking, pooled over channels: moments where both rhythms are strong
+    # count most, which is where the phase of each is well defined
     ul = (zl / (np.abs(zl) + 1e-12)) ** n_mult
     uh = zh / (np.abs(zh) + 1e-12)
+    al = np.abs(zl) ** n_mult
+    ah = np.abs(zh)
     m = ul.shape[1]
-    plv = float(np.mean(np.abs((uh * np.conj(ul)).mean(axis=1))))
-    null = []
-    for _ in range(19):
-        s = int(rng.integers(int(FS), m - int(FS)))
-        null.append(float(np.mean(np.abs((uh * np.conj(np.roll(ul, s, axis=1))).mean(axis=1)))))
+
+    def _plv(shift):
+        a_l = np.roll(al, shift, axis=1) if shift else al
+        u_l = np.roll(ul, shift, axis=1) if shift else ul
+        w = a_l * ah
+        return float(np.abs((w * uh * np.conj(u_l)).sum()) / max(w.sum(), 1e-12))
+
+    plv = _plv(0)
+    null = [_plv(int(rng.integers(int(FS), m - int(FS)))) for _ in range(19)]
     return plv, float(np.max(null))
 
 
@@ -465,7 +473,7 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
                                 xw = x[cl or used or [0], s0:e]
                             w_lo = width_of.get(ids[a_], 1.0)
                             plv, nul = harmonic_plv(xw, fl[a_], fl[b_], nm, w_lo, rng)
-                            harm_hist.setdefault(key, []).append(plv > max(nul, 0.25))
+                            harm_hist.setdefault(key, []).append(plv > max(nul, 0.2))
                             hh = harm_hist[key][-3:]
                             if sum(hh) >= 2:
                                 harmonic.add((a_, b_))

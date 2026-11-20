@@ -225,6 +225,7 @@ export abstract class BleSource implements DeviceSource {
     const device = this.device!;
     if (!device.gatt) throw new Error('This device has no GATT server.');
     this.setState(this.attempt > 0 ? 'reconnecting' : 'connecting', undefined, this.attempt > 0 ? { attempt: this.attempt } : {});
+    for (const { ch, fn } of this.subscriptions) ch.removeEventListener('characteristicvaluechanged', fn);
     this.subscriptions = [];
     const server = await device.gatt.connect();
     this.server = server;
@@ -241,6 +242,9 @@ export abstract class BleSource implements DeviceSource {
   private handleDisconnect(): void {
     this.stopWatchdog();
     this.teardownConnection();
+    // The same characteristic objects can come back after a reconnect: drop our listeners, or
+    // every notification would be decoded twice.
+    for (const { ch, fn } of this.subscriptions) ch.removeEventListener('characteristicvaluechanged', fn);
     this.subscriptions = [];
     if (this.stopping) return;
     this.pushInput({ type: 'link', slot: this.slot, tUs: this.stamp(), state: 'disconnected' });

@@ -598,8 +598,8 @@ def make_artifact(seed, kind, duration=90.0):
     return rec, rec_clean
 
 
-def make_hard(seed, case, duration=None):
-    """Hard cases of set F."""
+def make_hard(seed, case, duration=None, schedule=None):
+    """Hard cases of set F.  form_dissolve takes an optional schedule [[on, off], ...] in seconds."""
     if case == "form_dissolve":
         duration = duration or 240.0
     duration = duration or 120.0
@@ -651,7 +651,7 @@ def make_hard(seed, case, duration=None):
     elif case == "form_dissolve":
         f_start = rng.uniform(3.6, 4.4)
         freqs = [f_start * PHI ** k for k in range(3)]
-        sched = [[40.0, 110.0], [160.0, 220.0]]
+        sched = schedule or [[40.0, 110.0], [160.0, 220.0]]
         env = np.zeros(n)
         for a, b in sched:
             env += _smooth_step(n, a, b, 1.0)

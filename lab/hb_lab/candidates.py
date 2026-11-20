@@ -177,8 +177,9 @@ def s3_irasa(stretches):
     return base
 
 
-SPECTRA = {"S1": s1_multitaper, "S2": s2_welch, "S3": s3_irasa}
-RESOLUTION = {"S1": 1.0, "S2": 1.0, "S3": 1.0}  # Hz, full width of the estimator's smoothing
+SPECTRA = {"S1": s1_multitaper, "S2": s2_welch, "S3": s3_irasa,
+           "S1W1": lambda st: s1_multitaper(st, 1.0)}   # S1 variant: half-bandwidth 1.0 Hz instead of 0.5
+RESOLUTION = {"S1": 1.0, "S2": 1.0, "S3": 1.0, "S1W1": 2.0}  # Hz, full width of the estimator's smoothing
 
 
 class Composite:
@@ -625,7 +626,7 @@ def pair_stats(x, sx, target, resolved):
     t2_in = np.abs(miss) < lim
     t2_hold = np.abs(miss) < np.minimum(hy * k * sx, hy * eps)
     r = resolved
-    return {"miss": miss, "c": np.where(r, c, 0.0), "lnL": np.where(r, lnL, -np.inf),
+    return {"miss": miss, "c": np.where(r, c, 0.0), "lnL": np.where(r, lnL, -1e6),
             "t1_in": t1_in & r, "t1_hold": t1_hold & r, "t2_in": t2_in & r, "t2_hold": t2_hold & r}
 
 
