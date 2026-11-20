@@ -116,6 +116,9 @@ export const TRAINING_PARAMS = {
   /** Pairings before the first probe makes sense. */
   anchorMinPairingsBeforeProbe: 20,
 
+  /** Eyes-closed minus eyes-open alpha below this (dB) marks a likely low-alpha person (design 5.3). */
+  lowAlphaReactivityDb: 1.0,
+
   // --- Resonance breathing
   resonanceRatesBpm: [6.5, 6.0, 5.5, 5.0, 4.5],
   resonanceMinAdherence: 0.5,

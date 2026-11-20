@@ -1,0 +1,6 @@
+# Blind set (spec 10.2 I): seeds and answers must never be committed.
+blind/
+# Run logs and scratch outputs (the results JSON in out/ is committed deliberately).
+out/*.log
+out/quick*.json
+__pycache__/

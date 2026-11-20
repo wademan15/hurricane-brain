@@ -1,7 +1,7 @@
 /** Stillness and alpha programs (design P1, P2, P3). */
 
 import type { Program } from '../program';
-import { b, COMMON_SOUND, COMMON_VISUAL, F, program, SAFETY, sound, standardSession, standardVariables, visual } from './common';
+import { b, COMMON_SOUND, COMMON_VISUAL, F, program, SAFETY, sound, standardSession, standardVariables } from './common';
 
 const ALPHA_METRIC = {
   id: 'alpha_metric',
