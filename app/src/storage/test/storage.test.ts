@@ -17,8 +17,8 @@ const session = (id: string, recordingId: string | null = null): StoredSession =
     { t: 1, block: null, cells: Object.fromEntries(KEY_COLUMNS.map((c) => [c.id, { v: 1.5, why: 'ok' as const }])) },
     { t: 2, block: 'a, "quoted"', cells: Object.fromEntries(KEY_COLUMNS.map((c) => [c.id, { v: null, why: 'bad_contact' as const }])) },
   ],
-  settings: { audio: DEFAULT_AUDIO_SETTINGS, viz: { quality: 'medium', rampS: 0.5, slowStaleS: 1, heartStaleS: 2.5 }, mains: 'auto', chanceDriver: 'a', engine: { version: 'e1', params: { a: 1 } }, engineOverrides: {}, appVersion: '1.0.0' },
-  completed: true, notes: [],
+  settings: { audio: DEFAULT_AUDIO_SETTINGS, viz: { quality: 'medium', rampS: 0.5, slowStaleS: 1, heartStaleS: 2.5 }, mains: 'auto', chanceDriver: 'a', responseSpeed: 'steady', harmonicsCount: false, reducedMotion: 'system', soundOnly: false, ageGroup: null, engine: { version: 'e1', params: { a: 1 } }, engineOverrides: {}, appVersion: '1.0.0' },
+  completed: true, notes: [], profileId: 'local', cascadeEvents: [], journal: null,
 });
 
 describe('Storage', () => {

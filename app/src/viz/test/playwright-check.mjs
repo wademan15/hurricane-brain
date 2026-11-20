@@ -149,8 +149,6 @@ try {
   await shot('e-combined-readout');
   console.log(`  readout on the eye wall in the combined state: ${await page.locator('.hb-readout h3').textContent()}`);
   await page.keyboard.press('Escape');
-  await page.mouse.click(5, 5);
-  await page.keyboard.press('Escape');
 
   // (f) Reduced motion: the same measured 9.95 Hz rotates much less in 1 s.
   await page.evaluate(() => window.hb.setScenario('static-rot'));

@@ -1,11 +1,9 @@
-import { getStrategy, STATE_METRICS, type SessionRecord } from '../../training';
+import { getStrategy, type SessionRecord } from '../../training';
 import { fmtDuration, numberLine } from '../measured';
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? null : x * 100);
 
 export function BlockTable({ record }: { record: SessionRecord }) {
-  const metric = Object.values(STATE_METRICS);
-  void metric;
   const fields = record.targets.map((t) => t.field).filter((f): f is string => !!f);
   return (
     <div className="table-wrap">
@@ -40,7 +38,6 @@ export function BlockTable({ record }: { record: SessionRecord }) {
               <td>{numberLine(pct(b.successCombined), '%')}</td>
               {fields.map((f) => {
                 const s = b.stats[f];
-                const n = showNumber(s?.mean, '', s && s.sd !== null && s.ess ? s.sd / Math.sqrt(s.ess) : null);
                 return (
                   <td key={f}>
                     {numberLine(s?.mean, '', s && s.sd !== null && s.ess ? s.sd / Math.sqrt(s.ess) : null)}
