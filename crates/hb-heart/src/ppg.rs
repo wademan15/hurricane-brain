@@ -205,7 +205,6 @@ impl PpgDetector {
                 self.recent_amps.clear();
             }
         }
-        if region_end_t > 46.0 && region_end_t < 48.8 { eprintln!("DBG step e_t {:.3} region {:.3}-{:.3} ch {:?} q {:?}", self.anchor_t + e as f64/fs, self.anchor_t + region_start as f64/fs, region_end_t, chosen, self.quality); }
         let reference = if self.recent_amps.len() >= 3 {
             median(&self.recent_amps.iter().copied().collect::<Vec<_>>())
         } else {
@@ -213,7 +212,11 @@ impl PpgDetector {
         };
         let thr = p.ppg_threshold_frac * reference;
 
-        for abs in region_start..region_end {
+        // Look two samples back into the previous region: a peak on the boundary may fail the
+        // local-maximum test in both windows by a rounding-level difference. A peak seen twice is
+        // merged by the refractory logic.
+        let search_start = region_start.saturating_sub(2).max(ws + 1);
+        for abs in search_start..region_end {
             let i = (abs - ws) as usize;
             if i == 0 || i + 1 >= y.len() {
                 continue;
@@ -226,7 +229,6 @@ impl PpgDetector {
             let d = if den != 0.0 { (0.5 * (y0 - y2) / den).clamp(-0.5, 0.5) } else { 0.0 };
             let amp = y1 - 0.25 * (y0 - y2) * d;
             let cand = Candidate { t: self.anchor_t + (abs as f64 + d) / fs, amp };
-            if cand.t > 46.0 && cand.t < 48.5 { eprintln!("DBG cand {:.3} amp {:.3} thr {:.3} pending {:?}", cand.t, amp, thr, self.pending); }
             match self.pending.take() {
                 None => self.pending = Some(cand),
                 Some(pd) => {
