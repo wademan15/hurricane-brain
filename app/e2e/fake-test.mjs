@@ -54,9 +54,9 @@ await page.addInitScript(() => {
 await page.goto(URL);
 await page.waitForLoadState('networkidle');
 // onboarding
-const nameInput = page.locator('input[type=text], input:not([type])').first();
-if (await nameInput.count()) await nameInput.fill('Fake Test').catch(() => {});
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 14; i++) {
+  const nameInput = page.locator('input[type=text], input:not([type])').first();
+  if (await nameInput.count()) { if (!(await nameInput.inputValue().catch(() => 'x'))) await nameInput.fill('Fake Test').catch(() => {}); }
   const next = page.getByRole('button', { name: 'Next' });
   if (await next.count()) { await next.click(); continue; }
   const gs = page.getByRole('button', { name: 'Get started' });
