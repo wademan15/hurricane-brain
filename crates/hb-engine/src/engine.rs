@@ -97,6 +97,11 @@ impl<T: Copy + Default> Ring<T> {
 struct HarmonicMark {
     n: u32,
     marked: bool,
+    /// Phase tests made so far. Until `harmonic_pending_tests` have been made the pair is
+    /// kept out of scoring ("pending").
+    done: u32,
+    /// When the upper track was last inside the harmonic's band.
+    seen_t: f64,
     tests: VecDeque<(f64, C, Option<f64>)>,
 }
 
@@ -108,6 +113,9 @@ pub enum TrackEvent {
     Merged { t: f64, kept: u32, removed: u32 },
     Split { t: f64, from: u32, new: u32 },
     Ended { t: f64, id: u32 },
+    /// A rhythm came back at the place of a track that ended less than `track_resume_s` ago;
+    /// the track continues under its old id.
+    Resumed { t: f64, id: u32 },
 }
 
 /// Counters for testing and the lab comparison. Not part of the frame contract.
@@ -241,6 +249,9 @@ pub struct Engine {
     nonoverlap: u64,
     persist: Vec<VecDeque<(u64, Vec<Peak>)>>,
     tracks: Vec<TrackInt>,
+    /// Tracks that ended within the last `track_resume_s`. Not output. If the rhythm comes
+    /// back at the same place the track continues under its id (spec 6.5).
+    dormant: Vec<TrackInt>,
     next_track_id: u32,
     harmonics: BTreeMap<(u32, u32), HarmonicMark>,
     site_bg: Vec<Option<BgFit>>,
@@ -250,6 +261,10 @@ pub struct Engine {
     states: [StateMachine; 2],
     /// The combined state (both targets active) and when it last changed.
     both: (bool, Option<f64>),
+    /// Samples known to be missing and not yet repaired or voided, and whether the run they
+    /// belong to is already too long to repair.
+    pending_missing: u64,
+    unrepairable: bool,
     held_since: [Vec<Option<f64>>; 2],
     trackers: BTreeMap<u32, (usize, Box<dyn Tracker>)>,
     fast_block_gated: bool,
@@ -390,6 +405,7 @@ impl Engine {
             nonoverlap,
             persist: vec![VecDeque::new(); nsites],
             tracks: Vec::new(),
+            dormant: Vec::new(),
             next_track_id: 1,
             harmonics: BTreeMap::new(),
             site_bg: vec![None; nsites],
@@ -398,6 +414,8 @@ impl Engine {
             chance: ChanceCache::default(),
             states: [StateMachine::default(), StateMachine::default()],
             both: (false, None),
+            pending_missing: 0,
+            unrepairable: false,
             held_since: [Vec::new(), Vec::new()],
             trackers: BTreeMap::new(),
             fast_block_gated: false,
@@ -497,18 +515,55 @@ impl Engine {
                     self.diag.overlap_samples_dropped += skip as u64;
                     start = skip;
                 } else if first_index > next {
-                    let gap = first_index - next;
-                    self.handle_gap(gap, &samples[0..nch]);
+                    // Missing samples: counted here, repaired or voided when the next real
+                    // sample arrives (below).
+                    self.pending_missing = first_index - next;
                 }
             }
         }
+        // Review: a frame in which no channel has a number is a lost sample, however it
+        // reaches the engine: as a jump in the sample index (the device layer) or as a row of
+        // NaN (the lab fixtures, and any source that keeps a fixed grid). Both are the same
+        // gap and get the same repair (spec 3). Before, NaN rows were voided one by one and
+        // never repaired: 1 % packet loss in a fixture voided 67 % of windows.
+        let max_rep = self.p.gap_repair_max_samples as u64;
         let mut kinds = vec![Kind::Valid; nch];
         for k in start..nframes {
             let fr = &samples[k * nch..(k + 1) * nch];
+            if fr.iter().all(|v| !v.is_finite()) {
+                self.pending_missing += 1;
+                if self.pending_missing > max_rep {
+                    // Too long to repair: void it now so that time keeps moving.
+                    let n = self.pending_missing;
+                    self.pending_missing = 0;
+                    self.void_run(n);
+                    self.unrepairable = true;
+                }
+                continue;
+            }
+            if self.pending_missing > 0 {
+                let n = self.pending_missing;
+                self.pending_missing = 0;
+                if self.unrepairable {
+                    self.void_run(n);
+                } else {
+                    self.handle_gap(n, fr);
+                }
+            }
+            self.unrepairable = false;
             for (c, kd) in kinds.iter_mut().enumerate() {
                 *kd = if fr[c].is_finite() { Kind::Valid } else { Kind::Invalid };
             }
             self.ingest(fr, &kinds);
+        }
+    }
+
+    /// Ingest `n` missing samples as invalid.
+    fn void_run(&mut self, n: u64) {
+        let kinds = vec![Kind::Invalid; self.nch];
+        let fr = vec![0.0f32; self.nch];
+        for _ in 0..n {
+            self.ingest(&fr, &kinds);
         }
     }
 
@@ -529,11 +584,7 @@ impl Engine {
                 self.ingest(&fr, &kinds);
             }
         } else {
-            let kinds = vec![Kind::Invalid; nch];
-            let fr = vec![0.0f32; nch];
-            for _ in 0..gap {
-                self.ingest(&fr, &kinds);
-            }
+            self.void_run(gap);
         }
     }
 
@@ -557,7 +608,11 @@ impl Engine {
         let dev = m::sqrt((0..3).map(|k| (a[k] - lp[k]) * (a[k] - lp[k])).sum::<f64>());
         if t - first <= p.gate_reference_s {
             ms.gyro_ref_vals.push(g);
-            ms.gyro_ref = m::median(&ms.gyro_ref_vals);
+            // The resting level is a low quantile, not the median: movement that starts
+            // early then counts as movement instead of setting the reference (bake-off, E).
+            let mut v = ms.gyro_ref_vals.clone();
+            v.sort_by(|a, b| a.total_cmp(b));
+            ms.gyro_ref = m::quantile_sorted(&v, p.motion_ref_quantile.clamp(0.0, 1.0));
         }
         let gthr = p.motion_gyro_min_dps.max(p.motion_gyro_k * ms.gyro_ref.unwrap_or(0.0));
         if g > gthr || dev > p.motion_acc_g {
@@ -774,6 +829,7 @@ impl Engine {
     /// channel's reference level. Runs every fast frame so the artifact flag reacts within
     /// about 30 ms of the evidence; the reference only collects once per slow block.
     fn muscle_detect(&mut self, idx: u64, collect_ref: bool) {
+        let mains = self.mains_list();
         let p = &self.p;
         let rate = self.rate;
         let ref_len = m::round(p.gate_reference_s * rate) as u64;
@@ -802,7 +858,7 @@ impl Engine {
             let (mut s, mut cnt) = (0.0, 0);
             for (kk, v) in buf.iter().enumerate().take(n as usize / 2) {
                 let f = kk as f64 * df;
-                if (30.0..=45.0).contains(&f) {
+                if f >= p.muscle_lo_hz && f <= p.muscle_hi_hz && !spectral::in_mains_zone(f, &mains, p.mains_exclusion_hz) {
                     s += v.norm_sqr();
                     cnt += 1;
                 }
@@ -1572,6 +1628,28 @@ impl Engine {
             if o_tr[oi].is_some() {
                 continue;
             }
+            // Review: a rhythm that waxes and wanes fails persistence for a few seconds and its
+            // track ends. When it comes back at the same place it is the same rhythm: the
+            // track continues, with its window estimates of the last integration time (the
+            // gap simply holds none) and its history. Before, every return was a new track
+            // that started again from one window's uncertainty; on the lab's 120 s cascade
+            // files a planted rhythm went through 3 to 6 ids, and pairs spent most of the
+            // time unresolved.
+            let mut best: Option<(usize, f64)> = None;
+            for (di, d) in self.dormant.iter().enumerate() {
+                let dist = (o.peak.f - d.last_f).abs();
+                if dist <= join_dist(o.peak.se, d.last_se, p) && best.is_none_or(|b| dist < b.1) {
+                    best = Some((di, dist));
+                }
+            }
+            if let Some((di, _)) = best {
+                let mut tr = self.dormant.remove(di);
+                tr.observe(t, o);
+                tr.per_site = vec![None; nsites];
+                self.diag.events.push(TrackEvent::Resumed { t, id: tr.id });
+                born.push(tr);
+                continue;
+            }
             let id = self.next_track_id;
             self.next_track_id += 1;
             let from = cands.iter().find(|c| c.2 == oi).map(|c| self.tracks[c.1].id);
@@ -1589,10 +1667,16 @@ impl Engine {
             }
             if tr.cur.is_none() && t - tr.last_pass_t > p.peak_hold_s {
                 self.diag.events.push(TrackEvent::Ended { t, id: tr.id });
+                if p.track_resume_s > 0.0 {
+                    let mut tr = tr;
+                    tr.f_int = None;
+                    self.dormant.push(tr);
+                }
                 continue;
             }
             keep.push(tr);
         }
+        self.dormant.retain(|d| t - d.last_pass_t <= p.track_resume_s);
         keep.extend(born);
         keep.sort_by_key(|tr| tr.id);
         self.tracks = keep;
@@ -1612,6 +1696,7 @@ impl Engine {
         // surrogate level (None when the upper track is outside the harmonic's band), and
         // whether this one window is decisive.
         let mut tests: Vec<((u32, u32), u32, C, Option<f64>, bool)> = Vec::new();
+        let mut seen: Vec<((u32, u32), u32)> = Vec::new();
         for i in 0..n {
             for j in 0..n {
                 if i == j {
@@ -1633,9 +1718,11 @@ impl Engine {
                 // here: one window's centres are off by more than 3 % for a broad rhythm,
                 // and the phase test below, made at exactly n times the lower frequency,
                 // is what decides.
+                // It is never wider than twice the alignment tolerance in ratio, so a golden
+                // ratio pair (19 % from 2:1) or a 1.8 near miss is not a candidate.
                 let nf = nn as f64;
                 let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df).max(0.5 * nf * pl.width);
-                if (ph.f - nf * pl.f).abs() > tol {
+                if (ph.f - nf * pl.f).abs() > tol || m::ln(r / nf).abs() > 2.0 * p.tolerance {
                     // Out of the harmonic's band: evidence against an existing mark.
                     tests.push(((lo.id, hi.id), nn, C::default(), None, false));
                     continue;
@@ -1656,6 +1743,8 @@ impl Engine {
                         None => continue,
                     },
                 };
+                // In the harmonic's band: the pair is a candidate from now on, tested or not.
+                seen.push(((lo.id, hi.id), nn));
                 let Some((s, len)) = self.joint_run(&[c], end) else { continue };
                 let x = self.signal(&[c], s, len);
                 let sd = (pl.width / 2.3548).max(0.3);
@@ -1684,14 +1773,25 @@ impl Engine {
         // Before, a mark lapsed 2 s after the last decisive window, and a harmonic whose
         // windows locked at 0.4 to 0.6 (under the 0.7 limit, far over the surrogates' 0.2)
         // was credited as an octave pair for most of a recording.
+        let fresh = |nn: u32| HarmonicMark { n: nn, marked: false, done: 0, seen_t: t, tests: VecDeque::new() };
+        for (k, nn) in seen {
+            let e = self.harmonics.entry(k).or_insert_with(|| fresh(nn));
+            if e.n != nn {
+                *e = fresh(nn);
+            }
+            e.seen_t = t;
+        }
         let keep_s = p.integration_s.max(2.0 * p.slow_window_s);
         for (k, nn, z, sur, strong) in tests {
             if sur.is_none() && !self.harmonics.contains_key(&k) {
                 continue;
             }
-            let e = self.harmonics.entry(k).or_insert_with(|| HarmonicMark { n: nn, marked: false, tests: VecDeque::new() });
+            let e = self.harmonics.entry(k).or_insert_with(|| fresh(nn));
             if e.n != nn {
-                *e = HarmonicMark { n: nn, marked: false, tests: VecDeque::new() };
+                *e = fresh(nn);
+            }
+            if sur.is_some() {
+                e.done = e.done.saturating_add(1);
             }
             e.tests.push_back((t, z, sur));
             while e.tests.front().is_some_and(|(t0, _, _)| t - *t0 > keep_s) {
@@ -1722,18 +1822,43 @@ impl Engine {
             }
         }
         let ids: BTreeSet<u32> = self.tracks.iter().map(|t| t.id).collect();
-        self.harmonics.retain(|(a, b), _| ids.contains(a) && ids.contains(b));
+        // A pair that is not marked and has not been in a harmonic's band for a while is no
+        // longer a candidate.
+        let known = |id: &u32| ids.contains(id) || self.dormant.iter().any(|d| d.id == *id);
+        self.harmonics.retain(|(a, b), h| known(a) && known(b) && (h.marked || t - h.seen_t <= keep_s));
     }
 
-    fn harmonic_set(&self) -> BTreeSet<(u32, u32)> {
-        self.harmonics.iter().filter(|(_, h)| h.marked).map(|(&(a, b), _)| if a < b { (a, b) } else { (b, a) }).collect()
+    /// The pairs kept out of octave alignment and cascades (spec 6.6): pairs marked harmonic,
+    /// pairs in a harmonic's band whose phase test has not yet been made often enough to
+    /// say ("pending"), and pairs of two harmonics of one fundamental (2f and 3f are one
+    /// waveform, and their ratio of 1.5 is no relationship between rhythms).
+    fn harmonic_set(&self, p: &Params) -> BTreeSet<(u32, u32)> {
+        let key = |a: u32, b: u32| if a < b { (a, b) } else { (b, a) };
+        let mut out = BTreeSet::new();
+        let mut by_base: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+        for (&(lo, hi), h) in self.harmonics.iter() {
+            if h.marked || (h.done as usize) < p.harmonic_pending_tests {
+                out.insert(key(lo, hi));
+            }
+            if h.marked {
+                by_base.entry(lo).or_default().push(hi);
+            }
+        }
+        for ups in by_base.values() {
+            for (i, a) in ups.iter().enumerate() {
+                for b in &ups[i + 1..] {
+                    out.insert(key(*a, *b));
+                }
+            }
+        }
+        out
     }
 
     #[allow(clippy::type_complexity)]
     fn score(&mut self, t: f64, u: u64, p: &Params) -> (Vec<PairScore>, PhiOctave<Cascade>, States) {
         let mut scored: Vec<ScoreTrack> = self.tracks.iter().filter_map(|tr| tr.f_int.map(|(f, se)| ScoreTrack { id: tr.id, f, se })).collect();
         scored.sort_by(|a, b| a.f.total_cmp(&b.f).then(a.id.cmp(&b.id)));
-        let harm = self.harmonic_set();
+        let harm = self.harmonic_set(p);
         let baselines = self.baselines.clone();
         let mut ctx = ScoreCtx::new(p, &harm, &baselines);
         // Chance A places each surrogate inside the band in force for its real track.

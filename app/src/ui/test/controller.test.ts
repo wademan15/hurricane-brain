@@ -10,7 +10,8 @@ const profile = createProfile('local', '2026-01-01T00:00:00.000Z', 42);
 
 function makeDeps(over: Partial<ControllerDeps> & { settings?: Partial<AppSettings> } = {}) {
   const engines: FakeEngine[] = [];
-  const { audio, calls } = fakeAudio();
+  const audios: ReturnType<typeof fakeAudio>[] = [];
+  const noCalls = fakeAudio().calls;
   const saved = { recordings: [] as { meta: RecordingMeta; bytes: Uint8Array }[], sessions: [] as StoredSession[], finished: 0 };
   const deps: ControllerDeps = {
     createEngine: () => {
@@ -18,7 +19,11 @@ function makeDeps(over: Partial<ControllerDeps> & { settings?: Partial<AppSettin
       engines.push(e);
       return e;
     },
-    createAudio: () => audio,
+    createAudio: () => {
+      const a = fakeAudio();
+      audios.push(a);
+      return a.audio;
+    },
     getSettings: () => ({ ...DEFAULT_APP_SETTINGS, replaySpeed: 'fast', ...(over.settings ?? {}) }),
     getProfile: () => profile,
     persist: {
@@ -33,7 +38,7 @@ function makeDeps(over: Partial<ControllerDeps> & { settings?: Partial<AppSettin
     notifyMs: 0,
     ...over,
   };
-  return { deps, engines, calls, saved, audio };
+  return { deps, engines, audios, get calls() { return audios[0]?.calls ?? noCalls; }, saved };
 }
 
 async function runReplay(c: SessionController, bytes: Uint8Array) {
@@ -53,7 +58,8 @@ describe('SessionController replay path', () => {
         { afterInput: 500, json: { type: 'session_end', id: 's_free', t: 5, completed: true } },
       ],
     });
-    const { deps, engines, calls, saved } = makeDeps();
+    const h = makeDeps();
+    const { deps, engines, saved } = h;
     const c = new SessionController(deps);
     const hubFrames: string[] = [];
     c.hub.subscribe((f) => hubFrames.push(f.kind));
@@ -71,7 +77,7 @@ describe('SessionController replay path', () => {
     expect(saved.sessions).toEqual([]);
     expect(saved.finished).toBe(0);
     // Fast replay has no sound.
-    expect(calls.frames).toBe(0);
+    expect(h.calls.frames).toBe(0);
     expect(c.getState().finished?.mode).toBe('replay');
     expect(c.getState().finished?.kind).toBe('free');
     expect(c.getState().engine).toBe('ready');
@@ -111,10 +117,11 @@ describe('SessionController replay path', () => {
 
   it('plays sound only in real-time replay', async () => {
     const bytes = buildRecording({ seconds: 3, notes: [{ afterInput: 3, json: freeStart }] });
-    const { deps, calls } = makeDeps({ settings: { replaySpeed: 1 } });
+    const h = makeDeps({ settings: { replaySpeed: 1 } });
+    const { deps } = h;
     const c = new SessionController({ ...deps, getSettings: () => ({ ...DEFAULT_APP_SETTINGS, replaySpeed: 'fast', soundOn: true }) });
     await c.startReplay(bytes, { label: 'x', speed: 1 });
-    expect(calls.start).toBe(1);
+    expect(h.calls.start).toBe(1);
     await c.closeReplay();
   });
 
@@ -170,5 +177,184 @@ describe('SessionController live path', () => {
     source.emit('streams', { eeg: { channels: ['TP9', 'AF7', 'AF8', 'TP10'], rate_hz: 256, bits: 12, model: 'Muse 2' }, ppg: null, motion: null, chest_strap: null });
     await vi.waitFor(() => expect(c.getState().engine).toBe('ready'));
     await expect(c.startProgram({ programId: 'hrv_resonance_finding' })).rejects.toThrow(/chest strap/);
+  });
+});
+
+async function connected(h: ReturnType<typeof makeDeps>, source: ManualSource) {
+  const c = new SessionController(h.deps);
+  await c.connectMuse();
+  source.emit('streams', { eeg: { channels: ['TP9', 'AF7', 'AF8', 'TP10'], rate_hz: 256, bits: 12, model: 'Muse 2' }, ppg: null, motion: null, chest_strap: null });
+  await vi.waitFor(() => expect(c.getState().engine).toBe('ready'));
+  return c;
+}
+let nextIndex = 0;
+const feed = (source: ManualSource, chunks: number) => {
+  const chunk = new Float32Array(48).fill(1);
+  for (let i = 0; i < chunks; i++) {
+    source.emit('eeg', { firstIndex: nextIndex, nSamples: 12, nChannels: 4, samples: chunk });
+    nextIndex += 12;
+  }
+};
+
+describe('a second session in the same page load', () => {
+  it('runs end to end after the first one stopped, with every per-session object fresh', async () => {
+    nextIndex = 0;
+    const source = new ManualSource('muse');
+    const h = makeDeps({ museFactory: () => source });
+    const c = await connected(h, source);
+    const e = h.engines[0];
+    // Switch the combined state on for a stretch of each session.
+    e.hook = (f) => (f.t >= 3 && f.t < 6 ? { ...f, states: { ...f.states, phi: { ...f.states.phi, active: true }, octave: { ...f.states.octave, active: true }, both: { active: true, for_s: f.t - 3 } } } : f);
+
+    feed(source, 60); // ~2.8 s
+    await c.startFree();
+    feed(source, 160); // to ~9 s
+    await c.stop();
+    expect(h.audios).toHaveLength(1);
+    const firstAudio = h.audios[0];
+    expect(firstAudio.calls.frames).toBeGreaterThan(0);
+    expect(firstAudio.calls.stop).toBe(1);
+
+    feed(source, 40);
+    await c.startFree();
+    expect(c.getState().session?.kind).toBe('free');
+    const framesBefore = firstAudio.calls.frames;
+    feed(source, 160);
+    await c.stop();
+
+    // The second session got its own audio engine and it received frames; the first was left alone.
+    expect(h.audios).toHaveLength(2);
+    expect(h.audios[1].calls.start).toBe(1);
+    expect(h.audios[1].calls.frames).toBeGreaterThan(10);
+    expect(firstAudio.calls.frames).toBe(framesBefore);
+    expect(h.saved.sessions).toHaveLength(2);
+    const [a, b] = h.saved.sessions;
+    expect(a.id).not.toBe(b.id);
+    // The second session's rows start at its own start time, not before, and carry live values.
+    expect(b.keyRows[0].t).toBeGreaterThanOrEqual(Math.floor(b.tStart));
+    expect(b.keyRows.some((r) => r.cells.alpha_db.v !== null)).toBe(true);
+    expect(b.tStart).toBeGreaterThan(a.tEnd as number);
+    // Both sessions are in the one recording, and each has its own cascade events (none leaked over).
+    const last = h.saved.recordings.at(-1) as { meta: RecordingMeta };
+    expect(last.meta.sessions.map((s) => s.sessionId)).toEqual([a.id, b.id]);
+    expect(a.cascadeEvents.map((x) => x.kind).sort()).toEqual(['both', 'octave', 'phi']);
+    expect(b.cascadeEvents.every((x) => x.tStart >= b.tStart)).toBe(true);
+    expect(a.profileId).toBe('local');
+  });
+});
+
+describe('after a replay ends', () => {
+  it('keeps the connection and the last frames until the person exits, and can play again at another speed', async () => {
+    const bytes = buildRecording({ seconds: 5, notes: [{ afterInput: 3, json: freeStart }, { afterInput: 380, json: { type: 'session_end', id: 's_free', t: 4, completed: true } }] });
+    const h = makeDeps();
+    const c = new SessionController(h.deps);
+    await runReplay(c, bytes);
+    expect(c.getState().replay?.ended).toBe(true);
+    expect(c.getState().link?.kind).toBe('replay');
+    expect(c.getState().finished?.mode).toBe('replay');
+    expect(c.hub.latest().slow).not.toBeNull();
+    const first = h.engines.length;
+    await c.replayAgain(4);
+    await vi.waitFor(() => expect(c.getState().replay?.ended).toBe(true), { timeout: 5000 });
+    expect(h.engines.length).toBe(first + 1);
+    expect(c.getState().replay?.speed).toBe(4);
+    await c.closeReplay();
+    expect(c.getState().link).toBeNull();
+    expect(c.getState().replay).toBeNull();
+  });
+});
+
+describe('settings that reach the engine', () => {
+  it('passes response speed and harmonics as engine parameters, and nothing by default', async () => {
+    nextIndex = 0;
+    const s1 = new ManualSource('muse');
+    const h1 = makeDeps({ museFactory: () => s1 });
+    await connected(h1, s1);
+    expect(h1.engines[0].configs[0].params).toBeUndefined();
+
+    const s2 = new ManualSource('muse');
+    const h2 = makeDeps({ museFactory: () => s2, settings: { responseSpeed: 'quicker', harmonicsCount: true } });
+    await connected(h2, s2);
+    expect(h2.engines[0].configs[0].params).toEqual({ integration_s: 15, exclude_harmonics: false });
+  });
+
+  it('stores them with the session', async () => {
+    nextIndex = 0;
+    const s = new ManualSource('muse');
+    const h = makeDeps({ museFactory: () => s, settings: { responseSpeed: 'slower', reducedMotion: 'on', soundOnly: true, chanceDriver: 'b' } });
+    const c = await connected(h, s);
+    feed(s, 40);
+    await c.startFree();
+    feed(s, 40);
+    await c.stop();
+    const st = h.saved.sessions[0].settings;
+    expect([st.responseSpeed, st.harmonicsCount, st.reducedMotion, st.soundOnly, st.chanceDriver]).toEqual(['slower', false, 'on', true, 'b']);
+    // The sound is told which chance level drives the blooms; no frame is rewritten.
+    expect(h.audios[0].calls.settings.some((x) => (x as { bloomChance?: string }).bloomChance === 'b')).toBe(true);
+  });
+});
+
+describe('journal', () => {
+  it('is saved with the session, fed to the profile hook, and skipping saves nothing', async () => {
+    nextIndex = 0;
+    const s = new ManualSource('muse');
+    const hooks: string[] = [];
+    const h = makeDeps({ museFactory: () => s });
+    h.deps.persist.sessionJournal = async (id, j) => { hooks.push(`${id}:${j.mood}`); };
+    const c = await connected(h, s);
+    feed(s, 40);
+    await c.startFree();
+    feed(s, 40);
+    await c.stop();
+    expect(c.getState().finished?.journalOpen).toBe(true);
+    await c.submitJournal({ note: 'calm', mood: 4, ease: 3, depth: null, tags: ['relaxed'], writtenAt: '2026-03-01T10:00:00.000Z' });
+    const last = h.saved.sessions.at(-1) as StoredSession;
+    expect(last.journal?.note).toBe('calm');
+    expect(last.journal?.depth).toBeNull();
+    expect(hooks).toEqual([`${last.id}:4`]);
+    expect(c.getState().finished?.journalOpen).toBe(false);
+
+    feed(s, 40);
+    await c.startFree();
+    feed(s, 40);
+    await c.stop();
+    const n = h.saved.sessions.length;
+    await c.submitJournal(null);
+    expect(h.saved.sessions.length).toBe(n);
+    expect(c.getState().finished?.journalOpen).toBe(false);
+  });
+});
+
+describe('live stream out', () => {
+  it('sends nothing until the person turns it on, then forwards frames to the address they entered', async () => {
+    nextIndex = 0;
+    const s = new ManualSource('muse');
+    const log: string[] = [];
+    const fake = {
+      connect: (u: string) => log.push(`connect ${u}`),
+      disconnect: () => log.push('disconnect'),
+      on: () => () => {},
+      setStreams: () => {},
+      handleFrame: (f: { kind: string }) => { if (f.kind === 'slow' && !log.includes('frame')) log.push('frame'); },
+      handleEeg: () => { if (!log.includes('eeg')) log.push('eeg'); },
+      handleMarker: () => {},
+      handlePpg: () => {},
+      handleMotion: () => {},
+      handleRr: () => {},
+    };
+    let stream = { enabled: false, url: 'ws://localhost:8765', rawEeg: false };
+    const h = makeDeps({ museFactory: () => s, createStream: () => fake as never });
+    h.deps.getSettings = () => ({ ...DEFAULT_APP_SETTINGS, stream });
+    const c = await connected(h, s);
+    c.applyStreamSettings();
+    feed(s, 40);
+    expect(log).toEqual([]);
+    stream = { enabled: true, url: 'ws://localhost:9000', rawEeg: true };
+    c.applyStreamSettings();
+    feed(s, 40);
+    expect(log).toEqual(['connect ws://localhost:9000', 'eeg', 'frame']);
+    stream = { ...stream, enabled: false };
+    c.applyStreamSettings();
+    expect(log.at(-1)).toBe('disconnect');
   });
 });

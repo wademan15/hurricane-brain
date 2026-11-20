@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { DEFAULT_AUDIO_SETTINGS, mergeSettings, type AudioSettings } from '../../audio/settings';
 import { VIZ_SMOOTHING } from '../../viz';
 import { Button, Card, download, Field, Modal, Note, PageHeader, Segmented } from '../components/kit';
-import { GOLDEN_RATIO_TEXT, HEADPHONES, PRIVACY, WHAT_IT_DOES_NOT_CLAIM } from '../copy';
+import { GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, STORE_DESCRIPTION, WELLNESS, WHAT_IT_DOES_NOT_CLAIM } from '../copy';
+import type { ResponseSpeed } from '../../storage';
 import { fmtBytes } from '../measured';
 import { APP_VERSION } from '../session/controller';
 import { useAsync, useController, useProfile, useServices, useSettings } from '../state/app';
@@ -35,6 +36,16 @@ const LEVELS: Slider[] = [
   { key: 'toneHarmonic2', label: 'Second harmonic (helps small speakers)', min: 0, max: 0.3, step: 0.01, unit: '' },
   { key: 'maxVoices', label: 'Most tones at once', min: 1, max: 8, step: 1, unit: '' },
   { key: 'heartLatencyS', label: 'Heartbeat delay', min: 0, max: 2, step: 0.05, unit: 's', help: 'A beat is played this long after it is detected. Raise it if beats are being dropped.' },
+];
+const BLOOMS: { k: 'phi' | 'octave' | 'both'; label: string; help: string }[] = [
+  { k: 'phi', label: 'Golden ratio state', help: 'A soft doubling of each cascade member when the golden ratio state holds.' },
+  { k: 'octave', label: 'Octave state', help: 'Hollow upper octaves on each member when the octave state holds. It sounds different on purpose.' },
+  { k: 'both', label: 'Both at once', help: 'A slower gathering sound while both states hold together.' },
+];
+const SPEEDS: { value: ResponseSpeed; label: string; cost: string }[] = [
+  { value: 'quicker', label: 'Quicker (15 s)', cost: 'Follows changes sooner, but each reading is less certain: the uncertainty is wider, more pairs come back "unresolved", and the chance level is higher. It cannot make alignment easier to reach.' },
+  { value: 'steady', label: 'Steady (30 s)', cost: 'The default. A slow, steady reading, matched to the slow warming of the sound.' },
+  { value: 'slower', label: 'Slower (60 s)', cost: 'The most certain readings, but it takes about a minute to follow a change, and short alignments are missed.' },
 ];
 const GAINS: { k: keyof AudioSettings['gains']; label: string }[] = [
   { k: 'tones', label: 'Tracking tones' },
@@ -70,6 +81,7 @@ function DataManagement() {
         <dl className="kv">
           <dt>Recordings</dt><dd>{u.recordings} ({fmtBytes(u.recordingBytes)})</dd>
           <dt>Sessions</dt><dd>{u.sessions}</dd>
+          <dt>People</dt><dd>{u.profiles}</dd>
           <dt>Browser storage in use</dt><dd>{u.usedBytes !== null ? `${fmtBytes(u.usedBytes)} of ${u.quotaBytes !== null ? fmtBytes(u.quotaBytes) : 'unknown'}` : 'not reported by this browser'}</dd>
         </dl>
       ) : null}
@@ -80,15 +92,18 @@ function DataManagement() {
         if (!f) return;
         try {
           const p = await storage.importProfileJson(await f.text());
+          const known = pstore.all.get().some((x) => x.profile.userId === p.userId);
           await pstore.put(p);
-          setMsg({ tone: 'ok', text: 'Profile imported. It replaced the profile on this device.' });
+          if (!known) pstore.rename(p.userId, { name: 'Imported person' });
+          pstore.switchTo(p.userId);
+          setMsg({ tone: 'ok', text: known ? 'Profile imported. It replaced that person on this device.' : 'Profile imported as a new person. You can rename them in People.' });
         } catch (err) {
           setMsg({ tone: 'bad', text: err instanceof Error ? err.message : String(err) });
         }
       }} />
       <div className="row">
-        <Button disabled={!profile} onClick={() => profile && download('hurricane-brain-profile.json', storage.exportProfileJson(profile), 'application/json')}>Export profile</Button>
-        <Button onClick={() => fileRef.current?.click()}>Import profile</Button>
+        <Button disabled={!profile} onClick={() => profile && download('hurricane-brain-profile.json', storage.exportProfileJson(profile), 'application/json')}>Export this person's profile</Button>
+        <Button onClick={() => fileRef.current?.click()}>Import a profile</Button>
         <Button variant="danger" onClick={() => setConfirm(true)}>Delete everything</Button>
       </div>
       <p className="small dim">Recordings and session CSV files are exported from History.</p>
@@ -106,6 +121,34 @@ function DataManagement() {
           <input type="text" aria-label="Type DELETE to confirm" value={typed} onChange={(e) => setTyped(e.target.value)} />
         </Modal>
       ) : null}
+    </Card>
+  );
+}
+
+function StreamSettings() {
+  const { settings } = useServices();
+  const cfg = useSettings();
+  const st = useController();
+  const [url, setUrl] = useState(cfg.stream.url);
+  const status = st.stream;
+  return (
+    <Card>
+      <h2>Live stream out</h2>
+      <p className="dim">Off by default. When on, the app sends its live measurements to a program you run on your own computer, at the address you enter below. Data leaves the app only to that address, and only while this is on.</p>
+      <label className="check">
+        <input type="checkbox" checked={cfg.stream.enabled} onChange={(e) => settings.update({ stream: { ...cfg.stream, enabled: e.target.checked, url } })} />
+        <span><strong>Send live data to this address</strong></span>
+      </label>
+      <Field label="Address" hint="A WebSocket address such as ws://localhost:8765.">
+        <input type="text" inputMode="url" autoComplete="off" value={url} onChange={(e) => setUrl(e.target.value)} onBlur={() => settings.update({ stream: { ...cfg.stream, url } })} />
+      </Field>
+      <label className="check">
+        <input type="checkbox" checked={cfg.stream.rawEeg} onChange={(e) => settings.update({ stream: { ...cfg.stream, rawEeg: e.target.checked } })} />
+        <span><strong>Also send the raw signal</strong><div className="small dim">The raw samples from the headset, as well as the engine's measurements.</div></span>
+      </label>
+      <p data-testid="stream-status" className="small">
+        Status: {cfg.stream.enabled ? (status.state === 'open' ? 'connected' : status.state === 'connecting' ? 'connecting' : status.state === 'error' ? `not connected (${status.reason ?? 'unknown reason'})` : 'starting') : 'off'}
+      </p>
     </Card>
   );
 }
@@ -172,6 +215,19 @@ export function Settings() {
             <input type="range" min={0} max={2} step={0.05} value={audio.gains[g.k]} onChange={(e) => settings.updateAudio({ gains: { [g.k]: Number(e.target.value) } })} />
           </Field>
         ))}
+        <h3>Alignment sounds</h3>
+        <p className="small dim">Each state has its own sound. Mute it or set its level. All are on by default. A sound only plays while its state is measured as active.</p>
+        {BLOOMS.map((b) => (
+          <div key={b.k} style={{ marginBottom: 10 }}>
+            <label className="check">
+              <input type="checkbox" checked={audio.blooms[b.k].on} onChange={(e) => settings.updateAudio({ blooms: { [b.k]: { on: e.target.checked } } })} />
+              <span><strong>{b.label}</strong><div className="small dim">{b.help}</div></span>
+            </label>
+            <Field label={`${b.label} level: ${audio.blooms[b.k].level.toFixed(2)}`}>
+              <input type="range" min={0} max={2} step={0.05} value={audio.blooms[b.k].level} disabled={!audio.blooms[b.k].on} onChange={(e) => settings.updateAudio({ blooms: { [b.k]: { level: Number(e.target.value) } } })} />
+            </Field>
+          </div>
+        ))}
         <h3>Breath guide</h3>
         <label className="check">
           <input type="checkbox" checked={!!cfg.audio.breathGuide?.enabled} onChange={(e) => settings.updateAudio({ breathGuide: { enabled: e.target.checked } })} />
@@ -197,9 +253,20 @@ export function Settings() {
         <Field label="Picture quality" hint="Lower is lighter on a phone battery. It changes resolution only, not what is shown.">
           <Segmented label="Picture quality" value={cfg.vizQuality} onChange={(v) => settings.update({ vizQuality: v })} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]} />
         </Field>
-        <Field label="Which chance level drives the hurricane" hint="Chance A places the same number of peaks at random. Chance B shifts each peak's own history in time against the others. A is the default. Both are always shown in the readout.">
+        <Field label="Which chance level drives the hurricane and the sounds" hint="Chance A places the same number of peaks at random. Chance B shifts each peak's own history in time against the others. A is the default. Both are always shown in the readout.">
           <Segmented label="Chance level" value={cfg.chanceDriver} onChange={(v) => settings.update({ chanceDriver: v })} options={[{ value: 'a', label: 'A (default)' }, { value: 'b', label: 'B' }]} />
         </Field>
+        <Field label="Reduced motion" hint="Slower, calmer movement. The default follows your device's setting.">
+          <Segmented label="Reduced motion" value={cfg.reducedMotion} onChange={(v) => settings.update({ reducedMotion: v })} options={[{ value: 'system', label: 'Follow device' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
+        </Field>
+        <label className="check">
+          <input type="checkbox" checked={cfg.soundOnly} onChange={(e) => settings.update({ soundOnly: e.target.checked })} />
+          <span><strong>Sound only: keep the screen dark during sessions</strong><div className="small dim">Sessions start with the screen dark. Tap the screen to look at it.</div></span>
+        </label>
+        <details>
+          <summary>Photosensitivity</summary>
+          <ul>{PHOTOSENSITIVITY.map((t) => <li key={t} style={{ marginBottom: 6 }}>{t}</li>)}</ul>
+        </details>
         <Field label={`Eyes-closed brightness: ${Math.round(cfg.eyesClosedLevel * 100)}%`} hint="How much light stays on the screen in eyes-closed mode. 0 is black.">
           <input type="range" min={0} max={0.5} step={0.01} value={cfg.eyesClosedLevel} onChange={(e) => settings.update({ eyesClosedLevel: Number(e.target.value) })} />
         </Field>
@@ -214,6 +281,23 @@ export function Settings() {
         <Field label="Mains frequency" hint="The electrical supply frequency, removed from the signal. Auto detects it. Applies from the next connection.">
           <Segmented label="Mains frequency" value={String(cfg.mains)} onChange={(v) => settings.update({ mains: v === 'auto' ? 'auto' : (Number(v) as 50 | 60) })} options={[{ value: 'auto', label: 'Auto' }, { value: '50', label: '50 Hz' }, { value: '60', label: '60 Hz' }]} />
         </Field>
+        <Field label="Alignment response speed" hint="Applies from the next session and is stored with it.">
+          <Segmented label="Alignment response speed" value={cfg.responseSpeed} onChange={(v) => settings.update({ responseSpeed: v })} options={SPEEDS.map((x) => ({ value: x.value, label: x.label }))} />
+        </Field>
+        <p className="small dim" data-testid="speed-cost">{SPEEDS.find((x) => x.value === cfg.responseSpeed)?.cost}</p>
+        <label className="check">
+          <input type="checkbox" checked={cfg.harmonicsCount} onChange={(e) => settings.update({ harmonicsCount: e.target.checked })} />
+          <span><strong>Count harmonics toward octave alignment</strong><div className="small dim">Off by default: a peak at exactly twice another is often just its harmonic. If on, harmonic pairs are still marked as harmonic on screen. Applies from the next session.</div></span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={cfg.fitCoaching} onChange={(e) => settings.update({ fitCoaching: e.target.checked })} />
+          <span><strong>Check the headband before every session</strong><div className="small dim">Shows each sensor's contact and waits for a steady signal. You can always skip it.</div></span>
+        </label>
+        {cfg.fitCoaching ? (
+          <Field label={`Seconds of good signal needed: ${cfg.fitHoldS}`}>
+            <input type="range" min={3} max={30} step={1} value={cfg.fitHoldS} onChange={(e) => settings.update({ fitHoldS: Number(e.target.value) })} />
+          </Field>
+        ) : null}
         <Field label="Replay speed">
           <Segmented label="Replay speed" value={String(cfg.replaySpeed)} onChange={(v) => settings.update({ replaySpeed: v === 'fast' ? 'fast' : (Number(v) as 1 | 4) })} options={[{ value: '1', label: 'Real time (with sound)' }, { value: '4', label: '4 times' }, { value: 'fast', label: 'As fast as possible' }]} />
         </Field>
@@ -221,15 +305,25 @@ export function Settings() {
         <EngineParams />
       </Card>
 
+      <StreamSettings />
+
+      <Card>
+        <h2>People</h2>
+        <p className="dim">Everyone who trains on this device has their own calibration, history, signatures and anchors.</p>
+        <a className="btn" href="#/profiles">Manage people</a>
+      </Card>
+
       <DataManagement />
 
       <Card>
         <h2>About</h2>
-        <p>Hurricane Brain {APP_VERSION}. Brainwave and heart biofeedback for Muse headsets and chest straps, in Chrome over Web Bluetooth.</p>
+        <p>Hurricane Brain {APP_VERSION}. {STORE_DESCRIPTION}</p>
+        <Note>{WELLNESS}</Note>
         <h3>What it does not claim</h3>
         <ul>{WHAT_IT_DOES_NOT_CLAIM.map((t) => <li key={t}>{t}</li>)}</ul>
         <h3>Golden ratio alignment</h3>
         <p>{GOLDEN_RATIO_TEXT.measurement}</p>
+        <p>{GOLDEN_RATIO_TEXT.research}</p>
         <p>{GOLDEN_RATIO_TEXT.winter}</p>
         <p>{GOLDEN_RATIO_TEXT.mainstream}</p>
         <p>{GOLDEN_RATIO_TEXT.stance}</p>

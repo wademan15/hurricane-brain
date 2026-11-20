@@ -1,20 +1,25 @@
 import { useRef, useState } from 'react';
 import { getProgram, recommendPrograms } from '../../training';
-import { Badge, Button, Card, Note, PageHeader } from '../components/kit';
+import { Badge, Button, Card, Note, PageHeader, Segmented } from '../components/kit';
 import { deviceText } from '../components/bits';
 import { BLUETOOTH_UNAVAILABLE, WIRED_NOTE } from '../copy';
 import { fmtDateTime, fmtDuration } from '../measured';
-import { useController, useProfile, useServices, useAsync } from '../state/app';
+import { useController, useProfile, useProfileInfo, useServices, useSettings, useAsync } from '../state/app';
+import { useStarter } from '../state/start';
 
 export function Home({ navigate }: { navigate: (to: string) => void }) {
   const { controller, storage } = useServices();
   const st = useController();
   const profile = useProfile();
+  const info = useProfileInfo();
+  const settings = useSettings();
+  const { settings: settingsStore } = useServices();
+  const { begin } = useStarter(navigate);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recs = useAsync(() => storage.listRecordings(), []);
-  const sessions = useAsync(() => storage.listSessions(), [st.finished?.sessionId]);
+  const sessions = useAsync(() => storage.listSessions(profile?.userId), [st.finished?.sessionId, profile?.userId]);
 
   const run = async (name: string, fn: () => Promise<void>) => {
     setBusy(name);
@@ -48,6 +53,10 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
   return (
     <div>
       <PageHeader title="Hurricane Brain" sub="Brainwave and heart biofeedback. Measured values only: when something cannot be measured, the app says so." />
+      <div className="row split" style={{ marginBottom: 12 }}>
+        <span data-testid="active-person">Training as <strong>{info.name}</strong></span>
+        <Button size="small" variant="ghost" onClick={() => navigate('profiles')}>Change person</Button>
+      </div>
 
       {st.session ? (
         <Card>
@@ -126,7 +135,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
       <Card>
         <h2>Start</h2>
         <div className="stack">
-          <Button variant="primary" size="big" block disabled={!ready || busy !== null || !!st.session} onClick={() => run('quick', async () => { await controller.startFree(); navigate('session'); })}>
+          <Button variant="primary" size="big" block disabled={!ready || busy !== null || !!st.session} onClick={() => run('quick', () => begin({ kind: 'free' }))}>
             Quick start: free session
           </Button>
           <p className="small dim">
@@ -156,10 +165,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
               variant="primary"
               disabled={!ready || busy !== null || !!st.session}
               onClick={() =>
-                run('prog', async () => {
-                  await controller.startProgram({ programId: recProgram.id });
-                  navigate('session');
-                })
+                run('prog', () => begin({ kind: 'program', req: { programId: recProgram.id } }))
               }
             >
               Start with defaults
@@ -189,7 +195,14 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
           <Button disabled={busy !== null || !!st.session} onClick={() => fileRef.current?.click()}>
             Open a recording file
           </Button>
+          <Segmented
+            label="Replay speed"
+            value={settings.replaySpeed}
+            onChange={(v) => settingsStore.update({ replaySpeed: v })}
+            options={[{ value: 1, label: '1x with sound' }, { value: 4, label: '4x' }, { value: 'fast', label: 'As fast as possible' }]}
+          />
         </div>
+        <p className="small dim">Faster speeds play without sound.</p>
         {recs.data && recs.data.length ? (
           <div className="stack" style={{ marginTop: 14 }}>
             <h4>Recorded on this device</h4>

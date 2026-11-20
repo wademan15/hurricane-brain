@@ -56,34 +56,3 @@ export class FrameHub implements FrameSource {
     this.latestFrames = { slow: null, slowAt: null, fast: null, heart: null, heartAt: null };
   }
 }
-
-/**
- * The same frames with the golden ratio and octave excess taken from chance B instead of A.
- * This is a field swap, not a calculation. Used only for the hurricane and the sound when the
- * user chooses chance B (open decision D1); the viz and audio layers read `excess_a` only.
- * Caveat (recorded in ui/NOTES.md): the viz tap-to-inspect text still names `excess_a`.
- */
-export function swapToChanceB(f: Frame): Frame {
-  if (f.kind !== 'slow') return f;
-  const c = f.cascades;
-  return {
-    ...f,
-    cascades: {
-      phi: { ...c.phi, excess_a: c.phi.excess_b },
-      octave: { ...c.octave, excess_a: c.octave.excess_b },
-    },
-  };
-}
-
-/** A FrameSource view of a hub, optionally with chance B in place of A. */
-export class ChanceView implements FrameSource {
-  private readonly hub: FrameHub;
-  private readonly driver: () => 'a' | 'b';
-  constructor(hub: FrameHub, driver: () => 'a' | 'b') {
-    this.hub = hub;
-    this.driver = driver;
-  }
-  subscribe(listener: (f: Frame) => void): () => void {
-    return this.hub.subscribe((f) => listener(this.driver() === 'b' ? swapToChanceB(f) : f));
-  }
-}

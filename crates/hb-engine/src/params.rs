@@ -214,6 +214,9 @@ params! {
     /// Integrated frequency: factor on the jackknife error while the estimates span less than
     /// two slow windows and there is no scatter to pool (spec 6.4).
     integration_young_se_factor: f64 = 2.0,
+    /// A track that ended resumes under its id if its rhythm is confirmed again at the same
+    /// place within this many seconds (spec 6.5). 0 turns this off.
+    track_resume_s: f64 = 30.0,
     /// Seconds a track is reported as `new`.
     track_new_s: f64 = 1.0,
     /// Track history kept for chance B, s (memory cap, spec 11).
@@ -241,12 +244,18 @@ params! {
     step_k: f64 = 10.0,
     /// A step on one channel counts as unpartnered if no other channel exceeds this fraction of its threshold.
     step_partner_fraction: f64 = 0.5,
-    /// Muscle: 30-45 Hz power over the reference median, dB.
+    /// Muscle: power in the muscle band over the reference median, dB, and the band, Hz
+    /// (spec 5.3). The band lies above the rhythms the engine tracks, so a strong beta or
+    /// gamma rhythm is not gated as muscle; the bake-off found that it was at 30 to 45 Hz.
     muscle_db: f64 = 6.0,
+    muscle_lo_hz: f64 = 65.0,
+    muscle_hi_hz: f64 = 95.0,
     /// Motion: gyroscope floor, deg/s, multiple of resting level, and accelerometer deviation, g.
     motion_gyro_min_dps: f64 = 10.0,
     motion_gyro_k: f64 = 3.0,
     motion_acc_g: f64 = 0.05,
+    /// Motion: quantile of the gyroscope magnitude over the reference period taken as the resting level.
+    motion_ref_quantile: f64 = 0.25,
     /// Settling time gated after a long gap or a filter change, s.
     gap_settle_s: f64 = 0.5,
     /// Fast path: amplitude floor as a multiple of the background's RMS amplitude in the tracker band.
@@ -266,6 +275,9 @@ params! {
     /// the mark is taken off when that probability is above `harmonic_release_p` (spec 6.6).
     harmonic_alpha: f64 = 0.01,
     harmonic_release_p: f64 = 0.2,
+    /// Harmonics: a pair in a harmonic's band stays out of scoring until this many phase
+    /// tests have been made (3 s at four a second).
+    harmonic_pending_tests: usize = 12,
     /// Phase comparisons: number of time-shifted surrogates and their minimum shift, s.
     compare_shifts: usize = 8,
     compare_min_shift_s: f64 = 1.0,
@@ -282,7 +294,7 @@ params! {
     chance_b_span_s: f64 = 120.0,
     /// Lowest entry threshold of an aligned state, nats of log evidence: the state needs
     /// evidence for the target whatever the chance threshold says (spec 8.4).
-    state_min_evidence: f64 = 1.0,
+    state_min_evidence: f64 = 2.0,
     /// Excess alignment is zero unless the observed cascade beats all but this fraction of
     /// the surrogates (spec 8.5).
     excess_level: f64 = 0.05,

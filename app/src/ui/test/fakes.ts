@@ -8,7 +8,7 @@ import type { AudioEngine } from '../../audio';
 import { synthClassic } from '../../device/test/synth';
 import { LinkRecorder } from '../session/linkRecorder';
 import type { EngineClient } from '../../engine/client';
-import type { EngineConfig, Frame, Marker } from '../../engine/frames';
+import type { EngineConfig, Frame, Marker, SlowFrame } from '../../engine/frames';
 import { fastFrame, slowFrame } from '../../training/test-fixtures';
 import type { DeviceEventName, DeviceInput, DeviceSource, Listener } from '../../device';
 
@@ -26,6 +26,8 @@ export class FakeEngine implements EngineClient {
   private channels = 4;
   /** Frame times in the order frames were emitted (for determinism checks). */
   emitted: number[] = [];
+  /** Lets a test shape the slow frames (for example to switch a state on for a while). */
+  hook: ((f: SlowFrame) => SlowFrame) | null = null;
 
   async init(config: EngineConfig): Promise<void> {
     this.configs.push(config);
@@ -39,7 +41,8 @@ export class FakeEngine implements EngineClient {
     const tEnd = (firstIndex + n) / 256;
     while (this.nextFrameT <= tEnd) {
       const t = this.nextFrameT;
-      this.emit(slowFrame(t, { bands: { alpha: 3, theta: 1, beta: 0 }, alphaTrack: { freq: 10, height: 8 }, phiExcess: 0.2, octaveExcess: 0.1, phiSteps: 1 }));
+      const slow = slowFrame(t, { bands: { alpha: 3, theta: 1, beta: 0 }, alphaTrack: { freq: 10, height: 8 }, phiExcess: 0.2, octaveExcess: 0.1, phiSteps: 1 });
+      this.emit(this.hook ? this.hook(slow) : slow);
       this.emit(fastFrame(t, { alphaHeight: 8, alphaFreq: 10 }));
       this.nextFrameT += 0.25;
     }

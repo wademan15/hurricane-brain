@@ -51,7 +51,7 @@ export function slowFrame(t: number, s: SlowSpec = {}): SlowFrame {
     quality: ['TP9', 'AF7', 'AF8', 'TP10'].map((name) => ({ name, usable, why: usable ? 'ok' : 'bad_contact', mains_uv: 1, sd_uv: 10, railed: 0, emg_db: s.emgDb ?? 0, clean_fraction: s.cleanFraction ?? 1, artifacts: s.artifacts ?? [] })),
     spectra, tracks, dominant: tracks[0]?.id ?? null, pairs: [],
     cascades: { phi: cascade('phi', s.phiExcess ?? 0, s.phiSteps ?? 0), octave: cascade('octave', s.octaveExcess ?? 0, 0) },
-    states: { phi: { target: 'phi', active: false, for_s: 0, stat: M(0), enter_at: 1, exit_at: 0.5 }, octave: { target: 'octave', active: false, for_s: 0, stat: M(0), enter_at: 1, exit_at: 0.5 } },
+    states: { phi: { target: 'phi', active: false, for_s: 0, stat: M(0), enter_at: 1, exit_at: 0.5 }, octave: { target: 'octave', active: false, for_s: 0, stat: M(0), enter_at: 1, exit_at: 0.5 }, both: { active: false, for_s: 0 } },
     hemispheres: s.hemiMatch !== undefined && tracks.length ? [{ track: tracks[0].id, freq_diff: M(0), balance: M(0), locking_excess: M(0.2), match: M(s.hemiMatch) }] : [],
     front_back: [], mains_hz: 50, iaf_hz: null,
     band_edges: { delta: [1, 4], theta: [4, 8], alpha: [8, 13], beta: [13, 30], gamma: [30, 45] },

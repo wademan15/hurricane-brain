@@ -1,7 +1,7 @@
 {
   "name": "Hurricane Brain",
   "short_name": "Hurricane Brain",
-  "description": "Brainwave and heart biofeedback. Measured values only. Everything stays on your device.",
+  "description": "Brainwave and heart biofeedback for Muse headbands and the Polar H10. Wellness and self-exploration, not a medical device. Everything stays on your device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

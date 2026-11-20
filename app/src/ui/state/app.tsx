@@ -8,16 +8,19 @@ import { createEngineClient } from '../../engine';
 import { createStorage, type AppSettings, type Storage } from '../../storage';
 import type { UserProfile } from '../../training';
 import { SessionController } from '../session/controller';
-import { ChanceView } from '../session/hub';
-import { ProfileStore, SettingsStore, profileAfterSession, profileWithJournal, type ProfileEntry } from './stores';
+import type { FrameHub } from '../session/hub';
+import type { PendingStart } from './start';
+import { ProfileStore, Store, SettingsStore, profileAfterSession, profileWithJournal, type ProfileEntry } from './stores';
 
 export interface Services {
   controller: SessionController;
   storage: Storage;
   settings: SettingsStore;
   profile: ProfileStore;
-  /** The hub as the hurricane and spectrum see it (chance A or B). */
-  view: ChanceView;
+  /** Frames as the hurricane and spectrum read them. */
+  view: FrameHub;
+  /** A session waiting on the get-ready (fit coaching) screen. */
+  pending: Store<PendingStart | null>;
 }
 
 export async function createServices(storage: Storage = createStorage()): Promise<Services> {
@@ -52,8 +55,8 @@ export async function createServices(storage: Storage = createStorage()): Promis
     last = now;
   });
   controller.applyStreamSettings();
-  const view = new ChanceView(controller.hub, () => settings.get().chanceDriver);
-  return { controller, storage, settings, profile, view };
+  const view = controller.hub;
+  return { controller, storage, settings, profile, view, pending: new Store<PendingStart | null>(null) };
 }
 
 export const ServicesContext = createContext<Services | null>(null);

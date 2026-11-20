@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Button, Icon, Toast } from './ui/components/kit';
 import { useServices } from './ui/state/app';
 import { FitCheck } from './ui/screens/FitCheck';
@@ -5,6 +6,8 @@ import { Discover } from './ui/screens/Discover';
 import { HistoryDetail, HistoryList } from './ui/screens/History';
 import { Home } from './ui/screens/Home';
 import { Onboarding } from './ui/screens/Onboarding';
+import { Profiles } from './ui/screens/Profiles';
+import { Ready } from './ui/screens/Ready';
 import { ProgramDetail, ProgramList } from './ui/screens/Programs';
 import { Session } from './ui/screens/Session';
 import { Settings } from './ui/screens/Settings';
@@ -28,6 +31,17 @@ export function App() {
   const st = useController();
   const { controller } = useServices();
   const section = path[0] ?? 'home';
+  // Reduced motion also applies to the shell (the picture has its own `motion` prop).
+  useEffect(() => {
+    const q = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const apply = () => {
+      const reduced = settings.reducedMotion === 'on' || (settings.reducedMotion === 'system' && !!q?.matches);
+      document.documentElement.dataset.motion = reduced ? 'reduced' : 'full';
+    };
+    apply();
+    q?.addEventListener?.('change', apply);
+    return () => q?.removeEventListener?.('change', apply);
+  }, [settings.reducedMotion]);
 
   if (!settings.onboarded || !profile) {
     return <Onboarding onDone={() => navigate('home')} />;
@@ -38,6 +52,12 @@ export function App() {
   switch (section) {
     case 'session':
       screen = <Session navigate={navigate} />;
+      break;
+    case 'ready':
+      screen = <Ready navigate={navigate} />;
+      break;
+    case 'profiles':
+      screen = <Profiles navigate={navigate} />;
       break;
     case 'fit':
       screen = <FitCheck navigate={navigate} />;

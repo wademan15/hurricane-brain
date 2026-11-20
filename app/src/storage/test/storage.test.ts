@@ -125,3 +125,50 @@ describe('CSV export', () => {
     expect(row1[1]).toBe('ok');
   });
 });
+
+describe('journal, events and older sessions', () => {
+  it('saves a journal with the session and gives older sessions safe defaults', async () => {
+    const st = new Storage(new MemoryBackend());
+    const old = session('old') as Partial<StoredSession>;
+    delete old.profileId;
+    delete old.cascadeEvents;
+    delete old.journal;
+    await st.saveSession(old as StoredSession);
+    const back = await st.getSession('old');
+    expect(back?.profileId).toBe('local');
+    expect(back?.cascadeEvents).toEqual([]);
+    expect(back?.journal).toBeNull();
+    const j = { note: 'calm, a bit sleepy', mood: 4, ease: 5, depth: null, tags: ['relaxed'], writtenAt: '2026-03-01T11:00:00.000Z' };
+    await st.saveJournal('old', j);
+    expect((await st.getSession('old'))?.journal).toEqual(j);
+    expect(await st.saveJournal('missing', j)).toBeNull();
+  });
+
+  it('exports cascade events, the journal and the new per-second columns in the CSV', () => {
+    const ev = {
+      kind: 'both' as const, tStart: 10, tEnd: 40, durationS: 30,
+      parts: [
+        { target: 'phi' as const, members: [{ id: 2, band: 'theta', freqHz: { v: 7.44, why: 'ok' as const } }, { id: 1, band: 'alpha', freqHz: { v: 12.04, why: 'ok' as const } }], steps: 1, maxSteps: 2, ratios: [{ v: 1.618, why: 'ok' as const }], closeness: { v: 0.9, why: 'ok' as const }, chanceA: { v: 0.4, why: 'ok' as const }, chanceB: { v: null, why: 'warming_up' as const }, pA: { v: 0.02, why: 'ok' as const }, excessA: { v: 0.8, why: 'ok' as const }, excessB: { v: null, why: 'warming_up' as const } },
+        { target: 'octave' as const, members: [], steps: 0, maxSteps: 1, ratios: [], closeness: { v: null, why: 'unresolved' as const }, chanceA: { v: null, why: 'no_data' as const }, chanceB: { v: null, why: 'no_data' as const }, pA: { v: null, why: 'no_data' as const }, excessA: { v: null, why: 'no_data' as const }, excessB: { v: null, why: 'no_data' as const } },
+      ],
+    };
+    const s = { ...session('a'), cascadeEvents: [ev], journal: { note: 'said "hello", then slept', mood: 3, ease: null, depth: 2, tags: ['a', 'b'], writtenAt: '2026-03-01T11:00:00.000Z' }, settings: { ...session('a').settings, responseSpeed: 'quicker' as const, harmonicsCount: true } };
+    const csv = new Storage(new MemoryBackend()).sessionCsv(s);
+    expect(csv).toContain('# alignment response speed,quicker');
+    expect(csv).toContain('# harmonics count toward octave alignment,true');
+    expect(csv).toContain('# journal');
+    expect(csv).toContain('"said ""hello"", then slept",3,,2,a; b');
+    expect(csv).toContain('# cascade events');
+    const row = csv.split('\r\n').find((l) => l.startsWith('both,10,40,30'));
+    expect(row).toBeDefined();
+    expect(row).toContain('theta > alpha');
+    expect(row).toContain('7.440 > 12.040');
+    expect(row).toContain('1.618');
+    // Octave closeness was not measured: the cell is empty and says why.
+    expect(row).toContain('unresolved');
+    for (const col of ['at_ratio', 'at_miss_2', 'at_miss_3', 'at_miss_phi', 'phi_active', 'both_active', 'both_for_s', 'sdnn_ms', 'lf_power', 'resonance_hz']) {
+      expect(csv).toContain(`${col} [`);
+      expect(csv).toContain(`${col}_why`);
+    }
+  });
+});

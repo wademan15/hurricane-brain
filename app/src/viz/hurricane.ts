@@ -167,23 +167,27 @@ void main() {
     // becomes one shared, warm ring. Beads ride on the arms, so they pass a point no faster than arms.
     float beads = 0.0;
     if (u_both > 0.0) {
-      float armCore = smoothstep(0.55, 1.0, armShape / max(smoothstep(EYE_R * 0.8, EYE_WALL_R * 1.8, r), 1e-3));
-      beads = u_both * ringShape * armCore * smoothstep(0.0, 0.3, armShape);
+      // Arm centre lines only (normalised arm profile above 0.7), times the sharp ring profile.
+      float armCore = smoothstep(0.7, 1.0, armShape / max(smoothstep(EYE_R * 0.8, EYE_WALL_R * 1.8, r), 1e-3));
+      float ringCore = gauss((r - ${f(G.RING_RADII[0])}) / (RING_W * 0.8)) + gauss((r - ${f(G.RING_RADII[1])}) / (RING_W * 0.8))
+                     + gauss((r - ${f(G.RING_RADII[2])}) / (RING_W * 0.8));
+      beads = u_both * ringCore * armCore * smoothstep(0.0, 0.25, armShape);
     }
 
     // The eye: clears with the cascade's measured hold time. The eye wall carries the heartbeat.
     float eyeMask = 1.0 - u_eye * (1.0 - smoothstep(EYE_R * 0.5, EYE_R * 1.05, r));
     float wall = gauss((r - EYE_WALL_R) / 0.032);
     float wallV = wall * (0.5 * u_eye * (0.8 + 0.3 * detail) + PULSE_GAIN * u_pulse);
-    float sharedWall = gauss((r - EYE_WALL_R) / 0.045) * u_bothEye * u_both;
+    // Shared eye wall: one broad warm ring, plus a soft glow filling the eye (still, no motion).
+    float sharedWall = (gauss((r - EYE_WALL_R) / 0.04) + 0.35 * gauss(r / EYE_WALL_R)) * u_bothEye * u_both;
 
     float cloud = (arms + bands * 0.85) * eyeMask;
     float cc = clamp(cloud, 0.0, 1.0);
     vec3 cloudCol = mix(u_cCloudD, u_cCloudL, cc);
     col = water * (1.0 - 0.6 * cc) + cloudCol * cloud * 0.8;
     col += mix(u_cRing, u_cBoth, 0.5 * u_both) * ringv * 0.55;
-    col += u_cBoth * beads * 0.9;
-    col += u_cBoth * sharedWall * 0.9;
+    col += u_cBoth * beads * 1.8;
+    col += u_cBoth * sharedWall * 1.5;
     col += mix(u_cWall, u_cPulse, clamp(u_pulse, 0.0, 1.0)) * wallV * 0.7;
   }
 

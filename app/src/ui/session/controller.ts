@@ -513,7 +513,7 @@ export class SessionController {
     if (!program) throw new Error(`unknown program '${req.programId}'`);
     this.checkRequirements(program.requires, link);
     const now = this.now();
-    const sessionId = newSessionId(now, () => this.rand(), program.id);
+    const sessionId = this.nextSessionId(now, program.id);
     const headset = this.state.muse.name ?? link.streams.eeg?.model ?? null;
     const spec = prepareProgramSession(req, { profile, startedAtIso: now.toISOString(), sessionId, headset, engine: this.state.engineInfo ?? { version: null, params: null } });
     await this.beginSession(link, spec, sessionId, 'live');
@@ -522,7 +522,13 @@ export class SessionController {
   async startFree(): Promise<void> {
     const link = this.requireLive();
     const now = this.now();
-    await this.beginSession(link, freeSessionSpec(), newSessionId(now, () => this.rand(), null), 'live');
+    await this.beginSession(link, freeSessionSpec(), this.nextSessionId(now, null), 'live');
+  }
+
+  /** A session id that cannot repeat within this page load, whatever the clock and the random source do. */
+  private sessionCount = 0;
+  private nextSessionId(now: Date, programId: string | null): string {
+    return `${newSessionId(now, () => this.rand(), programId)}_${++this.sessionCount}`;
   }
 
   private requireLive(): Link {

@@ -134,3 +134,15 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
 .steps li { counter-increment: step; position: relative; padding: 0 0 14px 44px; min-height: 36px; }
 .steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-weight: 700; }
+
+/* journal and tag buttons */
+.ratebtns-light button { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+.ratebtns-light button[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tag-btn { min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border: var(--border-w) solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; cursor: pointer; }
+.tag-btn[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+textarea { resize: vertical; }
+.person { display: flex; gap: var(--space-3); align-items: center; }
+.person .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-weight: 700; flex: none; }
+.person[aria-current='true'] .avatar { background: var(--accent); color: var(--accent-ink); }
+.live-banner { background: var(--live-chip-bg); border: var(--border-w) solid var(--live-control-on-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-2); }
+.live-sub { color: var(--live-dim); }

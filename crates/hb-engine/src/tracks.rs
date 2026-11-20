@@ -110,7 +110,10 @@ impl TrackInt {
         let n = self.win.len() as f64;
         let fm = self.win.iter().map(|w| w.1).sum::<f64>() / n;
         let span = self.win.back().unwrap().0 - self.win.front().unwrap().0;
-        let n_eff = ((span + window_s) / window_s).min(n).max(1.0);
+        // Independent windows behind the estimates: the span in windows, but no more than
+        // the time actually covered (a track that paused and resumed has a hole in its span).
+        let covered = n * p.slow_update_s;
+        let n_eff = ((span + window_s) / window_s).min((covered + window_s) / window_s).min(n).max(1.0);
         let v1 = self.win.iter().map(|w| w.2 * w.2).sum::<f64>() / n / n_eff;
         let var = if n_eff >= 2.0 {
             let v2 = self.win.iter().map(|w| (w.1 - fm) * (w.1 - fm)).sum::<f64>() / n / (n_eff - 1.0);

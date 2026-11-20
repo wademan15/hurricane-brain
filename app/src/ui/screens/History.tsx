@@ -2,17 +2,21 @@ import { useRef, useState } from 'react';
 import { readRecording } from '../../device';
 import { KEY_COLUMNS, type RecordingMeta, type StoredSession } from '../../storage';
 import { BlockTable } from '../components/BlockTable';
+import { CascadeEventLog } from '../components/Cascades';
+import { JournalForm, JournalView } from '../components/Journal';
 import { KeyChart } from '../components/KeyChart';
 import { Badge, Button, Card, download, Modal, Note, PageHeader } from '../components/kit';
 import { fmtBytes, fmtDateTime, fmtDuration } from '../measured';
-import { useAsync, useController, useServices } from '../state/app';
+import { useAsync, useController, useProfile, useServices } from '../state/app';
+import { profileWithJournal } from '../state/stores';
 
-const CHARTS = ['alpha_db', 'theta_db', 'phi_closeness', 'phi_excess_a', 'oct_excess_a', 'hr_bpm', 'rmssd_ms', 'clean_fraction', 'reward'];
+const CHARTS = ['alpha_db', 'theta_db', 'phi_closeness', 'phi_excess_a', 'oct_closeness', 'oct_excess_a', 'both_active', 'at_ratio', 'hr_bpm', 'rmssd_ms', 'clean_fraction', 'reward'];
 
 export function HistoryList({ navigate }: { navigate: (to: string) => void }) {
   const { storage, controller } = useServices();
   const st = useController();
-  const sessions = useAsync(() => storage.listSessions(), []);
+  const profile = useProfile();
+  const sessions = useAsync(() => storage.listSessions(profile?.userId), [profile?.userId]);
   const recs = useAsync(() => storage.listRecordings(), []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,9 +102,11 @@ export function HistoryList({ navigate }: { navigate: (to: string) => void }) {
 }
 
 export function HistoryDetail({ id, navigate }: { id: string; navigate: (to: string) => void }) {
-  const { storage, controller } = useServices();
+  const { storage, controller, profile: profileStore } = useServices();
   const st = useController();
+  const profile = useProfile();
   const q = useAsync<StoredSession | null>(() => storage.getSession(id), [id]);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const s = q.data;
@@ -137,6 +143,35 @@ export function HistoryDetail({ id, navigate }: { id: string; navigate: (to: str
         <Button disabled={!s.recordingId} onClick={() => void exportRecording()}>Export recording</Button>
         <Button variant="danger" onClick={() => setConfirm(true)}>Delete</Button>
       </div>
+
+      <Card>
+        <h2>Golden ratio, octave and both at once</h2>
+        <p className="small dim">Each stretch in which the state held, from the engine's own frames, with the chance level alongside. The published research tested 2:1 and 3:1; golden ratio alignment is this app's own hypothesis.</p>
+        <CascadeEventLog events={s.cascadeEvents} tStart={s.tStart} />
+      </Card>
+
+      <Card>
+        <div className="row split">
+          <h2>Your journal</h2>
+          {!journalOpen ? <Button size="small" onClick={() => setJournalOpen(true)}>{s.journal ? 'Edit' : 'Write an entry'}</Button> : null}
+        </div>
+        {journalOpen ? (
+          <JournalForm
+            nowIso={() => new Date().toISOString()}
+            onSkip={() => setJournalOpen(false)}
+            onSave={async (j) => {
+              await storage.saveJournal(s.id, j);
+              if (profile && profile.userId === s.profileId) await profileStore.put(profileWithJournal(profile, s.id, j));
+              setJournalOpen(false);
+              q.reload();
+            }}
+          />
+        ) : s.journal ? (
+          <JournalView journal={s.journal} />
+        ) : (
+          <p className="dim">No journal entry for this session.</p>
+        )}
+      </Card>
 
       {rec ? (
         <Card>
@@ -183,7 +218,12 @@ export function HistoryDetail({ id, navigate }: { id: string; navigate: (to: str
           <dl className="kv">
             <dt>Engine</dt><dd>{s.settings.engine.version ?? 'version not recorded'}</dd>
             <dt>Mains</dt><dd>{String(s.settings.mains)}</dd>
-            <dt>Chance level driving the hurricane</dt><dd>{s.settings.chanceDriver.toUpperCase()}</dd>
+            <dt>Chance level driving the hurricane and blooms</dt><dd>{s.settings.chanceDriver.toUpperCase()}</dd>
+            <dt>Alignment response speed</dt><dd>{s.settings.responseSpeed ?? 'steady'}</dd>
+            <dt>Harmonics count toward octave alignment</dt><dd>{s.settings.harmonicsCount ? 'yes' : 'no'}</dd>
+            <dt>Reduced motion</dt><dd>{s.settings.reducedMotion ?? 'system'}</dd>
+            <dt>Sound only (screen dark)</dt><dd>{s.settings.soundOnly ? 'yes' : 'no'}</dd>
+            <dt>Age group</dt><dd>{s.settings.ageGroup ?? 'not said'}</dd>
             <dt>Visual smoothing</dt><dd>ramp {s.settings.viz.rampS} s, slow frames stale after {s.settings.viz.slowStaleS} s</dd>
             <dt>Pitch smoothing</dt><dd>{s.settings.audio.pitchTauS} s</dd>
             <dt>Loudness smoothing</dt><dd>{s.settings.audio.toneLoudnessTauS} s</dd>

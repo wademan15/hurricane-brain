@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { getProgram } from '../../training';
 import type { ProgramRequest } from '../session/plan';
-import { useController, useServices } from '../state/app';
+import { useController } from '../state/app';
+import { useStarter } from '../state/start';
 import { Button, Note } from './kit';
 
 /** Starts a program with the profile's defaults, or says exactly why it cannot start. */
 export function StartButton({ req, navigate, children, variant = 'primary' }: { req: ProgramRequest; navigate: (to: string) => void; children: ReactNode; variant?: 'primary' | 'default' }) {
-  const { controller } = useServices();
+  const { begin } = useStarter(navigate);
   const st = useController();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,8 +25,7 @@ export function StartButton({ req, navigate, children, variant = 'primary' }: { 
           setBusy(true);
           setError(null);
           try {
-            await controller.startProgram(req);
-            navigate('session');
+            await begin({ kind: 'program', req });
           } catch (e) {
             setError(e instanceof Error ? e.message : String(e));
           } finally {

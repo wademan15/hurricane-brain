@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { slowFrame } from '../../training/test-fixtures';
 import type { Measured } from '../../engine/frames';
 import { fmtDuration, measuredLine, NOT_MEASURED, reasonPlain, showMeasured, showNumber, summarizeSignal } from '../measured';
-import { swapToChanceB } from '../session/hub';
 
 describe('null display', () => {
   it('a null value is "not measured" with its reason, never 0 and never a number', () => {
@@ -54,7 +53,7 @@ describe('null display', () => {
   });
 
   it('durations that are not known are not shown as 0:00', () => {
-    expect(fmtDuration(null)).toBe(NOT_MEASURED);
+    expect(fmtDuration(null)).toMatch(/^not measured \(/);
     expect(fmtDuration(125)).toBe('2:05');
   });
 });
@@ -73,15 +72,5 @@ describe('signal summary', () => {
     const s = summarizeSignal(null);
     expect(s.level).toBe('none');
     expect(s.text).toMatch(/not measured/);
-  });
-});
-
-describe('chance B view', () => {
-  it('swaps the field read without computing anything', () => {
-    const f = slowFrame(1, { phiExcess: 0.3 });
-    f.cascades.phi.excess_b = { v: 0.9, se: null, why: 'ok' };
-    const g = swapToChanceB(f);
-    expect(g.kind === 'slow' && g.cascades.phi.excess_a.v).toBe(0.9);
-    expect(f.cascades.phi.excess_a.v).toBe(0.3); // the original frame is untouched
   });
 });

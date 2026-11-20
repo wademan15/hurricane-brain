@@ -10,10 +10,11 @@ Things the visualizer needs from other roles. The visualizer does not edit these
    - `VIZ_SMOOTHING.RAMP_S` 0.5 s: the declared smoothing between a measurement and the picture (rule 2.8).
    - `VIZ_SMOOTHING.SLOW_STALE_S` 1.0 s and `HEART_STALE_S` 2.5 s: when the picture treats frames as no data.
    - `VIZ_SMOOTHING.PULSE_S` 0.6 s and `PULSE_MIN_INTERVAL_S` 0.34 s: the heartbeat pulse.
-   - `VIZ_MAPPING.*`: rotation rate per Hz, dB for full brightness, pitch range, eye hold time constant,
-     symmetry offset, swell amplitude, pulse gain.
-2. **Open decision D1.** The winding reads `cascades.phi.excess_a` (chance A) and the ring reads
-   `cascades.octave.excess_a`, as the spec recommends. If D1 goes the other way, only those two reads change.
+   - `VIZ_MAPPING.*`: rotation rate per Hz and its cap, dB for full brightness, pitch range, eye and
+     combined-state hold time constants, symmetry offset, swell amplitude, pulse gain.
+   - `VIZ_PHOTOSAFE.*` (3 Hz flicker limit, texture feature sizes) and `VIZ_REDUCED_MOTION.*`.
+2. **Open decision D1.** `HurricaneView` now takes `chance: 'a' | 'b'` (default `'a'`) and reads
+   `excess_a` or `excess_b` itself for winding, rings and the combined-state strength.
 3. **Hemisphere symmetry needs one field.** `hemispheres[]` has one entry per track and the binding
    table says "hemisphere match" without saying which. The visualizer uses the entry for the dominant
    track (`hemispheres[track=dominant].match`). If a summary across tracks is wanted, the engine should
@@ -23,6 +24,16 @@ Things the visualizer needs from other roles. The visualizer does not edit these
 5. Arms are drawn only for cascade members whose state is `confirmed`. `fading` tracks are not drawn.
 
 ## For the app engineer
+
+- **Remove the chance-B swap** in `ui/session/hub.ts` (`swapToChanceB`) for the visualizer: pass
+  `chance={settings.chanceDriver}` to `HurricaneView` and hand it the unmodified frames. The readout
+  needs the original `excess_a` and `excess_b` to show both. (Audio still reads `excess_a`; ask the
+  sonification engineer before dropping the swap for audio too.)
+- **Reduced motion**: `HurricaneView` takes `motion: 'auto' | 'full' | 'reduced'` (default `auto`,
+  which follows `prefers-reduced-motion`). If the settings screen has its own reduced-motion switch,
+  pass `motion={settings.reducedMotion ? 'reduced' : 'auto'}`.
+- **Restyling**: every colour, font and size is a CSS custom property (README, "Theme tokens"). Set
+  them on `:root` or a wrapper; no code change in viz needed.
 
 - `VIZ_SMOOTHING` should be shown in settings (read-only is fine) and written into the session record (rule 2.8).
 - `HurricaneView` and `SpectrumView` take a `FrameSource` (`subscribe(listener) => unsubscribe`). The
@@ -43,4 +54,6 @@ Things the visualizer needs from other roles. The visualizer does not edit these
 - Frame time on real GPUs. Only SwiftShader (CPU) was available here; see README "Performance".
 - WebGL1 fallback path: the shader is GLSL ES 1.00 and runs under WebGL2 here, but a real WebGL1-only
   device was not tested.
-- Context loss and restore: handled in code, not exercised in the automated test.
+- Context loss and restore: exercised in Playwright with WEBGL_lose_context (passes), not on a real device.
+- The combined state's `for_s` is assumed to reset to 0 when `both.active` turns false (frames.ts says
+  "seconds in the current combined condition"). The visual only reads it while active.

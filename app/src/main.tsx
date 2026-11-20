@@ -2,6 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { App } from './App';
+import engineWorkerUrl from './engine/worker.ts?worker&url';
+import workletUrl from './audio/worklet.ts?worker&url';
+import wasmUrl from './wasm/pkg/hb_wasm_bg.wasm?url';
 import { createServices, ServicesProvider, type Services } from './ui/state/app';
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
@@ -47,7 +50,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && window.isSecureConte
       .then(() => navigator.serviceWorker.ready)
       .then((reg) => {
         // Ask the worker to cache every file this page has loaded so far, so a first visit works offline.
-        const urls = performance.getEntriesByType('resource').map((e) => e.name);
+        // The engine worker, its WebAssembly and the audio worklet are only fetched when a device
+        // connects or a sound starts, so they are named here and cached on the first visit.
+        const urls = [...performance.getEntriesByType('resource').map((e) => e.name), engineWorkerUrl, workletUrl, wasmUrl].map((u) => new URL(u, document.baseURI).href);
         reg.active?.postMessage({ type: 'cache-urls', urls });
       })
       .catch(() => {

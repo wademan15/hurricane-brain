@@ -2,7 +2,29 @@
 export { HurricaneView, type HurricaneViewProps } from './HurricaneView.tsx';
 export { SpectrumView, type SpectrumViewProps } from './SpectrumView.tsx';
 export type { FrameSource } from './frameStore.ts';
-export { computeVisualState, toUniforms, type Bound, type VisualState, type HurricaneUniforms } from './bindings.ts';
-export { hitTest, type Readout, type AlignmentRow } from './readout.ts';
+export {
+  computeVisualState,
+  toUniforms,
+  DEFAULT_VIZ_OPTIONS,
+  type Bound,
+  type VisualState,
+  type HurricaneUniforms,
+  type VizOptions,
+} from './bindings.ts';
+export { hitTest, chanceInWords, type Readout, type AlignmentRow } from './readout.ts';
 export { HurricaneRenderer } from './hurricane.ts';
-export { VIZ_SMOOTHING, VIZ_MAPPING, VIZ_GEOMETRY, VIZ_QUALITY, type Quality } from './params.ts';
+export { themeFromCss } from './theme.ts';
+export {
+  VIZ_SMOOTHING,
+  VIZ_MAPPING,
+  VIZ_GEOMETRY,
+  VIZ_QUALITY,
+  VIZ_PHOTOSAFE,
+  VIZ_REDUCED_MOTION,
+  VIZ_THEME,
+  VIZ_THEME_CSS,
+  type Quality,
+  type Motion,
+  type ChanceDriver,
+  type VizTheme,
+} from './params.ts';
