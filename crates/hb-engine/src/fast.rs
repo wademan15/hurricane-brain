@@ -145,7 +145,10 @@ impl DemodTracker {
         }
         let g0 = lp.dc_gain();
         self.enbw_hz = s2 * self.fp.rate / 2.0 / (g0 * g0);
-        self.settle_len = m::ceil(2.0 * self.lp_delay_s * self.fp.rate) as usize;
+        // After gated (zeroed) input the low-pass rings on for a while. A 2nd-order Butterworth's
+        // transient decays as exp(-t / delay): 13 % is left after two delays, under 2 %
+        // after four. Output stays null until then.
+        self.settle_len = m::ceil(4.0 * self.lp_delay_s * self.fp.rate) as usize;
     }
 
     /// RMS amplitude the background alone produces in this tracker's band.
@@ -206,7 +209,8 @@ impl Tracker for DemodTracker {
         let bg_amp = self.bg_amp();
         let height = if bg_amp > 0.0 && amp > 0.0 { Measured::ok(m::db(amp * amp / (bg_amp * bg_amp))) } else { Measured::null(Reason::Weak) };
         let amp_m = Measured::ok(amp);
-        let weak = !(amp > fp.amp_floor * bg_amp) || acc.norm_sqr() == 0.0;
+        // Without a background level there is no floor to pass: that is weak, not strong.
+        let weak = !(bg_amp > 0.0 && amp > fp.amp_floor * bg_amp) || acc.norm_sqr() == 0.0;
         if weak {
             let n = Measured::null(Reason::Weak);
             return FastReading { freq: n, amp_uv: amp_m, height_db: height, phase: n, locked: self.locked, delay_s: delay };

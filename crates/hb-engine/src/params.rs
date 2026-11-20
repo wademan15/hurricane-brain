@@ -203,14 +203,14 @@ params! {
     bg_curve_terms: usize = 4,
     /// Background fit fails if the lack-of-fit statistic (block-averaged residual over its
     /// noise level) exceeds this. Spec 6.2.
-    bg_lack_of_fit_max: f64 = 1e9,
+    bg_lack_of_fit_max: f64 = 1.25,
     /// Width of the blocks the lack-of-fit statistic averages over, Hz.
     bg_lof_block_hz: f64 = 2.0,
     /// Floor on a window's centre-frequency standard error, Hz.
     freq_se_floor_hz: f64 = 0.005,
     /// Integrated frequency: weight, in degrees of freedom, of the windows' own jackknife errors
     /// when pooled with the scatter of the window estimates (spec 6.4).
-    integration_prior_dof: f64 = 1.0,
+    integration_prior_dof: f64 = 0.5,
     /// Integrated frequency: factor on the jackknife error while the estimates span less than
     /// two slow windows and there is no scatter to pool (spec 6.4).
     integration_young_se_factor: f64 = 2.0,
@@ -250,7 +250,9 @@ params! {
     /// Settling time gated after a long gap or a filter change, s.
     gap_settle_s: f64 = 0.5,
     /// Fast path: amplitude floor as a multiple of the background's RMS amplitude in the tracker band.
-    fast_amp_floor: f64 = 1.0,
+    /// Background alone has a Rayleigh envelope and exceeds k RMS with probability exp(-k^2):
+    /// 37 % at 1.0, 5 % at 1.73.
+    fast_amp_floor: f64 = 1.73,
     /// Fast path: seconds of agreement before lock is regained.
     fast_relock_s: f64 = 0.25,
     /// Fast path: disagreement limit with the slow path, standard errors (spec 7: 3).

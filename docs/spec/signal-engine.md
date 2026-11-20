@@ -1,6 +1,6 @@
 # Signal engine specification
 
-Status: draft 1, 20 November 2026. Awaiting the owner's approval (roadmap gate 1).
+Status: draft 1, 20 November 2026, amended by the milestone review of the Rust engine on the same date (sections 6.2, 6.4, 7, 8.4, 8.5, 9 and 14; each amendment is marked "Review"). Awaiting the owner's approval (roadmap gate 1).
 Owner of this document: the signal architect. Changes go through a pull request reviewed at the Fable tier.
 
 This document says what the signal engine must measure, what it must output, which methods are candidates for each stage, and how we will choose between them by testing. It is written so that an implementer can build the engine without redesigning it.
@@ -140,6 +140,32 @@ EEG power falls with frequency roughly as 1/f^χ, with no rhythm needed. The eng
 
 The "flattened spectrum" is the spectrum divided by the fitted background. A flat line at 1 means no rhythm.
 
+**Review: the background is a curve, not a straight line.** A real spectrum is rarely one power law from 2 to 45 Hz. It has a knee, an amplifier noise floor, and filter edges. The height test in 6.3 is steep: where the fitted background is 10% too low, false peaks are about four times as frequent. Measured on background-only noise with a straight-line fit, against a stated 1% per window:
+
+| Background | False peaks per window, straight line | With the curve below |
+| --- | --- | --- |
+| 1/f, exponent 1 to 2, or white | 0.25 to 0.35% | 0.10 to 0.15% |
+| Knee at 15 Hz, 1/f³ above | 29% | 0.25% |
+| 1/f² over a noise floor | 12% | 0.20% |
+| Low-pass edge at 30 Hz | 11% | 0.50% |
+| High-pass edge at 4 Hz | 5% | 0.30% |
+
+Through the whole engine the straight line confirmed tracks in 14% of frames on 1/f² over a noise floor (112 tracks in 40 minutes of pure noise), most of them below 3 Hz, where the line was extrapolated below its fitted range. Persistence does not protect against this, because a misfit sits at the same frequency in every window.
+
+So the fit has two stages:
+
+1. The robust power law, as above. Its exponent and offset are the ones reported in the frame: they describe the best single power law.
+2. A robust polynomial in log power against log frequency (provisional: a cubic, 4 coefficients), fitted the same way, starting from the bins the power law kept. Outside the fitted range the curve continues as a straight line along its tangent. Nothing is extrapolated as a polynomial. The spectrum is flattened by this curve, and the fast path and the muscle measure read the background from it.
+
+Both stages model the estimator's own smoothing and the high-pass filter, and set their level so that the median of the flattened spectrum is the median of the chi-squared law in 6.1.
+
+The fit error has two parts, and either one makes the site null with reason "bad fit":
+
+- The residual of the kept bins (provisional limit: 3 times the expected spread).
+- **Lack of fit.** The first part cannot see a background the model does not follow, because the robust fit has already dropped what sits above it. So the flattened spectrum is averaged over blocks 2 Hz wide (the median within each block), and the spread of the block values is compared with what estimator noise alone gives. Provisional limit: 1.25, which pure background exceeds in under 0.1% of windows.
+
+The cost, which the bake-off must weigh: a curve can bend into a broad rhythm near the bottom of the fitted range. Single-window detection of a 10 dB rhythm 1 Hz wide falls from 99% to 89% at 5.3 Hz and from 96% to 41% at 3 Hz. At 10 Hz and above it is unchanged. A quadratic (3 coefficients) keeps theta detection at 99% and fails only the filter-edge cases (1.4% per window). By the decision rule in 10.4, staying quiet comes first, so the cubic is the starting value. The number of coefficients is in section 14.
+
 ### 6.3 Peak confirmation
 
 A candidate peak is a local maximum of the flattened spectrum. It becomes a **confirmed peak** only if all of the following hold:
@@ -172,7 +198,24 @@ Consequences, which shape the rest of this document:
 
 - A single 8 s window can tell a golden ratio step from an octave. Those differ by 21%.
 - A single window usually cannot tell 1.618 from 1.55 or 1.70. That needs about 30 s of steady signal.
-- So each peak carries an **integrated frequency**: a precision-weighted running mean of its window estimates over an integration time (provisional: 30 s), with its own standard error. Ratio scoring uses the integrated frequency. Alignment is therefore a slowly changing quantity, on the scale of tens of seconds. This suits the owner's requirement for sound that warms slowly, and it must not be hidden by making the display twitchier than the measurement.
+- So each peak carries an **integrated frequency**: the running mean of its window estimates over an integration time (provisional: 30 s), with its own standard error. Ratio scoring uses the integrated frequency. Alignment is therefore a slowly changing quantity, on the scale of tens of seconds. This suits the owner's requirement for sound that warms slowly, and it must not be hidden by making the display twitchier than the measurement.
+
+**Review: how the integrated standard error is formed, and how well it is calibrated.** Measured against planted rhythms at 10 dB in 8 s windows:
+
+- The jackknife error of one window is not calibrated. For rhythms 0.25 Hz wide it is about 1.7 times too large (actual error 0.08 Hz, reported 0.14 Hz). For rhythms 1 Hz wide it is 1.6 to 1.8 times too small (actual 0.38 Hz, reported 0.24 Hz), because the centroid follows the tallest lump of a lumpy peak and the tapers are not independent draws of which lump is tallest. At 4 s it is up to 2.4 times too small. The window error is still reported, and is used only where a floor of 1 Hz applies beside it (track joining).
+- Slow windows that overlap are not independent. Estimates taken every 250 ms from 8 s windows over 30 s are worth (30 + 8) / 8 = 4.75 independent ones, not 121.
+- A mean weighted by 1 / error² is worse than a plain mean here, because the weights come from noisy seven-taper errors and favour windows whose error happens to come out small. With the weights the actual error was 20 to 30% larger.
+
+The integrated frequency is therefore the plain mean, and its variance pools two estimates: v1 = mean(window error²) / n_eff from the windows' own errors, and v2 = mean((f − mean)²) / (n_eff − 1) from the scatter of the estimates, where n_eff is the number of non-overlapping windows spanned. The result is (ν v1 + (n_eff − 1) v2) / (ν + n_eff − 1) with ν = 1 (provisional). While the estimates span less than two windows there is no scatter, and the window error is doubled (provisional), which covers its worst measured shortfall.
+
+| Rhythm width | Actual error ÷ reported, before | After |
+| --- | --- | --- |
+| 0.25 Hz | 0.9 to 1.1 | 0.6 to 0.7 |
+| 0.5 Hz | 1.1 to 1.4 | 0.8 |
+| 1 Hz, 10 dB and above | 1.2 to 1.6 | 0.9 to 1.0 |
+| 1 Hz, 6 dB | 1.4 to 2.7 | 1.3 |
+
+Still open: for rhythms 1 Hz wide and wider the centre itself is biased, by about +0.1 Hz at 5 Hz in the integrated value and by up to −5% in single windows for rhythms 1.5 Hz wide. The reported error does not cover a bias. The centre estimator (the first candidate list in 10.1) has to be settled in the bake-off with this as a test. The reported peak width has the same cause and reads about 1.2 Hz for a rhythm whose true width at half height is 2.4 Hz.
 
 ### 6.5 Peak tracks
 
@@ -200,7 +243,8 @@ Per track it outputs:
 Requirements:
 
 - **Bounded by the slow path.** The tracker searches only within the confirmed peak's own width around its slow-path centre. If its reading leaves that range or disagrees with the slow path by more than 3 standard errors for longer than 1 s (provisional), the output is null and the reason is "lost lock". The slow path wins every disagreement.
-- **Null when weak.** Instantaneous frequency is meaningless when amplitude is near zero, because phase jumps. Below an amplitude floor set from the background, frequency is null while strength is still reported.
+- **Null when weak.** Instantaneous frequency is meaningless when amplitude is near zero, because phase jumps. Below an amplitude floor set from the background, frequency is null while strength is still reported. Review: the floor is stated as a false-pass probability. Background alone in the tracker's band has a Rayleigh envelope and exceeds k times its RMS amplitude with probability exp(−k²). The floor is k = 1.73 (provisional), which background alone passes 5% of the time. At k = 1 a tracker with no rhythm in its band reported a frequency in 31% of frames. A reading near the floor is also pulled toward the slow-path centre (by about 40% of the offset at an amplitude 2.5 times the background's), because it is the centre of everything in the band, rhythm and background together.
+- **Null while settling.** After gated samples the tracker's filter still holds them. Output stays null until under 2% of that is left (four filter delays, about 1.2 s at the 300 ms delay limit).
 - **Delay.** Total delay from scalp to output frame at or under 300 ms for alpha and above (provisional), and reported per track. A narrower filter is more precise and slower. The delay actually achieved is a measured output, not a constant in the documentation.
 - **No invention.** When the track is dropped, output stops. There is no glide to a default pitch. Fading the tone out is the sound layer's job, with its declared time constant.
 
@@ -248,7 +292,7 @@ The app needs a yes or no ("in golden ratio alignment") as well as a continuous 
 | --- | --- | --- | --- |
 | T1 | Fixed tolerance: aligned if the miss is under ε | Simple to explain | Ignores how well the peaks are known. Same chance level for everyone |
 | T2 | Scaled tolerance: aligned if the miss is under k·s_x, capped at ε, and the pair is resolved | Uses measurement precision | Without the cap and the resolved rule, sloppy peaks align more easily |
-| T3 | Evidence ratio: Λ = N(x; t, s_x² + τ²) ÷ q(x), where q is the person's own baseline density of x and τ is a small intrinsic tolerance. Aligned if ln Λ is above a threshold | A vague measurement gives Λ near 1, so no claim. A ratio the person sits at all the time earns little | Needs a baseline. Harder to explain |
+| T3 | Evidence ratio: Λ = N(x; t, s_x² + τ²) ÷ q(x), where q is the person's own baseline density of x and τ is a small intrinsic tolerance. Aligned if ln Λ is above a threshold. Review: q must not depend on the current s_x, and Λ is taken as the smaller of its values at s_x and at s_x = 0, which makes it non-increasing in s_x for every pair. The baseline density is a Gaussian at the baseline mean whose variance is the baseline's own, floored at τ², mixed with the density of unrelated peaks | A vague measurement gives Λ near 1, so no claim. A ratio the person sits at all the time earns little | Needs a baseline. Harder to explain |
 | T4 | Constant false alarm rate: whichever statistic is used, its threshold is set from the person's own chance distribution so that false entries happen at a fixed, stated rate (provisional: at most one false entry per 10 minutes) | The threshold adapts to the person and the day. The false alarm rate is a number we can publish | Needs enough data to estimate the chance distribution |
 
 My expectation, to be tested and not assumed, is that T3 with a T4 threshold wins.
@@ -258,6 +302,8 @@ Whatever rule wins, state changes use:
 - **Dwell.** The statistic must stay above the entry threshold for a minimum time (provisional: 5 s) before the state is entered.
 - **Hysteresis.** The exit threshold is lower than the entry threshold, so the state does not flicker.
 - **The same rule in the null.** Dwell and hysteresis are applied to the surrogates too, so the published false alarm rate includes them.
+
+**Review: what the false alarm rate means under each chance level.** Under chance B the null is a time series, dwell and hysteresis are applied to it, and "at most one false entry per 10 minutes" is a rate in time. Under chance A the null is a set of fixed peak placements with no time in it. The engine sets the threshold at the level that a fraction integration time ÷ 10 minutes = 5% of unrelated placements exceed (with a confidence margin; measured 3.3%). Peaks that are unrelated but steady do not come and go: such a pair is either over the threshold for as long as it lasts or never. So under chance A the honest statement is "about 1 in 30 pairs of unrelated steady peaks reads as aligned for the whole time", not "one false entry per 10 minutes", and the UI text must say it that way.
 
 ### 8.5 Chance levels
 
@@ -274,8 +320,14 @@ Read the last row carefully. With five peaks and a 3% tolerance, more than a qua
 
 The engine computes two chance levels, live, by rule 5:
 
-- **Chance A, unrelated peaks.** "Would this many peaks, placed at random, score this well?" Surrogate peak sets have the same number of tracks, placed at random in log frequency across the search range with the same measured uncertainties, and go through the same pairing, cascade search and thresholds. Available from the first confirmed peak.
-- **Chance B, your own wandering.** "Are these rhythms moving into alignment together, or is this just where each one usually sits?" Each track's frequency history is shifted in time by an independent random lag of at least 10 s, wrapping around, and scored the same way. This keeps each rhythm's own behaviour and removes only their relationship in time. Needs at least 120 s of track history (provisional). Until then it is null and the display says it is still measuring.
+- **Chance A, unrelated peaks.** "Would this many peaks, placed at random, score this well?" Surrogate peak sets have the same number of tracks with the same measured uncertainties, each placed at random in log frequency inside the band that holds the real track (delta, theta, alpha, beta or gamma, with the edges in force), and go through the same pairing, cascade search and thresholds. Available from the first confirmed peak.
+
+  Review: the first build placed surrogates across the whole search range, 1 to 45 Hz. That is the wrong null for the commonest case. A theta peak and an alpha peak can only form ratios between 1 and 3.25, and land within 3% of the golden ratio 9.4% of the time (first row of the table above). Peaks spread over 1 to 45 Hz land there under 3% of the time. Measured on unrelated theta and alpha peaks, the chance A percentile was at or under 5% for 16% of pairs and the aligned-state threshold was exceeded by 10% of pairs. With placement by band those numbers are 5.4% and 3.3%.
+- **Chance B, your own wandering.** "Are these rhythms moving into alignment together, or is this just where each one usually sits?" Each track's frequency history is shifted in time by a random lag of at least 10 s, wrapping around, with every two tracks' lags differing by at least the correlation time of an integrated frequency (the integration time plus one slow window, 38 s), and scored the same way. This keeps each rhythm's own behaviour and removes only their relationship in time. Needs at least 120 s of track history (provisional), and enough for the lags to fit: 153 s for four tracks, 191 s for five. Until then it is null and the display says it is still measuring.
+
+  Review: two more rules for chance B. First, a surrogate takes only its frequencies from the shifted moments; its uncertainties are the tracks' present ones, as in chance A, so a surrogate is resolved exactly when the observed set is. With the uncertainties of the shifted moments, surrogates from a track's first seconds were unresolved, could never score, and were counted as "chance did worse": for unrelated rhythms the percentile was at or under 5% in 17% of files. Second, shifted copies of one history are not independent draws. A history of length H holds about H ÷ 38 s independent values of each track, so about that number squared independent pairings, however many surrogates are drawn. The chance B percentile is therefore never reported below 1 ÷ (1 + (H ÷ 38 s)²): 9% with 120 s of history, 1.6% with 300 s, 0.4% with 600 s. Measured on independent wandering tracks without the floor, a percentile at or under 1% occurred in 4 to 9% of cases with 120 s of history and in 1% with 300 s or more.
+
+  Review: what matters is the difference between two tracks' lags, not each lag. With independent lags that difference was under 38 s in about 60% of surrogates at the minimum history, and under 10 s in 19%. Those surrogates kept the relationship they were meant to remove. The error was on the safe side (it made chance B's level too high), but it made chance B nearly blind.
 
 For each, the engine reports the expected closeness under chance, and where the observed value falls in the chance distribution (a percentile). At least 200 surrogates (provisional), from the session's seed, refreshed every 5 s.
 
@@ -305,6 +357,8 @@ The engine emits two kinds of frames. Every field is a value, an uncertainty whe
 - Chance: A and B, expected closeness and percentile, for pairs and cascades.
 - States: aligned state per target, with time in state.
 - Hemispheres: for each track present on both sides, the frequency difference between TP9 and TP10, the amplitude balance, and phase locking between the sides. Caveat to carry into the UI text: all channels share one reference electrode, which inflates measured locking between them. The engine reports locking in excess of a time-shifted surrogate, not the raw value.
+
+  Review: the time shift does not remove the shared reference. It removes only the locking that two narrow-band signals show by accident. Activity at the reference electrode appears in both channels at the same instant, and a time shift destroys it in the surrogate while leaving it in the measurement, so it is counted as excess. Measured with two independent sources: excess 0.09 with a silent reference (it should be 0; the floor at zero biases it upward), 0.12 when the reference carries the rhythm at half the sources' amplitude, 0.27 at equal amplitude. A truly shared source gives 0.65. On a Muse the number therefore cannot be read as synchrony between hemispheres, and "left and right symmetry" in 9.1 must not be bound to it as it stands. The field to add (schema change, not yet made) is locking that excludes zero lag, such as the imaginary part of coherency, reported beside this one, with the UI saying that zero-lag locking cannot be told from the reference.
 - Front and back: the same comparison between the frontal pair and the temporal pair.
 
 **Fast frame, 32 per second**
@@ -482,15 +536,22 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Slow update | 250 ms | 6 |
 | Peak search range | 1 to 45 Hz | 6.1 |
 | Background fit range | 2 to 45 Hz | 6.2 |
+| Background curve coefficients | 4 (a cubic in log-log; 2 is a plain power law) | 6.2 |
+| Background residual limit | 3 times the expected spread | 6.2 |
+| Background lack-of-fit limit | 1.25, over blocks 2 Hz wide | 6.2 |
 | α_peak, false peaks per window | 1% | 6.3 |
 | Peak width limits | estimator resolution to 6 Hz | 6.3 |
 | Persistence | 2 of the last 3 windows | 6.3 |
 | Peak hold after last pass | 2 s | 6.3 |
 | Integration time for ratio scoring | 30 s | 6.4 |
+| Weight of window errors in the integrated error | 1 degree of freedom | 6.4 |
+| Window error factor before two windows of history | 2 | 6.4 |
 | Track joining distance | 3 standard errors or 1 Hz | 6.5 |
 | Fast update | 32 per second | 7 |
 | Fast path delay limit | 300 ms | 7 |
 | Lost lock time | 1 s | 7 |
+| Fast amplitude floor | 1.73 background RMS amplitudes (background alone passes 5%) | 7 |
+| Fast settling after gated samples | 4 filter delays | 7 |
 | Resolved limit on s_x | 0.03 | 8.2 |
 | Tolerance ε | 0.03 | 8.2 |
 | Intrinsic tolerance τ | 0.01 | 8.4 |
@@ -499,6 +560,8 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | False entries allowed | 1 per 10 minutes | 8.4 |
 | Surrogates per chance estimate | 200 | 8.5 |
 | Minimum lag for chance B | 10 s | 8.5 |
+| Minimum difference between two tracks' lags, chance B | integration time + slow window (38 s) | 8.5 |
+| Chance A placement | within the track's own band | 8.5 |
 | History needed for chance B | 120 s | 8.5 |
 | Slow update time budget | 50 ms | 11 |
 

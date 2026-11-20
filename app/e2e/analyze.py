@@ -40,6 +40,8 @@ for name, v in d.items():
     out[name]['shots'] = shots
     if 'pair' in v['shots']:
         a, b = [img(p) for p in v['shots']['pair']]
-        out[name]['pairDiff'] = dict(maxAbs=float(np.abs(a-b).max()), changedPixels=int((np.abs(a-b) > 0).sum()), total=int(a.size))
+        h = min(a.shape[0], b.shape[0]); shape_equal = a.shape == b.shape; a, b = a[:h], b[:h]
+        m = (a != b); m[:70, :300] = False  # ignore the elapsed-time label (top-left)
+        out[name]['pairDiff'] = dict(maxAbs=float(np.abs(a-b).max()), changedPixels=int((np.abs(a-b) > 0).sum()), total=int(a.size), shapesEqual=shape_equal, changedOutsideClockLabel=int(m.sum()), maxAbsOutsideClockLabel=float(np.abs(a-b)[m].max()) if m.any() else 0.0)
 json.dump(out, open(f'out/{tag}/analysis.json', 'w'), indent=1)
 for n, o in out.items(): print(n, json.dumps(o)[:900])

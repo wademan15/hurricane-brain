@@ -478,6 +478,16 @@ fn chance_b_slack(p: &Params, n: usize, min_len: usize, min_lag: usize) -> Optio
     room.checked_sub((n - 1) * d)
 }
 
+/// The smallest p-value chance B can honestly report from histories `span_s` long. Shifted
+/// copies of one history are not independent draws: a history holds only span / correlation
+/// time independent values of each track, so about that number squared independent pairings.
+/// Measured on independent wandering tracks, P(p <= 0.01) was 4 to 9 % with 120 s of history
+/// and 1 % with 300 s or more. The floor is 1 / (1 + (span / correlation time)^2).
+pub fn chance_b_p_floor(p: &Params, span_s: f64) -> f64 {
+    let m_ind = span_s / (p.integration_s + p.slow_window_s);
+    (1.0 / (1.0 + m_ind * m_ind)).clamp(0.0, 1.0)
+}
+
 /// Chance B (spec 8.5): each track's own history shifted by a random lag of at least
 /// `min_lag` updates, wrapping within that track's history, with every two tracks' lags at
 /// least `chance_b_min_relative_lag` apart. All histories must hold at least `need` updates.
@@ -519,11 +529,17 @@ pub fn chance_b(hist: &[History], ctx: &ScoreCtx, rng: &mut Rng, min_lag: usize,
         for (k, &o) in offs.iter().enumerate() {
             lags[order[k]] = min_lag + o + k * d;
         }
+        // Only the frequency is taken from the shifted moment. The uncertainty is the track's
+        // present relative uncertainty, as in chance A, so that a surrogate is resolved exactly
+        // when the observed set is. With the uncertainty of the shifted moment, surrogates
+        // drawn from a track's first seconds (large error, unresolved) could never score, and
+        // counted as "chance did worse": for unrelated rhythms P(p <= 0.05) was 0.17.
         let at = |back: usize, set: &mut Vec<ScoreTrack>| {
             for (k, h) in hist.iter().enumerate() {
                 let len = h.f.len();
                 let idx = (len - 1 + 2 * len - (back % len) - lags[k]) % len;
-                set[k] = ScoreTrack { id: h.id, f: h.f[idx], se: h.se[idx] };
+                let rel = h.se[len - 1] / h.f[len - 1];
+                set[k] = ScoreTrack { id: h.id, f: h.f[idx], se: rel * h.f[idx] };
             }
             sort_tracks(set);
         };
@@ -757,5 +773,203 @@ mod tests {
             assert!(e <= prev + 1e-12);
             prev = e;
         }
+    }
+    /// Spec 8.2: uncertainty must never make alignment easier, with or without a baseline.
+    /// Before the review a tight baseline let the evidence rise by up to 5.4 nats as s_x grew.
+    #[test]
+    fn uncertainty_never_helps_with_a_baseline() {
+        let p = Params::default();
+        let h = BTreeSet::new();
+        for &var in &[1e-6, 1e-5, 1e-4, 1e-3, 1e-2] {
+            for mui in 0..40 {
+                let mu = 0.3 + 0.01 * mui as f64;
+                let mut b = Baselines::new();
+                b.insert((1, 2), (mu, var));
+                let ctx = ScoreCtx::new(&p, &h, &b);
+                for xi in 0..60 {
+                    let x = 0.40 + 0.003 * xi as f64;
+                    for ti in 0..2 {
+                        let mut prev = f64::INFINITY;
+                        for k in 0..=60 {
+                            let sx = 0.0005 * k as f64;
+                            let e = ctx.log_evidence(1, 2, x, sx, ctx.ln_t[ti]);
+                            assert!(e <= prev + 1e-9, "evidence rose with s_x: var {var} mu {mu} x {x} sx {sx}: {prev} -> {e}");
+                            prev = e;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A larger uncertainty can never turn a pair that is not aligned into one that is, nor
+    /// raise the aligned-state statistic.
+    #[test]
+    fn larger_uncertainty_never_aligns_a_pair() {
+        let p = Params::default();
+        let h = BTreeSet::new();
+        let b = Baselines::new();
+        let ctx = ScoreCtx::new(&p, &h, &b);
+        let mut rng = Rng::new(17);
+        for _ in 0..2000 {
+            let f1 = rng.uniform(3.0, 12.0);
+            let f2 = f1 * m::exp(rng.uniform(0.3, 0.8));
+            let mut was_aligned = [true; 4];
+            let mut prev_stat = [f64::INFINITY; 2];
+            for k in 0..40 {
+                let rel = 0.001 * k as f64;
+                let t = [ScoreTrack { id: 1, f: f1, se: rel * f1 }, ScoreTrack { id: 2, f: f2, se: rel * f2 }];
+                let sc = score_set(&t, &ctx);
+                for ti in 0..4 {
+                    let a = sc.pairs[0].aligned[ti];
+                    assert!(!a || was_aligned[ti], "pair became aligned as uncertainty grew");
+                    was_aligned[ti] = a;
+                }
+                for ci in 0..2 {
+                    if let Ok(v) = sc.stat[ci] {
+                        assert!(v <= prev_stat[ci] + 1e-9, "state statistic rose with uncertainty");
+                        prev_stat[ci] = v;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Chance A must be valid for the commonest real configuration: one theta peak and one
+    /// alpha peak that have nothing to do with each other. With surrogates spread over the
+    /// whole search range, P(p <= 0.05) was 0.16 and the state threshold was exceeded by 10 %
+    /// of such pairs against a design value of 5 %.
+    #[test]
+    fn chance_a_is_valid_for_unrelated_theta_and_alpha_peaks() {
+        let p = Params::default();
+        let h = BTreeSet::new();
+        let b = Baselines::new();
+        let ctx = ScoreCtx::new(&p, &h, &b);
+        let mut rng = Rng::new(99);
+        let trials = 2000;
+        let (mut p05, mut p01, mut exceed) = (0, 0, 0);
+        for tr in 0..trials {
+            let mut t = vec![
+                ScoreTrack { id: 1, f: m::exp(rng.uniform(m::ln(4.0), m::ln(8.0))), se: 0.0 },
+                ScoreTrack { id: 2, f: m::exp(rng.uniform(m::ln(8.0), m::ln(13.0))), se: 0.0 },
+            ];
+            for s in t.iter_mut() {
+                s.se = 0.006 * s.f;
+            }
+            let sc = score_set(&t, &ctx);
+            let mut r2 = Rng::derive(7, 0xA, tr as u64);
+            let a = chance_a(&t, &ctx, &mut r2);
+            let lv = a[0].level(sc.cascades[0].steps, sc.cascades[0].closeness.ok());
+            let pv = lv.p.v.expect("p");
+            if pv <= 0.05 {
+                p05 += 1;
+            }
+            if pv <= 0.01 {
+                p01 += 1;
+            }
+            if let (Some(thr), Ok(st)) = (static_threshold(&a[0], &p), sc.stat[0]) {
+                if st >= thr {
+                    exceed += 1;
+                }
+            }
+        }
+        let n = trials as f64;
+        println!("unrelated theta+alpha: P(p<=0.05) {:.3}, P(p<=0.01) {:.3}, state threshold exceeded {:.3}", p05 as f64 / n, p01 as f64 / n, exceed as f64 / n);
+        assert!(p05 as f64 / n <= 0.07, "P(p<=0.05) = {}", p05 as f64 / n);
+        assert!(p01 as f64 / n <= 0.02, "P(p<=0.01) = {}", p01 as f64 / n);
+        let pstar = p.integration_s / p.false_entry_interval_s;
+        assert!(exceed as f64 / n <= pstar, "threshold exceeded by {} of unrelated pairs, design {pstar}", exceed as f64 / n);
+    }
+
+    #[test]
+    fn null_bands_cover_the_search_range() {
+        let mut p = Params::default();
+        let nb = default_null_bands(&p);
+        assert_eq!(nb.first().unwrap()[0], p.peak_search_lo_hz);
+        assert_eq!(nb.last().unwrap()[1], p.peak_search_hi_hz);
+        for w in nb.windows(2) {
+            assert_eq!(w[0][1], w[1][0]);
+        }
+        p.peak_search_lo_hz = 5.0;
+        p.peak_search_hi_hz = 20.0;
+        let nb = clip_null_bands(&[[1.0, 4.0], [4.0, 8.0], [8.0, 13.0], [13.0, 30.0], [30.0, 45.0]], &p);
+        assert_eq!(nb, vec![[5.0, 8.0], [8.0, 13.0], [13.0, 20.0]]);
+        let h = BTreeSet::new();
+        let b = Baselines::new();
+        let pd = Params::default();
+        let ctx = ScoreCtx::new(&pd, &h, &b);
+        assert_eq!(ctx.null_band_of(6.0), [4.0, 8.0]);
+        assert_eq!(ctx.null_band_of(8.0), [8.0, 13.0]);
+        assert_eq!(ctx.null_band_of(45.0), [30.0, 45.0]);
+        assert_eq!(ctx.null_band_of(0.5), [1.0, 4.0]);
+    }
+
+    /// Chance B must remove the relationship. Two histories that ramp together at an exact
+    /// golden ratio are aligned at equal times and far from it at any relative lag beyond the
+    /// correlation time. With independent lags per track, 19 % of surrogates had a relative lag
+    /// under 10 s and kept the alignment.
+    #[test]
+    fn chance_b_surrogates_do_not_keep_the_relationship() {
+        let p = Params::default();
+        let h = BTreeSet::new();
+        let b = Baselines::new();
+        let ctx = ScoreCtx::new(&p, &h, &b);
+        let phi = (1.0 + 5f64.sqrt()) / 2.0;
+        let len = 640usize; // 160 s
+        let f1: Vec<f64> = (0..len).map(|k| 6.0 * (1.0 + 0.001 * k as f64)).collect();
+        let f2: Vec<f64> = f1.iter().map(|f| f * phi).collect();
+        let se1: Vec<f64> = f1.iter().map(|f| 0.004 * f).collect();
+        let se2: Vec<f64> = f2.iter().map(|f| 0.004 * f).collect();
+        let hist = [History { id: 1, f: &f1, se: &se1 }, History { id: 2, f: &f2, se: &se2 }];
+        let min_lag = (p.chance_b_min_lag_s / p.slow_update_s) as usize;
+        assert!(chance_b_feasible(&p, 2, len, min_lag));
+        let mut rng = Rng::new(5);
+        let cb = chance_b(&hist, &ctx, &mut rng, min_lag, 4, 480, 5, 1.0);
+        assert_eq!(cb.dists[0].draws.len(), p.surrogates);
+        let worst = cb.dists[0].draws.iter().filter_map(|d| d.closeness).fold(0.0f64, f64::max);
+        println!("largest surrogate closeness {worst:.4}");
+        assert!(worst < 0.02, "a chance B surrogate kept the alignment: closeness {worst}");
+        assert!(cb.dists[0].draws.iter().all(|d| d.steps == 0));
+        // Too short for the separation: no draws, and the caller reports warming up.
+        assert!(!chance_b_feasible(&p, 5, 480, min_lag));
+        let short = [History { id: 1, f: &f1[..150], se: &se1[..150] }, History { id: 2, f: &f2[..150], se: &se2[..150] }];
+        assert!(!chance_b_feasible(&p, 2, 150, min_lag));
+        let cb = chance_b(&short, &ctx, &mut rng, min_lag, 4, 150, 5, 1.0);
+        assert!(cb.dists[0].draws.is_empty() && cb.thresholds == [None, None]);
+    }
+    /// A chance B surrogate is resolved exactly when the observed set is: it takes the tracks'
+    /// present uncertainty, not the uncertainty of the shifted moment. Otherwise surrogates
+    /// from a track's first, vague seconds can never score and chance looks worse than it is.
+    #[test]
+    fn chance_b_surrogates_use_the_present_uncertainty() {
+        let p = Params::default();
+        let h = BTreeSet::new();
+        let b = Baselines::new();
+        let ctx = ScoreCtx::new(&p, &h, &b);
+        let len = 640usize;
+        let f1 = vec![6.0; len];
+        let f2 = vec![9.8; len];
+        // The first half of each history is far too vague to be resolved.
+        let se1: Vec<f64> = (0..len).map(|k| if k < len / 2 { 0.5 } else { 0.02 }).collect();
+        let se2: Vec<f64> = (0..len).map(|k| if k < len / 2 { 0.8 } else { 0.03 }).collect();
+        let hist = [History { id: 1, f: &f1, se: &se1 }, History { id: 2, f: &f2, se: &se2 }];
+        let mut rng = Rng::new(5);
+        let cb = chance_b(&hist, &ctx, &mut rng, 40, 4, 480, 5, 1.0);
+        assert_eq!(cb.dists[0].draws.len(), p.surrogates);
+        assert!(cb.dists[0].draws.iter().all(|d| d.closeness.is_some() && d.stat.is_some()), "a surrogate was unresolved although the observed pair is resolved");
+        // Constant histories: every surrogate equals the observation, so p = 1.
+        let now = [ScoreTrack { id: 1, f: 6.0, se: 0.02 }, ScoreTrack { id: 2, f: 9.8, se: 0.03 }];
+        let sc = score_set(&now, &ctx);
+        let lv = cb.dists[0].level(sc.cascades[0].steps, sc.cascades[0].closeness.ok());
+        assert_eq!(lv.p.v, Some(1.0));
+    }
+
+    #[test]
+    fn chance_b_percentile_floor_follows_the_history_length() {
+        let p = Params::default();
+        let f120 = chance_b_p_floor(&p, 120.0);
+        let f600 = chance_b_p_floor(&p, 600.0);
+        assert!((f120 - 1.0 / (1.0 + (120.0f64 / 38.0).powi(2))).abs() < 1e-12);
+        assert!(f120 > 0.05 && f600 < 0.01 && f600 > 0.0);
     }
 }

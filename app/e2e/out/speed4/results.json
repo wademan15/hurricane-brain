@@ -3056,6 +3056,2368 @@
    },
    "audioMsgs": [],
    "console": []
+  },
+  "artifact_blinks": {
+   "series": [
+    {
+     "wall": 552,
+     "el": 0,
+     "title": "Replay: Free session 0:00",
+     "phi": "Golden ratio alignment not measured no data over chance A: not measured nothing received yet",
+     "oct": "Octave alignment not measured no data over chance A: not measured nothing received yet",
+     "chance": "Chance level (same procedure) A: not measured no data / not measured no data golden / octave. B: not measured / not measured p (A): not measured",
+     "signal": "Signal not measured (no frames arriving)",
+     "chips": [
+      "Signal not measured (no frames arriving)",
+      "Peaks: not measured (no frames arriving)",
+      "Heart: no heart source connected"
+     ],
+     "calm": "No data",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1056,
+     "el": 4,
+     "title": "Replay: Free session 0:04",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1563,
+     "el": 6,
+     "title": "Replay: Free session 0:06",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2066,
+     "el": 8,
+     "title": "Replay: Free session 0:08",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2568,
+     "el": 10,
+     "title": "Replay: Free session 0:10",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3071,
+     "el": 12,
+     "title": "Replay: Free session 0:12",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3574,
+     "el": 14,
+     "title": "Replay: Free session 0:14",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4077,
+     "el": 16,
+     "title": "Replay: Free session 0:16",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4619,
+     "el": 17,
+     "title": "Replay: Free session 0:17",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.034 ± 0.011 / 0.0237 ± 0.0090 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.323",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5145,
+     "el": 19,
+     "title": "Replay: Free session 0:19",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.114 ± 0.020 / 0.100 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.731",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.49 ± 0.18 Hz",
+      "alpha: 9.567 ± 0.021 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5661,
+     "el": 21,
+     "title": "Replay: Free session 0:21",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.114 ± 0.020 / 0.100 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.731",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 9.564 ± 0.025 Hz",
+      "beta: 23.849 ± 0.097 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6173,
+     "el": 23,
+     "title": "Replay: Free session 0:23",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.041 ± 0.012 / 0.037 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.398",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.75 ± 0.36 Hz",
+      "alpha: 9.557 ± 0.035 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6687,
+     "el": 25,
+     "title": "Replay: Free session 0:25",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.041 ± 0.012 / 0.037 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.408",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.84 ± 0.35 Hz",
+      "alpha: 9.555 ± 0.035 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7295,
+     "el": 27,
+     "title": "Replay: Free session 0:27",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0290 ± 0.0087 / 0.040 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.428",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.84 ± 0.34 Hz",
+      "alpha: 9.554 ± 0.034 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7983,
+     "el": 29,
+     "title": "Replay: Free session 0:29",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0284 ± 0.0095 / 0.039 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.353",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.82 ± 0.31 Hz",
+      "alpha: 9.554 ± 0.032 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 8532,
+     "el": 32,
+     "title": "Replay: Free session 0:32",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0284 ± 0.0095 / 0.039 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.353",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 22.76 ± 0.24 Hz",
+      "alpha: 9.556 ± 0.031 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 24214,
+     "title": null,
+     "phi": null,
+     "oct": null,
+     "chance": null,
+     "signal": null,
+     "chips": [],
+     "calm": null,
+     "guide": null,
+     "page": "finished"
+    }
+   ],
+   "shots": {
+    "t30": "artifact_blinks-t30.png",
+    "t30-full": "artifact_blinks-t30-full.png",
+    "afterEnd": "artifact_blinks-end.png"
+   },
+   "inspects": [
+    {
+     "at": 30,
+     "el": 32,
+     "eye": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=2].freq 9.745 ± 0.065 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=2].match 0.857 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.0301 ± 0.0098 p 0.348 0.033 ± 0.011 p 0.174 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Cloud band 1 (track 1) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=1].height_db 8.36 ± 0.92 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 2 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=2].freq 9.659 ± 0.050 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.107 ± 0.019 p 0.741 0.131 ± 0.020 p 0.368 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Cloud band 1 × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[band 0].height_db not measured (no confirmed peak) Bands of unorganized cloud slow.tracks[state=confirmed].length 0 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.045 ± 0.013 p 0.388 0.0229 ± 0.0074 p 0.209 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "Cloud band 1 (track 1) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=1].height_db 8.12 ± 0.61 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 2 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=2].freq 9.60 ± 0.48 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.056 ± 0.014 p 0.413 0.0232 ± 0.0090 p 0.134 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Cloud band 1 (track 1) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=1].height_db 6.4 ± 1.1 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 2 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=2].freq 9.64 ± 0.22 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.115 ± 0.019 p 0.697 0.065 ± 0.014 p 0.313 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Water around the storm × The whole picture swells gently with the measured breathing rhythm. What you see Measured Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=19].freq 22.44 ± 0.14 Hz The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    }
+   ],
+   "ended": true,
+   "afterEnd": {
+    "title": null,
+    "phi": null,
+    "oct": null,
+    "chance": null,
+    "signal": null,
+    "chips": [],
+    "calm": null,
+    "guide": null,
+    "page": "finished"
+   },
+   "audioMsgs": [],
+   "console": []
+  },
+  "artifact_jaw_clench": {
+   "series": [
+    {
+     "wall": 416,
+     "el": 0,
+     "title": "Replay: Free session 0:00",
+     "phi": "Golden ratio alignment not measured no data over chance A: not measured nothing received yet",
+     "oct": "Octave alignment not measured no data over chance A: not measured nothing received yet",
+     "chance": "Chance level (same procedure) A: not measured no data / not measured no data golden / octave. B: not measured / not measured p (A): not measured",
+     "signal": "Signal not measured (no frames arriving)",
+     "chips": [
+      "Signal not measured (no frames arriving)",
+      "Peaks: not measured (no frames arriving)",
+      "Heart: no heart source connected"
+     ],
+     "calm": "No data",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 919,
+     "el": 3,
+     "title": "Replay: Free session 0:03",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1422,
+     "el": 5,
+     "title": "Replay: Free session 0:05",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1928,
+     "el": 7,
+     "title": "Replay: Free session 0:07",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2431,
+     "el": 9,
+     "title": "Replay: Free session 0:09",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2937,
+     "el": 11,
+     "title": "Replay: Free session 0:11",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3444,
+     "el": 13,
+     "title": "Replay: Free session 0:13",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3946,
+     "el": 15,
+     "title": "Replay: Free session 0:15",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4488,
+     "el": 17,
+     "title": "Replay: Free session 0:17",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.033 ± 0.011 / 0.0220 ± 0.0082 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.308",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5075,
+     "el": 19,
+     "title": "Replay: Free session 0:19",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.080 ± 0.016 / 0.097 ± 0.017 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.726",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.81 ± 0.16 Hz",
+      "beta: 25.00 ± 0.11 Hz",
+      "beta: 26.43 ± 0.23 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5638,
+     "el": 21,
+     "title": "Replay: Free session 0:21",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.033 over chance A: 0.001 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0301 ± 0.0093 / 0.032 ± 0.011 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.274",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.80 ± 0.13 Hz",
+      "beta: 25.00 ± 0.14 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6210,
+     "el": 23,
+     "title": "Replay: Free session 0:23",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.021 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.113 ± 0.018 / 0.097 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.607",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.746 ± 0.083 Hz",
+      "beta: 25.01 ± 0.16 Hz",
+      "beta: 23.36 ± 0.16 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6753,
+     "el": 25,
+     "title": "Replay: Free session 0:25",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.041 ± 0.012 / 0.0238 ± 0.0080 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.368",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.764 ± 0.079 Hz",
+      "beta: 25.15 ± 0.30 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7307,
+     "el": 28,
+     "title": "Replay: Free session 0:28",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.041 ± 0.012 / 0.0238 ± 0.0080 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.343",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.774 ± 0.082 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7908,
+     "el": 30,
+     "title": "Replay: Free session 0:30",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.049 ± 0.012 / 0.0293 ± 0.0097 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.358",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 10.789 ± 0.082 Hz",
+      "beta: 24.31 ± 0.57 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 20313,
+     "el": 79,
+     "title": "Replay: Free session 1:19",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.131 ± 0.019 / 0.119 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.900",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 25.83 ± 0.26 Hz",
+      "alpha: 10.893 ± 0.059 Hz",
+      "beta: 27.13 ± 0.44 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    }
+   ],
+   "shots": {
+    "t30": "artifact_jaw_clench-t30.png",
+    "t30-full": "artifact_jaw_clench-t30-full.png",
+    "t60": "artifact_jaw_clench-t60.png",
+    "t60-full": "artifact_jaw_clench-t60-full.png",
+    "t70": "artifact_jaw_clench-t70.png",
+    "t70-full": "artifact_jaw_clench-t70-full.png",
+    "pair": [
+     "artifact_jaw_clench-pairA.png",
+     "artifact_jaw_clench-pairB.png"
+    ],
+    "afterEnd": "artifact_jaw_clench-end.png"
+   },
+   "inspects": [
+    {
+     "at": 30,
+     "el": 30,
+     "eye": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=13].freq 10.64 ± 0.27 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=13].match 0.971 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.037 ± 0.011 p 0.343 0.033 ± 0.010 p 0.174 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Cloud band 1 (track 13) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=13].height_db 10.2 ± 1.3 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 3 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=14].freq 24.88 ± 0.23 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.057 Chance A (random peaks) 0.152 ± 0.020 p 0.776 0.167 ± 0.022 p 0.308 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Cloud band 1 (track 14) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=14].height_db 8.83 ± 0.89 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 1 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=14].freq 24.77 ± 0.12 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.032 ± 0.011 p 0.433 0.0333 ± 0.0100 p 0.542 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Left and right symmetry (hemisphere match) slow.hemispheres[track=dominant].match not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.093 ± 0.017 p 0.741 0.088 ± 0.017 p 0.876 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=16].freq 25.903 ± 0.081 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=16].match not measured (not available) Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) 0.100 ± 0.018 p 0.667 0.113 ± 0.020 p 0.264 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": -200,
+       "text": "Cloud band 2 (track 20) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 2 slow.tracks[id=20].height_db 8.14 ± 0.74 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 3 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=16].freq 25.77 ± 0.21 Hz Golden ratio Octave Steps in cascade 0 1 Closeness 0.000 0.647 Chance A (random peaks) 0.225 ± 0.024 p 0.751 0.189 ± 0.023 p 0.154 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0.565 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 1.3 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=20].freq 10.87 ± 0.16 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=20].match 0.966 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.002 Chance A (random peaks) 0.188 ± 0.025 p 0.866 0.203 ± 0.024 p 0.453 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    },
+    {
+     "at": 60,
+     "el": 79,
+     "eye": null,
+     "probes": []
+    },
+    {
+     "at": 70,
+     "el": 79,
+     "eye": null,
+     "probes": []
+    }
+   ],
+   "ended": false,
+   "afterEnd": {
+    "title": null,
+    "phi": null,
+    "oct": null,
+    "chance": null,
+    "signal": null,
+    "chips": [],
+    "calm": null,
+    "guide": null,
+    "page": "finished"
+   },
+   "audioMsgs": [],
+   "console": []
+  },
+  "nearmiss_1.8_10db": {
+   "series": [
+    {
+     "wall": 607,
+     "el": 0,
+     "title": "Replay: Free session 0:00",
+     "phi": "Golden ratio alignment not measured no data over chance A: not measured nothing received yet",
+     "oct": "Octave alignment not measured no data over chance A: not measured nothing received yet",
+     "chance": "Chance level (same procedure) A: not measured no data / not measured no data golden / octave. B: not measured / not measured p (A): not measured",
+     "signal": "Signal not measured (no frames arriving)",
+     "chips": [
+      "Signal not measured (no frames arriving)",
+      "Peaks: not measured (no frames arriving)",
+      "Heart: no heart source connected"
+     ],
+     "calm": "No data",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1110,
+     "el": 4,
+     "title": "Replay: Free session 0:04",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1612,
+     "el": 6,
+     "title": "Replay: Free session 0:06",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2117,
+     "el": 8,
+     "title": "Replay: Free session 0:08",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2620,
+     "el": 10,
+     "title": "Replay: Free session 0:10",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3123,
+     "el": 12,
+     "title": "Replay: Free session 0:12",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3625,
+     "el": 14,
+     "title": "Replay: Free session 0:14",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4128,
+     "el": 16,
+     "title": "Replay: Free session 0:16",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4740,
+     "el": 17,
+     "title": "Replay: Free session 0:17",
+     "phi": "Golden ratio alignment not measured uncertainty too large to score over chance A: not measured uncertainty too large to score . 0 steps",
+     "oct": "Octave alignment not measured uncertainty too large to score over chance A: not measured uncertainty too large to score . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured not available / not measured not available golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): not measured (not available)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5286,
+     "el": 19,
+     "title": "Replay: Free session 0:19",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.061 ± 0.014 / 0.0230 ± 0.0078 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.517",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.322 ± 0.074 Hz",
+      "theta: 4.544 ± 0.072 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5886,
+     "el": 21,
+     "title": "Replay: Free session 0:21",
+     "phi": "Golden ratio alignment 0.000 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.090 ± 0.017 / 0.109 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.816",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.26 ± 0.12 Hz",
+      "theta: 4.529 ± 0.078 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6448,
+     "el": 24,
+     "title": "Replay: Free session 0:24",
+     "phi": "Golden ratio alignment 0.014 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.373 over chance A: 0.204 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.212 ± 0.024 / 0.212 ± 0.025 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.463",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.16 ± 0.15 Hz",
+      "theta: 4.525 ± 0.063 Hz",
+      "beta: 15.36 ± 0.21 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6977,
+     "el": 26,
+     "title": "Replay: Free session 0:26",
+     "phi": "Golden ratio alignment 0.014 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.629 over chance A: 0.529 . 1 step",
+     "chance": "Chance level (same procedure) A: 0.212 ± 0.024 / 0.212 ± 0.025 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.463",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.14 ± 0.14 Hz",
+      "theta: 4.500 ± 0.058 Hz",
+      "beta: 15.44 ± 0.18 Hz",
+      "theta: 7.95 ± 0.12 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7527,
+     "el": 28,
+     "title": "Replay: Free session 0:28",
+     "phi": "Golden ratio alignment 0.014 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.597 over chance A: 0.524 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.165 ± 0.021 / 0.154 ± 0.021 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.398",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.13 ± 0.13 Hz",
+      "theta: 4.483 ± 0.054 Hz",
+      "beta: 15.52 ± 0.18 Hz",
+      "alpha: 8.00 ± 0.11 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 8093,
+     "el": 30,
+     "title": "Replay: Free session 0:30",
+     "phi": "Golden ratio alignment 0.029 over chance A: 0 . 0 steps",
+     "oct": "Octave alignment 0.577 over chance A: 0.500 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.165 ± 0.021 / 0.154 ± 0.021 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.373",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "beta: 14.14 ± 0.12 Hz",
+      "beta: 15.63 ± 0.20 Hz",
+      "alpha: 8.066 ± 0.079 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 24045,
+     "title": null,
+     "phi": null,
+     "oct": null,
+     "chance": null,
+     "signal": null,
+     "chips": [],
+     "calm": null,
+     "guide": null,
+     "page": "finished"
+    }
+   ],
+   "shots": {
+    "t30": "nearmiss_1.8_10db-t30.png",
+    "t30-full": "nearmiss_1.8_10db-t30-full.png",
+    "afterEnd": "nearmiss_1.8_10db-end.png"
+   },
+   "inspects": [
+    {
+     "at": 30,
+     "el": 30,
+     "eye": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 14.673 ± 0.093 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=1].match 0.964 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 1 Closeness 0.401 0.788 Chance A (random peaks) 0.171 ± 0.022 p 0.184 0.134 ± 0.019 p 0.085 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.277 0.756 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Cloud band 1 (track 1) × A confirmed rhythm that is not part of a golden ratio cascade: cloud with no spiral structure. What you see Measured Brightness of cloud band 1 slow.tracks[id=1].height_db 13.01 ± 0.78 dB Bands of unorganized cloud slow.tracks[state=confirmed].length 2 tracks Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 14.70 ± 0.26 Hz Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.011 Chance A (random peaks) 0.0236 ± 0.0082 p 0.080 0.040 ± 0.012 p 0.109 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 15.42 ± 0.54 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=1].match not measured (not available) Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 14.47 ± 0.19 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=1].match 0.839 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness 0.000 0.000 Chance A (random peaks) not measured (not available) not measured (not available) Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A not measured (not available) not measured (not available) Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 14.69 ± 0.53 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=1].match 0.892 Number of spiral arms slow.cascades.phi.tracks.length not measured (no golden ratio cascade) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Water around the storm × The whole picture swells gently with the measured breathing rhythm. What you see Measured Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=1].freq 14.96 ± 0.23 Hz The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    }
+   ],
+   "ended": true,
+   "afterEnd": {
+    "title": null,
+    "phi": null,
+    "oct": null,
+    "chance": null,
+    "signal": null,
+    "chips": [],
+    "calm": null,
+    "guide": null,
+    "page": "finished"
+   },
+   "audioMsgs": [],
+   "console": []
+  },
+  "phi3_10db_shuffled_samples": {
+   "series": [
+    {
+     "wall": 446,
+     "el": 0,
+     "title": "Replay: Free session 0:00",
+     "phi": "Golden ratio alignment not measured no data over chance A: not measured nothing received yet",
+     "oct": "Octave alignment not measured no data over chance A: not measured nothing received yet",
+     "chance": "Chance level (same procedure) A: not measured no data / not measured no data golden / octave. B: not measured / not measured p (A): not measured",
+     "signal": "Signal not measured (no frames arriving)",
+     "chips": [
+      "Signal not measured (no frames arriving)",
+      "Peaks: not measured (no frames arriving)",
+      "Heart: no heart source connected"
+     ],
+     "calm": "No data",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1015,
+     "el": 3,
+     "title": "Replay: Free session 0:03",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1518,
+     "el": 5,
+     "title": "Replay: Free session 0:05",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2020,
+     "el": 7,
+     "title": "Replay: Free session 0:07",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2523,
+     "el": 10,
+     "title": "Replay: Free session 0:10",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3028,
+     "el": 12,
+     "title": "Replay: Free session 0:12",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3530,
+     "el": 14,
+     "title": "Replay: Free session 0:14",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4033,
+     "el": 16,
+     "title": "Replay: Free session 0:16",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4539,
+     "el": 18,
+     "title": "Replay: Free session 0:18",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5043,
+     "el": 20,
+     "title": "Replay: Free session 0:20",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5546,
+     "el": 22,
+     "title": "Replay: Free session 0:22",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6048,
+     "el": 24,
+     "title": "Replay: Free session 0:24",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6552,
+     "el": 26,
+     "title": "Replay: Free session 0:26",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7054,
+     "el": 28,
+     "title": "Replay: Free session 0:28",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7558,
+     "el": 30,
+     "title": "Replay: Free session 0:30",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 9565,
+     "el": 38,
+     "title": "Replay: Free session 0:38",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 10068,
+     "el": 40,
+     "title": "Replay: Free session 0:40",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 10570,
+     "el": 42,
+     "title": "Replay: Free session 0:42",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 11073,
+     "el": 44,
+     "title": "Replay: Free session 0:44",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 11576,
+     "el": 46,
+     "title": "Replay: Free session 0:46",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 12079,
+     "el": 48,
+     "title": "Replay: Free session 0:48",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 12582,
+     "el": 50,
+     "title": "Replay: Free session 0:50",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 13084,
+     "el": 52,
+     "title": "Replay: Free session 0:52",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 13587,
+     "el": 54,
+     "title": "Replay: Free session 0:54",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 14089,
+     "el": 56,
+     "title": "Replay: Free session 0:56",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 14592,
+     "el": 58,
+     "title": "Replay: Free session 0:58",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 15094,
+     "el": 60,
+     "title": "Replay: Free session 1:00",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 17031,
+     "el": 68,
+     "title": "Replay: Free session 1:08",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 17534,
+     "el": 70,
+     "title": "Replay: Free session 1:10",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 18036,
+     "el": 72,
+     "title": "Replay: Free session 1:12",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 18538,
+     "el": 74,
+     "title": "Replay: Free session 1:14",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 19041,
+     "el": 76,
+     "title": "Replay: Free session 1:16",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 19543,
+     "el": 78,
+     "title": "Replay: Free session 1:18",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 20045,
+     "el": 80,
+     "title": "Replay: Free session 1:20",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 20548,
+     "el": 82,
+     "title": "Replay: Free session 1:22",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 21050,
+     "el": 84,
+     "title": "Replay: Free session 1:24",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 21553,
+     "el": 86,
+     "title": "Replay: Free session 1:26",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 22055,
+     "el": 88,
+     "title": "Replay: Free session 1:28",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 22558,
+     "el": 90,
+     "title": "Replay: Free session 1:30",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 23061,
+     "el": 92,
+     "title": "Replay: Free session 1:32",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 23564,
+     "el": 94,
+     "title": "Replay: Free session 1:34",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 24066,
+     "el": 96,
+     "title": "Replay: Free session 1:36",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 24569,
+     "el": 98,
+     "title": "Replay: Free session 1:38",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 25071,
+     "el": 100,
+     "title": "Replay: Free session 1:40",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 29260,
+     "el": 116,
+     "title": "Replay: Free session 1:56",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 31257,
+     "title": null,
+     "phi": null,
+     "oct": null,
+     "chance": null,
+     "signal": null,
+     "chips": [],
+     "calm": null,
+     "guide": null,
+     "page": "finished"
+    }
+   ],
+   "shots": {
+    "t30": "phi3_10db_shuffled_samples-t30.png",
+    "t30-full": "phi3_10db_shuffled_samples-t30-full.png",
+    "t60": "phi3_10db_shuffled_samples-t60.png",
+    "t60-full": "phi3_10db_shuffled_samples-t60-full.png",
+    "t99": "phi3_10db_shuffled_samples-t99.png",
+    "t99-full": "phi3_10db_shuffled_samples-t99-full.png",
+    "pair": [
+     "phi3_10db_shuffled_samples-pairA.png",
+     "phi3_10db_shuffled_samples-pairB.png"
+    ],
+    "t113": "phi3_10db_shuffled_samples-t113.png",
+    "t113-full": "phi3_10db_shuffled_samples-t113-full.png",
+    "afterEnd": "phi3_10db_shuffled_samples-end.png"
+   },
+   "inspects": [
+    {
+     "at": 30,
+     "el": 30,
+     "eye": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": -200,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    },
+    {
+     "at": 60,
+     "el": 60,
+     "eye": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": -200,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    },
+    {
+     "at": 99,
+     "el": 100,
+     "eye": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": -200,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    },
+    {
+     "at": 113,
+     "el": 116,
+     "eye": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Calm water × Calm water: no confirmed peak What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no confirmed peak) Number of spiral arms slow.cascades.phi.tracks.length not measured (no confirmed peak) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no confirmed peak) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 0 0 Closeness not measured (no confirmed peak) not measured (no confirmed peak) Chance A (random peaks) not measured (no confirmed peak) not measured (no confirmed peak) Chance B (own wandering) not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance A not measured (no confirmed peak) not measured (no confirmed peak) Beyond chance B not measured (no confirmed peak) not measured (no confirmed peak) Held 0.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Calm water × No data What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no data) Number of spiral arms slow.cascades.phi.tracks.length not measured (no data) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no data) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Calm water × No data What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=dominant].freq not measured (no data) Number of spiral arms slow.cascades.phi.tracks.length not measured (no data) Ring structure (octave excess alignment) slow.cascades.octave.excess_a not measured (no data) Pulse through the eye wall (detected heartbeat) heart.beats[] not measured (no data) Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    }
+   ],
+   "ended": true,
+   "afterEnd": {
+    "title": null,
+    "phi": null,
+    "oct": null,
+    "chance": null,
+    "signal": null,
+    "chips": [],
+    "calm": null,
+    "guide": null,
+    "page": "finished"
+   },
+   "audioMsgs": [],
+   "console": []
+  },
+  "phi3_10db_shuffled_2s_blocks": {
+   "series": [
+    {
+     "wall": 712,
+     "el": 1,
+     "title": "Replay: Free session 0:01",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal not usable: TP9 (warming up: not enough data yet), AF7 (warming up: not enough data yet), AF8 (warming up: not enough data yet), TP10 (warming up: not enough data yet)",
+     "chips": [
+      "Signal not usable: TP9 (warming up: not enough data yet), AF7 (warming up: not enough data yet), AF8 (warming up: not enough data yet), TP10 (warming up: not enough data yet)",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "No data",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1219,
+     "el": 4,
+     "title": "Replay: Free session 0:04",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 1729,
+     "el": 6,
+     "title": "Replay: Free session 0:06",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: warming up: not enough data yet",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2233,
+     "el": 8,
+     "title": "Replay: Free session 0:08",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 2736,
+     "el": 10,
+     "title": "Replay: Free session 0:10",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3243,
+     "el": 12,
+     "title": "Replay: Free session 0:12",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 3746,
+     "el": 14,
+     "title": "Replay: Free session 0:14",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4289,
+     "el": 16,
+     "title": "Replay: Free session 0:16",
+     "phi": "Golden ratio alignment 0.795 over chance A: 0.790 . 1 step",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0196 ± 0.0078 / 0.0322 ± 0.0098 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.015",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "Peaks: none confirmed against the background yet",
+      "Heart: no heart source connected"
+     ],
+     "calm": "Calm water: no confirmed peak",
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 4857,
+     "el": 18,
+     "title": "Replay: Free session 0:18",
+     "phi": "Golden ratio alignment 0.965 over chance A: 0.959 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.131 ± 0.021 / 0.108 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "theta: 4.590 ± 0.077 Hz",
+      "alpha: 12.21 ± 0.24 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5416,
+     "el": 20,
+     "title": "Replay: Free session 0:20",
+     "phi": "Golden ratio alignment 0.994 over chance A: 0.993 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.131 ± 0.021 / 0.108 ± 0.018 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 12.17 ± 0.22 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 5976,
+     "el": 22,
+     "title": "Replay: Free session 0:22",
+     "phi": "Golden ratio alignment 0.918 over chance A: 0.908 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.110 ± 0.019 / 0.087 ± 0.017 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 12.18 ± 0.19 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 6584,
+     "el": 24,
+     "title": "Replay: Free session 0:24",
+     "phi": "Golden ratio alignment 0.826 over chance A: 0.805 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.110 ± 0.019 / 0.087 ± 0.017 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "theta: 4.622 ± 0.076 Hz",
+      "alpha: 12.25 ± 0.16 Hz",
+      "theta: 7.39 ± 0.13 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7174,
+     "el": 26,
+     "title": "Replay: Free session 0:26",
+     "phi": "Golden ratio alignment 0.881 over chance A: 0.867 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.110 ± 0.019 / 0.087 ± 0.017 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "theta: 4.621 ± 0.078 Hz",
+      "alpha: 12.30 ± 0.13 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 7725,
+     "el": 29,
+     "title": "Replay: Free session 0:29",
+     "phi": "Golden ratio alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "oct": "Octave alignment not measured no confirmed peak over chance A: not measured no confirmed peak . 0 steps",
+     "chance": "Chance level (same procedure) A: not measured no confirmed peak / not measured no confirmed peak golden / octave. B: not measured (no confirmed peak) / not measured (no confirmed peak) p (A): not measured (no confirmed peak)",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 12.36 ± 0.12 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 8320,
+     "el": 31,
+     "title": "Replay: Free session 0:31",
+     "phi": "Golden ratio alignment 0.947 over chance A: 0.946 . 1 step",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.0219 ± 0.0079 / 0.0192 ± 0.0069 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.010",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 12.31 ± 0.13 Hz",
+      "theta: 7.54 ± 0.18 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 24344,
+     "el": 95,
+     "title": "Replay: Free session 1:35",
+     "phi": "Golden ratio alignment 0.985 over chance A: 0.984 . 2 steps",
+     "oct": "Octave alignment 0.000 over chance A: 0 . 0 steps",
+     "chance": "Chance level (same procedure) A: 0.091 ± 0.017 / 0.071 ± 0.015 golden / octave. B: not measured (warming up: not enough data yet) / not measured (warming up: not enough data yet) p (A): 0.005",
+     "signal": "Signal good: 4 of 4 channels usable",
+     "chips": [
+      "Signal good: 4 of 4 channels usable",
+      "alpha: 12.070 ± 0.081 Hz",
+      "Heart: no heart source connected"
+     ],
+     "calm": null,
+     "guide": "",
+     "page": "live"
+    },
+    {
+     "wall": 32608,
+     "title": null,
+     "phi": null,
+     "oct": null,
+     "chance": null,
+     "signal": null,
+     "chips": [],
+     "calm": null,
+     "guide": null,
+     "page": "finished"
+    }
+   ],
+   "shots": {
+    "t30": "phi3_10db_shuffled_2s_blocks-t30.png",
+    "t30-full": "phi3_10db_shuffled_2s_blocks-t30-full.png",
+    "t60": "phi3_10db_shuffled_2s_blocks-t60.png",
+    "t60-full": "phi3_10db_shuffled_2s_blocks-t60-full.png",
+    "afterEnd": "phi3_10db_shuffled_2s_blocks-end.png"
+   },
+   "inspects": [
+    {
+     "at": 30,
+     "el": 31,
+     "eye": "The eye × The eye clears the longer the golden ratio cascade has held. What you see Measured Clarity of the eye (time the cascade has held) slow.cascades.phi.held_s 9.75 s Golden ratio Octave Steps in cascade 2 0 Closeness 0.795 0.000 Chance A (random peaks) 0.169 ± 0.022 p 0.005 0.164 ± 0.022 p 0.592 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.753 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 9.8 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion.",
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "Spiral arm 3 (track 3) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 3 slow.tracks[id=3].height_db 11.6 ± 1.2 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.903 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 11.92 ± 0.14 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match 0.227 Golden ratio Octave Steps in cascade 2 0 Closeness 0.912 0.000 Chance A (random peaks) 0.093 ± 0.017 p 0.005 0.107 ± 0.018 p 0.438 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.903 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 15.0 s 0.0 s Aligned state not in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 120,
+       "dy": 0,
+       "text": "Spiral arm 2 (track 8) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 2 slow.tracks[id=8].height_db 9.2 ± 1.2 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.888 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 12.16 ± 0.24 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match 0.801 Golden ratio Octave Steps in cascade 2 0 Closeness 0.900 0.000 Chance A (random peaks) 0.107 ± 0.018 p 0.005 0.119 ± 0.019 p 0.438 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.888 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 21.0 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": 120,
+       "text": "Spiral arm 1 (track 7) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 1 slow.tracks[id=7].height_db 7.59 ± 0.24 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.909 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 12.16 ± 0.37 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match 0.457 Golden ratio Octave Steps in cascade 2 0 Closeness 0.917 0.000 Chance A (random peaks) 0.088 ± 0.016 p 0.005 0.073 ± 0.015 p 0.398 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.909 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 26.5 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": -120,
+       "dy": 0,
+       "text": "Spiral arm 3 (track 3) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 3 slow.tracks[id=3].height_db 12.01 ± 0.64 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.862 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 12.22 ± 0.16 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match 0 Golden ratio Octave Steps in cascade 2 0 Closeness 0.878 0.000 Chance A (random peaks) 0.116 ± 0.019 p 0.010 0.089 ± 0.017 p 0.383 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.862 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 32.0 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 0,
+       "dy": -200,
+       "text": "Spiral arm 2 (track 8) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 2 slow.tracks[id=8].height_db 10.68 ± 0.61 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.809 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 12.22 ± 0.35 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match 0 Golden ratio Octave Steps in cascade 2 0 Closeness 0.847 0.000 Chance A (random peaks) 0.196 ± 0.023 p 0.015 0.110 ± 0.018 p 0.542 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.809 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 38.5 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      },
+      {
+       "dx": 200,
+       "dy": 0,
+       "text": "Spiral arm 1 (track 7) × One arm per track in the golden ratio cascade. Brightness is that track's height above background. What you see Measured Brightness of arm 1 slow.tracks[id=7].height_db 9.8 ± 1.3 dB Number of spiral arms slow.cascades.phi.tracks.length 3 arms How tightly the arms wind (golden ratio excess alignment) slow.cascades.phi.excess_a 0.978 Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=7].freq 4.494 ± 0.056 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=7].match not measured (not available) Golden ratio Octave Steps in cascade 2 0 Closeness 0.980 0.000 Chance A (random peaks) 0.100 ± 0.017 p 0.005 0.098 ± 0.018 p 0.478 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.978 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 46.0 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    },
+    {
+     "at": 60,
+     "el": 95,
+     "eye": null,
+     "probes": [
+      {
+       "dx": 0,
+       "dy": -120,
+       "text": "The storm × Rotation follows the strongest confirmed rhythm. The halves line up when the hemispheres match. What you see Measured Rotation speed (frequency of the strongest confirmed track) slow.tracks[id=3].freq 11.788 ± 0.089 Hz Left and right symmetry (hemisphere match) slow.hemispheres[track=3].match not measured (not available) Number of spiral arms slow.cascades.phi.tracks.length 2 arms Slow swell (measured breathing rhythm) heart.breath_phase not measured (no data) Golden ratio Octave Steps in cascade 1 0 Closeness 0.927 0.000 Chance A (random peaks) 0.114 ± 0.019 p 0.050 0.051 ± 0.012 p 0.458 Chance B (own wandering) not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Beyond chance A 0.918 0 Beyond chance B not measured (warming up: not enough data yet) not measured (warming up: not enough data yet) Held 74.5 s 0.0 s Aligned state in alignment not in alignment The spiral form is a design choice. What is measured: whether it forms, how many arms, how tightly they wind, how bright each one is, the ring, the eye, and the motion."
+      }
+     ]
+    }
+   ],
+   "ended": true,
+   "afterEnd": {
+    "title": null,
+    "phi": null,
+    "oct": null,
+    "chance": null,
+    "signal": null,
+    "chips": [],
+    "calm": null,
+    "guide": null,
+    "page": "finished"
+   },
+   "audioMsgs": [],
+   "console": []
   }
  }
 }

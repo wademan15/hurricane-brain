@@ -189,6 +189,8 @@ struct ChanceCache {
     thr_a: [Option<f64>; 2],
     b: Option<[NullDist; 2]>,
     thr_b: [Option<f64>; 2],
+    /// Smallest p-value chance B may report from the histories it was built on.
+    b_p_floor: f64,
 }
 
 /// The signal engine. Feed it samples; drain frames.
@@ -1713,6 +1715,7 @@ impl Engine {
                 let b = ratios::chance_b(&hists, &ctx, &mut rng, min_lag, step, span, dwell_steps, step as f64 * us);
                 self.chance.thr_b = b.thresholds;
                 self.chance.b = Some(b.dists);
+                self.chance.b_p_floor = ratios::chance_b_p_floor(p, shortest as f64 * us);
             } else {
                 self.chance.b = None;
                 self.chance.thr_b = [None, None];
@@ -1764,7 +1767,17 @@ impl Engine {
                 None => ChanceLevel::null(if scored.len() < 2 { Reason::NotConfirmed } else { Reason::WarmingUp }),
             };
             let level_b = match &self.chance.b {
-                Some(d) => d[ci].level(steps, obs_c),
+                Some(d) => {
+                    // A history of a few correlation times cannot support a small p-value.
+                    let mut lv = d[ci].level(steps, obs_c);
+                    let floor = self.chance.b_p_floor;
+                    for pm in [&mut lv.p, &mut lv.p_steps] {
+                        if let Some(v) = pm.v {
+                            pm.v = Some(v.max(floor));
+                        }
+                    }
+                    lv
+                }
                 None => ChanceLevel::null(if scored.len() < 2 { Reason::NotConfirmed } else { Reason::WarmingUp }),
             };
             let excess = |lv: &ChanceLevel| -> Measured {

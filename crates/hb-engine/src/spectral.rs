@@ -415,6 +415,7 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
     let mut corr = vec![0.0f64; idx.len()]; // log10 of shape correction
     let mut fit = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0); // a, b, se_a, se_b, rms, mx, sxx, s2
     let mut n_in = 0.0;
+    let mut inl_line = vec![true; xs.len()];
     for outer in 0..3 {
         let ys: Vec<f64> = idx.iter().zip(corr.iter()).map(|(&i, c)| m::log10(s[i]) - c).collect();
         let mut inl = vec![true; xs.len()];
@@ -467,6 +468,7 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
                 break;
             }
         }
+        inl_line = inl;
         if outer < 2 {
             let shape = smoothed_shape(fit.1, nb, df, p.mt_half_bandwidth_hz, response);
             for (j, &i) in idx.iter().enumerate() {
@@ -540,13 +542,15 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
         cv.terms = terms;
         let mut corr2 = corr.clone();
         let mut ok = true;
-        let mut inl = vec![true; xs.len()];
+        // Start from the power law's inliers: what the rigid fit already set aside as a peak
+        // stays out unless the curve comes to explain it. Starting from all bins lets the
+        // curve bend up into a broad low-frequency rhythm before the rhythm is recognised.
+        let mut inl = inl_line.clone();
         let mut last_s2 = 0.0;
         let mut last_inv = [[0.0; BG_MAX_TERMS]; BG_MAX_TERMS];
         let mut last_rms = 0.0;
         'outer: for outer in 0..3 {
             let ys: Vec<f64> = idx.iter().zip(corr2.iter()).map(|(&i, c)| m::log10(s[i]) - c).collect();
-            inl = vec![true; xs.len()];
             for _ in 0..25 {
                 let n = inl.iter().filter(|v| **v).count();
                 if n < 10 + terms {

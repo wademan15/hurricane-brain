@@ -132,3 +132,41 @@ pub fn track_near<'a>(sf: &'a SlowFrame, f: f64, tol: f64) -> Option<&'a Track> 
 pub fn phi() -> f64 {
     (1.0 + 5f64.sqrt()) / 2.0
 }
+
+/// One channel with an arbitrary background spectrum `shape(f)` (power density, any scale),
+/// rhythms planted relative to it, scaled to `sd_uv`. `n2` samples are synthesized and the
+/// first `n` returned, so a window is not one full period of the synthesis.
+pub fn synth_shape(n: usize, shape: &dyn Fn(f64) -> f64, rhythms: &[Rhythm], sd_uv: f64, rng: &mut Rng) -> Vec<f64> {
+    let nfft = next_pow2(2 * n);
+    let fft = Fft::new(nfft);
+    let mut buf = vec![C::default(); nfft];
+    for k in 1..nfft / 2 {
+        let f = k as f64 * RATE / nfft as f64;
+        let mut pw = shape(f);
+        for r in rhythms {
+            pw += (m::pow(10.0, r.snr_db / 10.0) - 1.0) * shape(r.f) * m::exp(-0.5 * ((f - r.f) / r.bw) * ((f - r.f) / r.bw));
+        }
+        let a = m::sqrt(pw);
+        let z = C::new(a * rng.normal(), a * rng.normal());
+        buf[k] = z;
+        buf[nfft - k] = z.conj();
+    }
+    fft.inverse(&mut buf);
+    let x: Vec<f64> = buf[..n].iter().map(|v| v.re).collect();
+    scale_to(x, sd_uv)
+}
+
+/// Background shapes that are not one power law (review, November 2026).
+pub fn bg_shape(name: &str) -> Box<dyn Fn(f64) -> f64> {
+    match name {
+        // A knee: flat below 15 Hz, falling as f^-3 above.
+        "knee" => Box::new(|f: f64| 1.0 / (1.0 + m::pow(f / 15.0, 3.0))),
+        // 1/f^2 running into an amplifier noise floor.
+        "floor" => Box::new(|f: f64| m::pow(f.max(0.5), -2.0) + 0.005),
+        // 1/f^1.5 with a low-pass edge at 30 Hz.
+        "lowpass" => Box::new(|f: f64| m::pow(f.max(0.5), -1.5) / (1.0 + m::pow(f / 30.0, 4.0))),
+        // 1/f^1.5 with a high-pass edge at 4 Hz.
+        "highpass" => Box::new(|f: f64| m::pow(f.max(0.5), -1.5) * (m::pow(f / 4.0, 4.0) / (1.0 + m::pow(f / 4.0, 4.0)))),
+        _ => panic!("unknown shape {name}"),
+    }
+}

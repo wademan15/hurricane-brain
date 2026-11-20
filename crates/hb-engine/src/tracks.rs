@@ -136,3 +136,66 @@ impl TrackInt {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prng::Rng;
+
+    fn track_with(win: &[(f64, f64, f64)]) -> TrackInt {
+        let pk = Peak { f: 10.0, se: 0.1, h: 5.0, h_db_se: None, width: 1.0 };
+        let mut t = TrackInt::new(1, 0.0, &Obs { site: 0, peak: pk }, 1);
+        t.cur = None;
+        t.win = win.iter().copied().collect();
+        t
+    }
+
+    /// Window estimates every 250 ms from overlapping 8 s windows, modelled as a moving
+    /// average of white noise over 32 updates. The reported error of the integrated
+    /// frequency must match the actual spread whether the windows' own errors are right,
+    /// 1.7 times too large or 1.7 times too small (both were measured on planted rhythms).
+    #[test]
+    fn integrated_error_follows_the_scatter_not_only_the_window_errors() {
+        let p = Params::default();
+        let sd_window = 0.2;
+        for &claim in &[1.0, 1.7, 1.0 / 1.7] {
+            let mut rng = Rng::new(11);
+            let (mut errs, mut ses) = (Vec::new(), Vec::new());
+            for _ in 0..600 {
+                let n = 121usize;
+                let noise: Vec<f64> = (0..n + 32).map(|_| rng.normal()).collect();
+                let win: Vec<(f64, f64, f64)> = (0..n)
+                    .map(|k| {
+                        let avg = noise[k..k + 32].iter().sum::<f64>() / 32.0 * (32f64).sqrt();
+                        (100.0 + 0.25 * k as f64, 10.0 + sd_window * avg, sd_window * claim)
+                    })
+                    .collect();
+                let mut t = track_with(&win);
+                t.integrate(130.0, 8.0, &p);
+                let (f, se) = t.f_int.unwrap();
+                errs.push(f - 10.0);
+                ses.push(se);
+            }
+            let n = errs.len() as f64;
+            let rms = m::sqrt(errs.iter().map(|e| e * e).sum::<f64>() / n);
+            let mean_se = ses.iter().sum::<f64>() / n;
+            println!("window errors claimed x{claim:.2}: actual {rms:.4}, reported {mean_se:.4}, ratio {:.2}", rms / mean_se);
+            assert!(rms / mean_se < 1.5 && rms / mean_se > 1.0 / 1.5, "claim x{claim}: actual/reported {}", rms / mean_se);
+        }
+    }
+
+    /// With less than two windows of span there is no scatter to pool: the error is the
+    /// windows' own, inflated, and never below one window's jackknife error.
+    #[test]
+    fn young_track_error_is_inflated() {
+        let p = Params::default();
+        let win: Vec<(f64, f64, f64)> = (0..8).map(|k| (20.0 + 0.25 * k as f64, 10.0, 0.1)).collect();
+        let mut t = track_with(&win);
+        t.integrate(22.0, 8.0, &p);
+        let (_, se) = t.f_int.unwrap();
+        assert!(se >= 0.1, "{se}");
+        t.win.clear();
+        t.integrate(22.0, 8.0, &p);
+        assert!(t.f_int.is_none());
+    }
+}
