@@ -48,6 +48,9 @@ class HurricaneSynthProcessor extends AudioWorkletProcessor {
       case 'anchorStop':
         this.core.stopAnchor();
         break;
+      case 'reset':
+        this.core.newSession();
+        break;
       case 'dispose':
         this.alive = false;
         break;

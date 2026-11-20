@@ -11,7 +11,7 @@
  */
 import type { HurricaneUniforms } from './bindings.ts';
 import { cloudTexture, NOISE_SIZE } from './noise.ts';
-import { VIZ_GEOMETRY, VIZ_MAPPING, VIZ_QUALITY, type Quality } from './params.ts';
+import { VIZ_GEOMETRY, VIZ_MAPPING, VIZ_PHOTOSAFE, VIZ_QUALITY, VIZ_THEME, type Quality, type VizTheme } from './params.ts';
 
 const f = (x: number): string => (Number.isInteger(x) ? `${x}.0` : `${x}`);
 const G = VIZ_GEOMETRY;
@@ -39,6 +39,11 @@ precision mediump float;
 #define BAND_OUT ${f(G.BAND_OUTER_R)}
 #define STORM_R ${f(G.STORM_OUTER_R)}
 #define PULSE_GAIN ${f(VIZ_MAPPING.PULSE_GAIN)}
+#define MAX_FLICKER_HZ ${f(VIZ_PHOTOSAFE.MAX_FLICKER_HZ)}
+#define DETAIL_F ${f(VIZ_PHOTOSAFE.DETAIL_FEATURE_R)}
+#define PATCH_F ${f(VIZ_PHOTOSAFE.PATCH_FEATURE_R)}
+#define STREAK_F ${f(VIZ_PHOTOSAFE.STREAK_FEATURE_RAD)}
+#define BEAD_W ${f(G.BEAD_WIDTH)}
 
 uniform vec2 u_res;
 uniform float u_radius;
@@ -55,11 +60,30 @@ uniform float u_eye;
 uniform float u_sym;
 uniform float u_pulse;
 uniform float u_swell;
+uniform float u_both;
+uniform float u_bothEye;
+uniform float u_rotRate;
+
+uniform vec3 u_cWater;
+uniform vec3 u_cRipple;
+uniform vec3 u_cCloudD;
+uniform vec3 u_cCloudL;
+uniform vec3 u_cRing;
+uniform vec3 u_cWall;
+uniform vec3 u_cPulse;
+uniform vec3 u_cBoth;
 
 float wrapA(float a) { return a - TAU * floor((a + PI) / TAU); }
 float gauss(float x) { return exp(-x * x); }
 // Static screen-space dither against banding. Depends only on pixel position.
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+// Photosensitivity: contrast gain for rotating texture whose features pass a point passHz times
+// a second. 1 up to MAX_FLICKER_HZ, then (MAX/passHz)^2. Mirrors geometry.ts flickerGain().
+float flickerGain(float passHz) {
+  if (passHz <= MAX_FLICKER_HZ) return 1.0;
+  float k = MAX_FLICKER_HZ / passHz;
+  return k * k;
+}
 
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * u_res) / u_radius;
@@ -67,9 +91,9 @@ void main() {
   float r = length(p);
 
   // Calm water: dark, still, screen-locked. Only the breath swell (scale) moves it.
-  vec3 water = vec3(0.010, 0.018, 0.034);
+  vec3 water = u_cWater;
   float rip = texture2D(u_noise, p * 0.30 + 0.5).g * 0.65 + texture2D(u_noise, p * 0.85 + 0.25).b * 0.35;
-  water += vec3(0.010, 0.017, 0.026) * rip;
+  water += u_cRipple * rip;
   water *= 1.0 - 0.45 * smoothstep(0.5, 1.9, r);
 
   vec3 col = water;
@@ -81,10 +105,13 @@ void main() {
     float c = cos(u_rot), s = sin(u_rot);
     vec2 q = vec2(c * p.x + s * p.y, -s * p.x + c * p.y);
     float side = clamp(p.x / 0.04, -1.0, 1.0);
-    float detail = texture2D(u_noise, q * 1.1 + 0.3).g;
+    // Fine texture loses contrast when the measured rotation would sweep it past faster than 3 Hz.
+    float lin = TAU * r * u_rotRate;
+    float detail = mix(0.5, texture2D(u_noise, q * 1.1 + 0.3).g, flickerGain(lin / DETAIL_F));
 
     // Spiral arms (logarithmic spiral theta = a0 + b ln r; the spiral form is a design choice).
     float arms = 0.0;
+    float armShape = 0.0;
     if (u_armN > 0.0) {
       float theta = atan(q.y, q.x) + 0.5 * side * u_sym;
       float lr = log(max(r, 1e-4));
@@ -106,6 +133,8 @@ void main() {
       }
       // Cloud streaks along the nearest arm, fixed in the rotating frame.
       float streak = texture2D(u_noise, vec2(bestD * 1.6 + bestI * 0.37, lr * 0.22 + bestI * 0.11)).r;
+      streak = mix(0.5, streak, flickerGain(TAU * u_rotRate / STREAK_F));
+      armShape = bestW * env;
       arms *= env * mix(0.35, 1.3, streak) * mix(0.7, 1.15, detail);
     }
 
@@ -120,29 +149,42 @@ void main() {
         float rj = BAND_IN + (BAND_OUT - BAND_IN) * (fj + 0.5) / nb;
         bands += pres * u_band[j] * gauss((r - rj) / 0.06);
       }
-      float patchy = texture2D(u_noise, q * 0.55 + 0.21).r * 0.75 + detail * 0.4;
+      float patchy = mix(0.5, texture2D(u_noise, q * 0.3 + 0.21).r, flickerGain(lin / PATCH_F)) * 0.75 + detail * 0.4;
       bands *= smoothstep(0.38, 0.8, patchy) * (1.0 - smoothstep(0.85, 1.05, r));
     }
 
     // Octave rings: thin, smooth, warm. Deliberately unlike the cloud arms.
+    float ringShape = 0.0;
     float ringv = 0.0;
-    if (u_ring > 0.0) {
-      ringv = gauss((r - ${f(G.RING_RADII[0])}) / RING_W) + gauss((r - ${f(G.RING_RADII[1])}) / RING_W)
-            + gauss((r - ${f(G.RING_RADII[2])}) / RING_W) * 0.8;
-      ringv *= u_ring * (0.85 + 0.2 * texture2D(u_noise, q * 2.3).b);
+    if (u_ring > 0.0 || u_both > 0.0) {
+      ringShape = gauss((r - ${f(G.RING_RADII[0])}) / RING_W) + gauss((r - ${f(G.RING_RADII[1])}) / RING_W)
+                + gauss((r - ${f(G.RING_RADII[2])}) / RING_W) * 0.8;
+      float ringTex = mix(0.5, texture2D(u_noise, q * 2.3).b, flickerGain(lin / DETAIL_F));
+      ringv = ringShape * u_ring * (0.85 + 0.2 * ringTex);
+    }
+
+    // Combined state: where arms cross rings the two interlock in luminous beads, and the eye wall
+    // becomes one shared, warm ring. Beads ride on the arms, so they pass a point no faster than arms.
+    float beads = 0.0;
+    if (u_both > 0.0) {
+      float armCore = smoothstep(0.55, 1.0, armShape / max(smoothstep(EYE_R * 0.8, EYE_WALL_R * 1.8, r), 1e-3));
+      beads = u_both * ringShape * armCore * smoothstep(0.0, 0.3, armShape);
     }
 
     // The eye: clears with the cascade's measured hold time. The eye wall carries the heartbeat.
     float eyeMask = 1.0 - u_eye * (1.0 - smoothstep(EYE_R * 0.5, EYE_R * 1.05, r));
     float wall = gauss((r - EYE_WALL_R) / 0.032);
     float wallV = wall * (0.5 * u_eye * (0.8 + 0.3 * detail) + PULSE_GAIN * u_pulse);
+    float sharedWall = gauss((r - EYE_WALL_R) / 0.045) * u_bothEye * u_both;
 
     float cloud = (arms + bands * 0.85) * eyeMask;
     float cc = clamp(cloud, 0.0, 1.0);
-    vec3 cloudCol = mix(vec3(0.26, 0.34, 0.48), vec3(0.84, 0.89, 0.96), cc);
+    vec3 cloudCol = mix(u_cCloudD, u_cCloudL, cc);
     col = water * (1.0 - 0.6 * cc) + cloudCol * cloud * 0.8;
-    col += vec3(0.95, 0.72, 0.45) * ringv * 0.55;
-    col += mix(vec3(0.70, 0.82, 1.0), vec3(1.0, 0.70, 0.66), clamp(u_pulse, 0.0, 1.0)) * wallV * 0.7;
+    col += mix(u_cRing, u_cBoth, 0.5 * u_both) * ringv * 0.55;
+    col += u_cBoth * beads * 0.9;
+    col += u_cBoth * sharedWall * 0.9;
+    col += mix(u_cWall, u_cPulse, clamp(u_pulse, 0.0, 1.0)) * wallV * 0.7;
   }
 
   col = 1.0 - exp(-col * 1.3);
@@ -161,7 +203,8 @@ interface GlState {
 
 const UNIFORM_NAMES = [
   'u_res', 'u_radius', 'u_noise', 'u_rot', 'u_armN', 'u_arm', 'u_wind', 'u_bandN', 'u_band',
-  'u_ring', 'u_eye', 'u_sym', 'u_pulse', 'u_swell',
+  'u_ring', 'u_eye', 'u_sym', 'u_pulse', 'u_swell', 'u_both', 'u_bothEye', 'u_rotRate',
+  'u_cWater', 'u_cRipple', 'u_cCloudD', 'u_cCloudL', 'u_cRing', 'u_cWall', 'u_cPulse', 'u_cBoth',
 ] as const;
 
 /** Storm radius as a fraction of the shorter side of the canvas. */
@@ -179,6 +222,7 @@ export class HurricaneRenderer {
 
   private st: GlState | null = null;
   private quality: Quality;
+  private theme: VizTheme = VIZ_THEME;
   private lastKey = '';
   private cssW = 0;
   private cssH = 0;
@@ -258,6 +302,12 @@ export class HurricaneRenderer {
     this.applySize();
   }
 
+  /** Storm colours. Restyling only: nothing bound changes. */
+  setTheme(t: VizTheme): void {
+    this.theme = t;
+    this.lastKey = '';
+  }
+
   setQuality(q: Quality): void {
     if (q === this.quality) return;
     this.quality = q;
@@ -303,7 +353,8 @@ export class HurricaneRenderer {
     const { gl, loc } = st;
     const w = this.canvas.width;
     const h = this.canvas.height;
-    const key = uniformKey(u, w, h);
+    const th = this.theme;
+    const key = uniformKey(u, w, h) + JSON.stringify(th);
     if (!force && key === this.lastKey) return false;
     const t0 = performance.now();
     gl.viewport(0, 0, w, h);
@@ -320,6 +371,17 @@ export class HurricaneRenderer {
     gl.uniform1f(loc.u_sym, u.symmetry);
     gl.uniform1f(loc.u_pulse, u.pulse);
     gl.uniform1f(loc.u_swell, u.swell);
+    gl.uniform1f(loc.u_both, u.both);
+    gl.uniform1f(loc.u_bothEye, u.bothEye);
+    gl.uniform1f(loc.u_rotRate, u.rotRate);
+    gl.uniform3fv(loc.u_cWater, th.water);
+    gl.uniform3fv(loc.u_cRipple, th.waterRipple);
+    gl.uniform3fv(loc.u_cCloudD, th.cloudDark);
+    gl.uniform3fv(loc.u_cCloudL, th.cloudLight);
+    gl.uniform3fv(loc.u_cRing, th.octaveRing);
+    gl.uniform3fv(loc.u_cWall, th.eyeWall);
+    gl.uniform3fv(loc.u_cPulse, th.pulse);
+    gl.uniform3fv(loc.u_cBoth, th.combined);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.lastSubmitMs = performance.now() - t0;
     this.lastKey = key;
@@ -357,6 +419,7 @@ function padTo(a: number[], n: number): Float32Array {
 function uniformKey(u: HurricaneUniforms, w: number, h: number): string {
   const vals = [
     w, h, u.rotation, u.armCount, u.winding, u.bandCount, u.ring, u.eye, u.symmetry, u.pulse, u.swell,
+    u.both, u.bothEye, u.rotRate,
     ...padTo(u.armBrightness, VIZ_GEOMETRY.MAX_ARMS), ...padTo(u.bandBrightness, VIZ_GEOMETRY.MAX_BANDS),
   ];
   return Array.from(new Float32Array(vals)).join(',');

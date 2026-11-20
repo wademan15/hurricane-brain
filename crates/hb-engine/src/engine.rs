@@ -90,6 +90,15 @@ impl<T: Copy + Default> Ring<T> {
     }
 }
 
+/// The harmonic mark of one pair of tracks (spec 6.6): the multiple, whether the upper track
+/// is currently marked a harmonic of the lower, and the recent tests (time, passed).
+#[derive(Clone, Debug)]
+struct HarmonicMark {
+    n: u32,
+    marked: bool,
+    tests: VecDeque<(f64, bool)>,
+}
+
 /// Track merge and split events (spec 6.5 says they are recorded; the frame schema has no
 /// field for them yet, see NOTES.md).
 #[derive(Clone, Debug, PartialEq)]
@@ -232,12 +241,14 @@ pub struct Engine {
     persist: Vec<VecDeque<(u64, Vec<Peak>)>>,
     tracks: Vec<TrackInt>,
     next_track_id: u32,
-    harmonics: BTreeMap<(u32, u32), (u32, f64)>,
+    harmonics: BTreeMap<(u32, u32), HarmonicMark>,
     site_bg: Vec<Option<BgFit>>,
     baselines: Baselines,
     baseline_start: Option<f64>,
     chance: ChanceCache,
     states: [StateMachine; 2],
+    /// The combined state (both targets active) and when it last changed.
+    both: (bool, Option<f64>),
     held_since: [Vec<Option<f64>>; 2],
     trackers: BTreeMap<u32, (usize, Box<dyn Tracker>)>,
     fast_block_gated: bool,
@@ -385,6 +396,7 @@ impl Engine {
             baseline_start: None,
             chance: ChanceCache::default(),
             states: [StateMachine::default(), StateMachine::default()],
+            both: (false, None),
             held_since: [Vec::new(), Vec::new()],
             trackers: BTreeMap::new(),
             fast_block_gated: false,
@@ -1595,7 +1607,8 @@ impl Engine {
         let n = self.tracks.len();
         let trim = m::round(0.5 * self.rate) as usize;
         let min_shift = m::round(p.compare_min_shift_s * self.rate) as usize;
-        let mut passes: Vec<((u32, u32), u32)> = Vec::new();
+        // Every pair tested this update: (lower id, upper id), n, passed.
+        let mut tests: Vec<((u32, u32), u32, bool)> = Vec::new();
         for i in 0..n {
             for j in 0..n {
                 if i == j {
@@ -1620,6 +1633,9 @@ impl Engine {
                 let nf = nn as f64;
                 let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df).max(0.5 * nf * pl.width);
                 if (ph.f - nf * pl.f).abs() > tol {
+                    // Out of the harmonic's band: evidence against an existing mark.
+                    eprintln!("DBG t {t:.1} n {nn} lo {:.2} hi {:.2} w {:.2} GATE tol {tol:.2}", pl.f, ph.f, pl.width);
+                    tests.push(((lo.id, hi.id), nn, false));
                     continue;
                 }
                 // Channel: where the lower rhythm is strongest among channel sites.
@@ -1648,25 +1664,51 @@ impl Engine {
                     // exactly n:1 for the whole window. A shift cannot tell that from a harmonic
                     // (a strictly periodic waveform is its own shifted copy), so it is flagged.
                     let steady = sur >= p.harmonic_plv_min;
-                    if plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady) {
-                        passes.push(((lo.id, hi.id), nn));
-                    }
+                    let pass = plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady);
+                    eprintln!("DBG t {t:.1} n {nn} lo {:.2} hi {:.2} w {:.2} len {} plv {plv:.2} sur {sur:.2}", pl.f, ph.f, pl.width, len);
+                    tests.push(((lo.id, hi.id), nn, pass));
                 }
             }
         }
-        for (k, nn) in passes {
-            self.harmonics.insert(k, (nn, t));
+        // Review: the mark is kept from the pair's history, not from the last two seconds. One
+        // pass sets it (erring toward "harmonic", spec 10.4). It is taken off only by evidence:
+        // when, over the last integration time and at least two slow windows of tests, fewer
+        // than `harmonic_release_fraction` of the tests passed. A window in which the test
+        // could not be made says nothing and changes nothing. Before, the mark lapsed 2 s
+        // after the last pass and the harmonic was then credited as an octave pair.
+        let keep_s = p.integration_s.max(2.0 * p.slow_window_s);
+        for (k, nn, pass) in tests {
+            if !pass && !self.harmonics.contains_key(&k) {
+                continue;
+            }
+            let e = self.harmonics.entry(k).or_insert_with(|| HarmonicMark { n: nn, marked: false, tests: VecDeque::new() });
+            if e.n != nn {
+                *e = HarmonicMark { n: nn, marked: false, tests: VecDeque::new() };
+            }
+            e.tests.push_back((t, pass));
+            while e.tests.front().is_some_and(|(t0, _)| t - *t0 > keep_s) {
+                e.tests.pop_front();
+            }
+            if pass {
+                e.marked = true;
+            } else if e.marked {
+                let span = e.tests.front().map(|(t0, _)| t - *t0).unwrap_or(0.0);
+                let passed = e.tests.iter().filter(|(_, ok)| *ok).count() as f64;
+                if span >= 2.0 * p.slow_window_s && passed < p.harmonic_release_fraction * e.tests.len() as f64 {
+                    e.marked = false;
+                }
+            }
         }
         let ids: BTreeSet<u32> = self.tracks.iter().map(|t| t.id).collect();
-        self.harmonics.retain(|(a, b), (_, last)| ids.contains(a) && ids.contains(b) && t - *last <= p.peak_hold_s);
+        self.harmonics.retain(|(a, b), _| ids.contains(a) && ids.contains(b));
     }
 
     fn harmonic_set(&self) -> BTreeSet<(u32, u32)> {
-        self.harmonics.keys().map(|&(a, b)| if a < b { (a, b) } else { (b, a) }).collect()
+        self.harmonics.iter().filter(|(_, h)| h.marked).map(|(&(a, b), _)| if a < b { (a, b) } else { (b, a) }).collect()
     }
 
     #[allow(clippy::type_complexity)]
-    fn score(&mut self, t: f64, u: u64, p: &Params) -> (Vec<PairScore>, PhiOctave<Cascade>, PhiOctave<AlignedState>) {
+    fn score(&mut self, t: f64, u: u64, p: &Params) -> (Vec<PairScore>, PhiOctave<Cascade>, States) {
         let mut scored: Vec<ScoreTrack> = self.tracks.iter().filter_map(|tr| tr.f_int.map(|(f, se)| ScoreTrack { id: tr.id, f, se })).collect();
         scored.sort_by(|a, b| a.f.total_cmp(&b.f).then(a.id.cmp(&b.id)));
         let harm = self.harmonic_set();
@@ -1787,13 +1829,23 @@ impl Engine {
                 }
                 None => ChanceLevel::null(if scored.len() < 2 { Reason::NotConfirmed } else { Reason::WarmingUp }),
             };
-            let excess = |lv: &ChanceLevel| -> Measured {
-                match (obs_c, lv.closeness.v) {
-                    (Some(c), Some(ch)) if ch < 1.0 => Measured::ok(((c - ch) / (1.0 - ch)).max(0.0)),
+            // Excess alignment (spec 8.5): above zero only when the observed cascade beats all
+            // but a fraction `excess_level` of the surrogates. Null where there is no observed
+            // closeness or no chance distribution, and for chance B while its history cannot
+            // support a percentile that small.
+            let excess = |dist: Option<&ratios::NullDist>, lv: &ChanceLevel, p_floor: f64| -> Measured {
+                match (obs_c, dist) {
                     (None, _) => Measured::null(cr.closeness.err().unwrap_or(Reason::NotAvailable)),
-                    _ => Measured::null(lv.closeness.why),
+                    (Some(_), None) => Measured::null(lv.closeness.why),
+                    (Some(_), Some(_)) if p_floor > p.excess_level => Measured::null(Reason::WarmingUp),
+                    (Some(c), Some(d)) => match d.excess(steps, c, p.excess_level) {
+                        Some((ex, _)) => Measured::ok(ex),
+                        None => Measured::null(lv.closeness.why),
+                    },
                 }
             };
+            let excess_a = excess(self.chance.a.as_ref().map(|d| &d[ci]), &level_a, 0.0);
+            let excess_b = excess(self.chance.b.as_ref().map(|d| &d[ci]), &level_b, self.chance.b_p_floor);
             let closeness = match cr.closeness {
                 Ok(c) => Measured::ok(c),
                 Err(w) => Measured::null(w),
@@ -1805,8 +1857,8 @@ impl Engine {
                 skipped: cr.skipped.iter().map(|&i| scored[i].id).collect(),
                 closeness,
                 held_s,
-                excess_a: excess(&level_a),
-                excess_b: excess(&level_b),
+                excess_a,
+                excess_b,
                 chance: ChancePair { a: level_a, b: level_b },
             });
         }
@@ -1825,6 +1877,11 @@ impl Engine {
                 },
                 _ => self.chance.thr_a[ci],
             };
+            // Review: the threshold is a quantile of the chance statistic, and when chance can
+            // hardly reach the target at all (a theta and a beta track, say) that quantile is
+            // far below zero. "Closer than chance" is then still nowhere near the target. The
+            // state needs evidence for the target, not only less evidence against it.
+            let enter = enter.map(|e| e.max(p.state_min_evidence));
             let exit = enter.map(|e| e - p.state_hysteresis);
             let stat = sc.stat[ci];
             self.states[ci].update(t, stat.ok(), enter, exit, p.dwell_s);
@@ -1840,7 +1897,13 @@ impl Engine {
         }
         let so = st.pop().unwrap();
         let sp = st.pop().unwrap();
-        (pairs_out, PhiOctave { phi, octave: oct }, PhiOctave { phi: sp, octave: so })
+        // The combined state: both at once. No statistic of its own.
+        let both_now = sp.active && so.active;
+        if self.both.1.is_none() || both_now != self.both.0 {
+            self.both = (both_now, Some(t));
+        }
+        let both = BothState { active: both_now, for_s: self.both.1.map(|s0| t - s0).unwrap_or(0.0) };
+        (pairs_out, PhiOctave { phi, octave: oct }, States { phi: sp, octave: so, both })
     }
 
     /// Compare side A (site `sa`, channels `ca`) with side B for every track present on both.
@@ -2000,9 +2063,9 @@ impl Engine {
         let harmonic_of = self
             .harmonics
             .iter()
-            .filter(|((_, hi), _)| *hi == tr.id)
-            .min_by_key(|((lo, _), (n, _))| (*n, *lo))
-            .map(|((lo, _), (n, _))| HarmonicOf { id: *lo, n: *n });
+            .filter(|((_, hi), h)| *hi == tr.id && h.marked)
+            .min_by_key(|((lo, _), h)| (h.n, *lo))
+            .map(|((lo, _), h)| HarmonicOf { id: *lo, n: h.n });
         let fref = tr.cur.as_ref().map(|c| c.f).or(tr.f_int.map(|v| v.0)).unwrap_or(tr.last_f);
         Track {
             id: tr.id,

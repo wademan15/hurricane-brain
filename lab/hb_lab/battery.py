@@ -114,6 +114,12 @@ def jobs_B(per_ratio=8, octave_extra=12):
 
 
 def jobs_C():
+    """Set C.  Only background, white noise, the headset on a table and sample-shuffled recordings are
+    "nothing there" (no peaks allowed).  Random-peak files have real but unrelated peaks: alignment there is
+    chance and counts toward the false-entry rate.  Block-shuffled (1 s blocks), phase-randomized and
+    channel-shifted surrogates keep the spectrum: they SHOULD show the source's peaks and ratios, are scored
+    against the source (lab/compare: surrogate check in docs/spec/bakeoff-report.md) and are reported
+    separately, not as false entries."""
     out = []
     spec = [("background_only", 30), ("white_noise", 10), ("random_loguniform", 30), ("random_bands", 30),
             ("headset_on_table", 10), ("surrogate_sample_shuffle", 8), ("surrogate_block_shuffle", 8),

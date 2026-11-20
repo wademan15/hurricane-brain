@@ -5,7 +5,12 @@
 import { parseProfile, type UserProfile } from '../training';
 import { IdbBackend, type KvBackend } from './backend';
 import { sessionSummaryCsv } from './csv';
-import { DEFAULT_APP_SETTINGS, type AppSettings, type RecordingMeta, type StoredSession } from './types';
+import { DEFAULT_APP_SETTINGS, type AppSettings, type Journal, type RecordingMeta, type StoredSession } from './types';
+
+/** Sessions saved before profiles, events and journals existed get safe defaults. */
+function normalizeSession(s: StoredSession): StoredSession {
+  return { ...s, profileId: s.profileId ?? 'local', cascadeEvents: s.cascadeEvents ?? [], journal: s.journal ?? null };
+}
 
 const SETTINGS_KEY = 'app';
 
@@ -28,7 +33,7 @@ export class Storage {
   // ---- settings -----------------------------------------------------------------------------
   async loadSettings(): Promise<AppSettings> {
     const s = await this.kv.get<Partial<AppSettings>>('settings', SETTINGS_KEY);
-    return { ...DEFAULT_APP_SETTINGS, ...(s ?? {}), version: 1 };
+    return { ...DEFAULT_APP_SETTINGS, ...(s ?? {}), stream: { ...DEFAULT_APP_SETTINGS.stream, ...(s?.stream ?? {}) }, version: 1 };
   }
   async saveSettings(s: AppSettings): Promise<void> {
     await this.kv.put('settings', SETTINGS_KEY, s);
@@ -44,7 +49,9 @@ export class Storage {
   async saveProfile(p: UserProfile): Promise<void> {
     await this.kv.put('profiles', p.userId, p);
   }
+  /** Delete a profile and every session that belongs to it (recordings go with their last session). */
   async deleteProfile(userId: string): Promise<void> {
+    for (const s of await this.listSessions(userId)) await this.deleteSession(s.id);
     await this.kv.delete('profiles', userId);
   }
   exportProfileJson(p: UserProfile): string {
@@ -88,12 +95,23 @@ export class Storage {
   async saveSession(s: StoredSession): Promise<void> {
     await this.kv.put('sessions', s.id, s);
   }
-  async listSessions(): Promise<StoredSession[]> {
-    const all = await this.kv.getAll<StoredSession>('sessions');
-    return all.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
+  /** Sessions, newest first. Pass a profile id to list one person's sessions only. */
+  async listSessions(profileId?: string): Promise<StoredSession[]> {
+    const all = (await this.kv.getAll<StoredSession>('sessions')).map(normalizeSession);
+    const mine = profileId === undefined ? all : all.filter((x) => x.profileId === profileId);
+    return mine.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
   }
   async getSession(id: string): Promise<StoredSession | null> {
-    return (await this.kv.get<StoredSession>('sessions', id)) ?? null;
+    const s = await this.kv.get<StoredSession>('sessions', id);
+    return s ? normalizeSession(s) : null;
+  }
+  /** Save the journal entry of a session (null removes it). */
+  async saveJournal(id: string, journal: Journal | null): Promise<StoredSession | null> {
+    const s = await this.getSession(id);
+    if (!s) return null;
+    const next = { ...s, journal };
+    await this.saveSession(next);
+    return next;
   }
   /** Delete a session; its recording goes too when no other session refers to it. */
   async deleteSession(id: string): Promise<void> {

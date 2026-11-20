@@ -6,6 +6,61 @@ import type { AudioSettings, AudioSettingsPatch } from '../audio';
 import type { Reason } from '../engine/frames';
 import type { SessionRecord } from '../training';
 
+export type ResponseSpeed = 'quicker' | 'steady' | 'slower';
+export type AgeGroup = 'child' | 'teen' | 'adult';
+
+/** What the app knows about a person besides their training profile. */
+export interface ProfileInfo {
+  name: string;
+  ageGroup: AgeGroup | null;
+}
+
+/** One member of a cascade as the engine reported it. */
+export interface CascadeMember {
+  id: number;
+  band: string;
+  /** Integrated frequency, Hz, or null with the reason it was not measured. */
+  freqHz: KeyCell;
+}
+
+/** The state of one cascade (golden ratio or octave) at the end of an event. */
+export interface CascadeSnapshot {
+  target: 'phi' | 'octave';
+  members: CascadeMember[];
+  steps: number;
+  maxSteps: number;
+  /** Measured frequency ratio between neighbouring members (hi / lo), one per step. */
+  ratios: KeyCell[];
+  closeness: KeyCell;
+  chanceA: KeyCell;
+  chanceB: KeyCell;
+  pA: KeyCell;
+  excessA: KeyCell;
+  excessB: KeyCell;
+}
+
+/** A stretch in which the golden ratio state, the octave state, or both at once, held. */
+export interface CascadeEvent {
+  kind: 'phi' | 'octave' | 'both';
+  /** Session clock seconds. */
+  tStart: number;
+  tEnd: number;
+  durationS: number;
+  /** One snapshot for phi or octave, two for both. */
+  parts: CascadeSnapshot[];
+}
+
+/** The short entry after a session. Everything optional; stored with the session. */
+export interface Journal {
+  note: string;
+  /** 1 (low) to 5 (high), or null when not answered. */
+  mood: number | null;
+  ease: number | null;
+  depth: number | null;
+  tags: string[];
+  writtenAt: string;
+}
+
 export interface RecordingSessionRef {
   sessionId: string;
   kind: 'program' | 'free';
@@ -67,11 +122,25 @@ export const KEY_COLUMNS: KeyColumn[] = [
   { id: 'oct_excess_a', label: 'octave excess over chance A', unit: '0..1' },
   { id: 'oct_excess_b', label: 'octave excess over chance B', unit: '0..1' },
   { id: 'oct_steps', label: 'octave cascade steps', unit: 'steps' },
+  { id: 'phi_active', label: 'golden ratio state active (1 = yes)', unit: '0/1' },
+  { id: 'phi_for_s', label: 'seconds in the current golden ratio condition', unit: 's' },
+  { id: 'oct_active', label: 'octave state active (1 = yes)', unit: '0/1' },
+  { id: 'oct_for_s', label: 'seconds in the current octave condition', unit: 's' },
+  { id: 'both_active', label: 'both states at once (1 = yes)', unit: '0/1' },
+  { id: 'both_for_s', label: 'seconds in the current combined condition', unit: 's' },
+  { id: 'at_ratio', label: 'alpha:theta frequency ratio (strongest alpha and theta peaks)', unit: 'ratio' },
+  { id: 'at_miss_2', label: 'alpha:theta distance from 2:1 (ln ratio)', unit: 'ln' },
+  { id: 'at_miss_3', label: 'alpha:theta distance from 3:1 (ln ratio)', unit: 'ln' },
+  { id: 'at_miss_phi', label: 'alpha:theta distance from the golden ratio (ln ratio)', unit: 'ln' },
   { id: 'usable_channels', label: 'usable EEG channels', unit: 'count' },
   { id: 'clean_fraction', label: 'clean fraction (mean of channels)', unit: '0..1' },
   { id: 'emg_db', label: 'muscle level (mean of channels)', unit: 'dB' },
   { id: 'hr_bpm', label: 'heart rate', unit: 'bpm' },
   { id: 'rmssd_ms', label: 'RMSSD', unit: 'ms' },
+  { id: 'sdnn_ms', label: 'SDNN', unit: 'ms' },
+  { id: 'lf_power', label: 'heart rhythm power 0.04-0.15 Hz', unit: 'ms2' },
+  { id: 'hf_power', label: 'heart rhythm power 0.15-0.4 Hz', unit: 'ms2' },
+  { id: 'resonance_hz', label: 'heart rhythm peak frequency', unit: 'Hz' },
   { id: 'resonance_strength', label: 'heart rhythm resonance strength', unit: '0..1' },
   { id: 'breath_bpm', label: 'breathing rate estimate', unit: 'breaths/min' },
   { id: 'pacer_adherence', label: 'pacer adherence', unit: '0..1' },
@@ -84,6 +153,14 @@ export interface SessionSettings {
   viz: { quality: string; rampS: number; slowStaleS: number; heartStaleS: number };
   mains: 'auto' | 50 | 60;
   chanceDriver: 'a' | 'b';
+  /** Alignment response speed preset and the integration time it set (null = engine default). */
+  responseSpeed: ResponseSpeed;
+  /** Whether harmonics counted toward octave alignment. */
+  harmonicsCount: boolean;
+  reducedMotion: 'system' | 'on' | 'off';
+  /** The screen was dark, sound only. */
+  soundOnly: boolean;
+  ageGroup: AgeGroup | null;
   engine: { version: string | null; params: Record<string, number | string | boolean> | null };
   engineOverrides: Record<string, number>;
   appVersion: string;
@@ -105,6 +182,11 @@ export interface StoredSession {
   keyRows: KeyRow[];
   settings: SessionSettings;
   completed: boolean;
+  /** The profile this session belongs to (several people can share one device). */
+  profileId: string;
+  /** Golden ratio, octave and combined-state events derived from the slow frames. */
+  cascadeEvents: CascadeEvent[];
+  journal: Journal | null;
   /** Free-text or marked notes the user added during the session. */
   notes: { t: number; text: string }[];
 }
@@ -118,6 +200,26 @@ export interface AppSettings {
   vizQuality: 'low' | 'medium' | 'high';
   mains: 'auto' | 50 | 60;
   chanceDriver: 'a' | 'b';
+  /** Alignment response speed: steady (30 s, default), quicker or slower. */
+  responseSpeed: ResponseSpeed;
+  /** Whether harmonics count toward octave alignment (default no). */
+  harmonicsCount: boolean;
+  /** 'system' follows the device's reduced-motion preference. */
+  reducedMotion: 'system' | 'on' | 'off';
+  /** Run sessions with the screen dark, sound only. */
+  soundOnly: boolean;
+  /** The photosensitivity notice was read. */
+  photoNoticeSeen: boolean;
+  /** Seconds of usable signal on every channel before "good to go". */
+  fitHoldS: number;
+  /** Show the fit and contact coaching before every session. */
+  fitCoaching: boolean;
+  /** Live stream out to a local address chosen by the user. Off by default. */
+  stream: { enabled: boolean; url: string; rawEeg: boolean };
+  /** The person using the app now. */
+  activeProfileId: string | null;
+  /** Names and age groups, by profile id. */
+  profileInfo: Record<string, ProfileInfo>;
   /** Screen brightness multiplier in eyes-closed mode, 0..0.5 (0 = black). */
   eyesClosedLevel: number;
   /** Numeric engine parameter overrides (tolerances), applied at the next session start. */
@@ -134,6 +236,16 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   vizQuality: 'medium',
   mains: 'auto',
   chanceDriver: 'a',
+  responseSpeed: 'steady',
+  harmonicsCount: false,
+  reducedMotion: 'system',
+  soundOnly: false,
+  photoNoticeSeen: false,
+  fitHoldS: 10,
+  fitCoaching: true,
+  stream: { enabled: false, url: 'ws://localhost:8765', rawEeg: false },
+  activeProfileId: null,
+  profileInfo: {},
   eyesClosedLevel: 0.04,
   engineOverrides: {},
   replaySpeed: 1,

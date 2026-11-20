@@ -2,6 +2,8 @@
 
 Status: first full run, 20 November 2026. The Python reference lab (`lab/`) produced every number here, using synthetic data only. Nothing here comes from a real Muse recording. The blind set (10.2 I) has not been run. The skeptic still has to sign this off against the blind files (10.4 step 4).
 
+Section 13 compares the Rust engine (`hb-run`, built from commit 840deda at 22:15 UTC) with the lab on the cross-check fixtures.
+
 Full tables, regenerated from the results files: `lab/out/bakeoff_tables.md`. Raw results: `lab/out/bakeoff_results_pass*.json`. How to reproduce: section 12.
 
 ---
@@ -29,6 +31,8 @@ What the recommended configuration (S1Q, P1 tuned, excess centroid, T3 amended, 
 - Results held up under 1% packet loss.
 - Bit-identical output on repeat.
 - Roadmap gate 2: the 10 Hz sine reads 9.998 to 10.000 Hz.
+- False golden entries: 0.98 per 10 min, just under the limit of 1, counted over the 163 minutes of set C that are not spectrum-preserving surrogates.
+- No hurricane structure on those files.
 
 What it **misses**:
 
@@ -42,7 +46,6 @@ What it **misses**:
 | Recovery within 3 s of an artifact | 67% |
 | Standard-error calibration (factor 1.5 allowed) | Off by 1.71 |
 | Cascade schedule, median delay under 20 s | 24 s |
-| Hurricane structure on nothing-there files (none allowed) | 1 golden 3-member cascade in 142 files |
 | Octave/golden labelling under 1% of files | 0/20 and 0/8, too few files to show under 1% |
 
 Full list in section 9.
@@ -54,7 +57,13 @@ Full list in section 9.
 3. Placing chance A by band (amended 8.5) is right for the null, but CFAR on it at the strict level made a real golden cascade nearly invisible: 2.5% of time in state, 11 of 12 formations missed. At the amended 3.3% level it meets C, but its median delay is 35 s.
 4. Every pass mark for detection at 6 dB, frequency within 1%, error calibration and recovery within 3 s is missed by every candidate. Section 10 explains why some of these marks look physically out of reach for rhythms of the planted widths, or conflict with other parameters.
 5. Decision rule 10.4 step 1 favours a detector that sees nothing. P3 detected no planted rhythm and still has the fewest C, D and E failures among the confirmation methods. The rule needs a minimum sensitivity before step 1 (section 2).
-6. The heavier surrogates of 8.5 (phase-randomized, block-shuffled, channel-shifted) keep the spectral peaks, and so they keep alignment. A phase-randomized golden cascade stays in the golden state 99% of the time under T1. They are not a "nothing there" yardstick for alignment of steady rhythms.
+6. **Corrected pass rule for surrogates.** Block shuffling with blocks much longer than a rhythm's cycle (here 1 s), phase randomization and channel shifting all keep the spectrum. So a correct engine **should** still show the source's peaks, ratios and cascades. Only sample shuffling, or blocks shorter than a cycle, destroys them.
+
+   The lab passes this rule. Sample shuffling removed all 31 planted peaks. Block shuffling kept 34 of 34, and the other two transforms kept 29 of 29. Golden-state presence matched the source in every block-shuffled and phase-randomized file. A phase-randomized golden cascade stays in the state 99% of the time under T1, which is the expected result.
+
+   The first draft of this battery counted alignment on these surrogates as false entries. That was wrong, and they are now scored against their source (section 6). It follows that these surrogates test timing (chance B), not placement (chance A).
+
+7. **The Rust engine follows the spec's T4 path**: a CFAR threshold on the amended ln Λ, with chance A placed by band. In the lab, that rule failed C at 1.59 false entries per 10 min and entered states on artifacts. On the fixtures, the engine agrees with the lab on window peak frequencies (median difference 0.031 Hz) but confirms fewer peaks at 6 dB. It also loses most windows under 1% packet loss (section 13).
 
 ---
 
@@ -303,17 +312,27 @@ These are on S1Q with the excess centroid. "Windows ≥99th pct" is the share of
   - the generator's peak placement (log-uniform over 2 to 40 Hz, one per band with band edges) not matching the null's exactly.
 - **Against band-placed chance, a single theta–alpha golden pair is weak evidence**: only 42% of planted golden pairs end at or above the 95th percentile. The spec says this in 8.5. This measures it.
 - **Chance B was never available at the end of an A or C file.** These files are 90 to 120 s, and chance B needs 120 s of track history after an 8 s window and a 30 s integration. It was available only in the 180 s steady cascades of set F, and there only for some tracks. Chance B is effectively untested.
-- **Heavier surrogates keep alignment.** On the 180 s steady golden cascade, time in the golden state under T1 was:
-  - original 88%;
-  - phase-randomized 99%;
-  - block-shuffled 64%.
+- **Spectrum-preserving surrogates: the pass rule is "same as the source".** A block shuffle with blocks much longer than a rhythm's cycle (the battery uses 1 s blocks, which is 3 cycles or more of anything at 3 Hz and above), a phase randomization and a channel shift all keep each channel's spectrum. A correct engine should therefore still find the source's peaks and ratios, and its cascades. A whole-app test that found a cascade surviving a 2 s block shuffle saw the expected behaviour. Only sample shuffling, or blocks shorter than one cycle, destroys the rhythms.
 
-  On random-peak recordings, false golden entries under T1 were:
-  - block-shuffled 2.7 to 4.5 per 10 min;
-  - channel-shifted 2.7 to 5.4;
-  - phase-randomized 0.9 to 2.7.
+  Checked here with the recommended configuration, each surrogate against its own unshuffled source (8 files per kind, `lab/out/surrogate_vs_source.txt`):
 
-  These surrogates preserve the spectrum and therefore the peaks and their ratios. They are a yardstick for chance B (timing) but not for chance A (placement). Spec 8.5's requirement that "live chance levels must agree with these within a stated margin" needs restating per chance level.
+  | Transform | Planted peaks found in source / in surrogate | Golden state (T3) time, source / surrogate | Files where state presence differs |
+  | --- | --- | --- | --- |
+  | Sample shuffle (must destroy) | 31/31 → 0/31 | 4.5% / 0.0% | 1 (correct: the shuffle removed it) |
+  | Block shuffle, 1 s blocks (must keep) | 34/34 → 34/34 | 0.0% / 0.0% | 0 |
+  | Phase randomization (must keep) | 29/30 → 29/30 | 0.0% / 0.0% | 0 |
+  | Channel shift (must keep) | 29/29 → 29/29 | 8.0% / 16.3% | 0 |
+
+  Every transform met its rule. On the 180 s steady golden cascade, time in the golden state under T1 was:
+  - 88% on the original;
+  - 99% phase-randomized;
+  - 64% block-shuffled.
+
+  These are expected. Block shuffling cuts the 30 s integration's continuity, which explains its lower figure. The block-shuffled cascade is still present, as it should be.
+
+  Consequences:
+  - Alignment on these files is not counted as false entries in C. The C rates and the hurricane check in section 9 use the other 118 files (163 minutes).
+  - The heavier surrogates test chance B (timing) and the engine's agreement with itself. They do not test chance A (placement). Spec 8.5's sentence that "the live chance levels must agree with these within a stated margin" needs restating per chance level.
 - **A broken build caught.** `broken-chance-single-pair` scores chance on one random pair instead of the full search. It produced 6.4% of windows at or above the 99th percentile on log-uniform files, against 0.9%.
 
 ---
@@ -338,6 +357,7 @@ All on S1Q with the excess centroid. C counts over all 196 minutes; F is the for
 
 Reading:
 
+- The C column counts all 196 minutes, including the spectrum-preserving surrogates, which should keep their source's alignment (section 6). Counted correctly, over the 163 minutes of the other files, the rates are T1 1.10, T3 amended 0.98, T4 1.59 and T4c (band, 3.3%) 0.67. The ranking does not change.
 - **No rule meets both C and the F delay.**
 - The amended T3 comes closest: it meets C, by a small margin, and its delay of 24 s misses 20 s by 4 s.
 - Under 10.4, C comes first, so the amended T3 is recommended.
@@ -416,9 +436,10 @@ Configuration `S1Q-P1-excess-band-a033-t3min`: S1Q, P1 with factor 1.280, centro
 | B | Octave labelled golden < 1% of files, and the reverse | 0/20 and 0/8; 95% upper limits 16% and 32% | **not shown** (sample too small) |
 | B | Rate at 1.5 and 1.8 under 10% of the rate at 1.618 | 0.00 and 0.00 | met |
 | C | Confirmed peaks in no-rhythm noise ≤ α_peak | 0.00% (0/3216) | met |
-| C | Aligned state ≤ 1 false entry per 10 min | 0.97 (15 of 142 files had an entry) | met, narrowly |
+| C | Aligned state ≤ 1 false entry per 10 min | 0.98 over the 163 min of C that excludes spectrum-preserving surrogates (13 of 118 files had an entry); 0.97 over all 196 min | met, narrowly |
 | C | Cascades of 3 or more steps: none | 0 files | met |
-| C | Hurricane structure: none | 1 file in 142 with a golden cascade of 3 members (a block-shuffled random-peak recording) | **missed** |
+| C | Hurricane structure: none | 0 files. The one golden 3-member cascade in C was in a 1 s block-shuffled recording, which should keep its source's peaks and ratios, so it is not a failure | met |
+| C | Surrogates: sample shuffle destroys peaks; block shuffle (blocks longer than a cycle), phase randomization and channel shift keep the source's peaks and ratios | 0/31 kept after sample shuffle; 34/34, 29/30 and 29/29 kept after the others (section 6) | met |
 | D | ≥ 95% of harmonics marked | 2x 93.1%, 3x 78.9% | **missed** |
 | D | No octave alignment credited | Octave state 0/24; an octave pair or cascade at some moment in 1/24 | **missed** (state met) |
 | E | No confirmed peak attributable to an artifact | 22 windows in 13 of 48 files | **missed** |
@@ -457,6 +478,7 @@ Pass-mark tables for the other configurations (S1-P1 under T1 and T4c, S1Q-P1, a
 | Frequency within 1% (10.3 A) | Integrated frequency within 1% | "Within 2 reported SE in 95% of tracks", plus a bias limit (median signed error ≤ 0.3%) | Even the best estimator places only 60% of 0.25–0.5 Hz rhythms and 43% of 0.8–1.5 Hz rhythms within 1% over 30 s; the 95th percentile is 3.4% |
 | 6 dB detection (10.3 A) | ≥ 80% | Keep as a goal, but note that no candidate meeting α_peak reaches it. Best: S1 72.6%. Only the anti-conservative analytic threshold reaches 81% | 4.1, 4.2 |
 | "None in the whole set" (10.3 C) | Cascades of 3+ steps, hurricane: none | A rate compared with chance A's own rate for the same number of tracks | With enough files, unrelated peaks form a 3-member golden cascade by chance (spec 8.5: 0.57% for three banded peaks at 3%) |
+| Surrogates in 10.2 C | Shuffled in blocks, phase-randomized and channel-shifted recordings listed under "nothing there" | Move them out of "nothing there". The pass rule: blocks much longer than a cycle, phase randomization and channel shifts keep the spectrum, so the source's peaks and ratios must still be found. Only sample shuffling or sub-cycle blocks must remove them | Section 6. A whole-app test that found a cascade surviving a 2 s block shuffle was showing correct behaviour |
 | Labelling < 1% (10.3 B) | Under 1% of files | Specify the number of files: about 300 per arm to show < 1% with 0 errors | 0/20 and 0/8 only bound it under 16% and 32% |
 | Decision rule (10.4) | C, D or E failure removes a candidate | Put the A ≥10 dB detection mark first; then rank C, D and E by rate | Section 2 (P3) |
 
@@ -495,6 +517,8 @@ Kept and not varied: window 8 s, persistence 2 of 3, hold 2 s, integration 30 s,
 - G and H were not rerun for the band and T3 variants, because they do not change those measures.
 - The lab hops 1 s, not 250 ms, so delays are resolved to 1 s.
 
+**Rust engine.** Compared on the 21 fixtures only, not on the battery (section 13).
+
 **Not measured.**
 
 - The 50 ms slow-path budget and memory. The lab is Python and timings would be meaningless.
@@ -529,7 +553,15 @@ python3 lab/report_tables.py                       # merges the five results fil
 python3 lab/make_fixtures.py --expected lab/out/bakeoff_results_pass2.json --config S1Q-P1-excess-band-a033-t3min
 ```
 
-The fixtures committed in `lab/fixtures/expected/` were written with `--config S1Q-P1-excess-band-a033`, which equals the recommended configuration except for T3. T3 is the first draft there; T1, T2, T4c, peaks and tracks are identical. Rewrite them with the command above once the engine implements amended T3.
+The fixtures committed in `lab/fixtures/expected/` were written with the command above, so they hold the recommended configuration. Their T4 entries correspond to the engine's rule.
+
+The Rust comparison in section 13:
+
+```
+CARGO_TARGET_DIR=/home/user/targets/lab cargo build -p hb-engine --release
+for f in lab/fixtures/*.json; do n=$(basename $f .json); /home/user/targets/lab/release/hb-run lab/fixtures/$n > OUT/$n.jsonl; done
+python3 lab/compare_rust.py OUT                    # writes lab/out/rust_vs_lab.md and .json
+```
 
 | Path | What it is |
 | --- | --- |
@@ -551,3 +583,69 @@ The fixtures committed in `lab/fixtures/expected/` were written with `--config S
 | No harmonic test | D octave state entered (T1) | 24/24 | 0/24 |
 | T2 without the cap | B time in state at 1.7 | 51.7% | 27.2% |
 | Chance scored on one pair, not the full search | C windows ≥ chance's 99th pct | 6.4% | 0.9% |
+
+---
+
+## 13. Rust engine against the lab on the fixtures (spec 11)
+
+**What was run.**
+
+- `hb-run` was built from commit 840deda (`git status` clean for `crates/`) at 22:15 UTC on 20 November 2026, with `CARGO_TARGET_DIR=/home/user/targets/lab cargo build -p hb-engine --release`. The build succeeded on the first try.
+- It ran on all 21 fixtures in `lab/fixtures/`, with default parameters.
+- The lab ran the recommended configuration (section 9) on the same files.
+- Each lab window (hop 1 s) was paired with the engine slow frame (hop 250 ms) nearest in time, within 0.26 s.
+
+Full table: `lab/out/rust_vs_lab.md`. Per-file data: `lab/out/rust_vs_lab.json`. Script: `lab/compare_rust.py`.
+
+**What was compared.** The engine's frame has no separate list of window peaks, so:
+
+- Lab window peaks were compared with the engine's confirmed tracks' window frequency (`freq`).
+- Lab integrated tracks were compared with the engine's `freq_integrated`.
+- Two frequencies were paired when within 0.5 Hz. Spec 11 asks for agreement within 0.05 Hz.
+- "Same confirmed set" means the same number of confirmed tracks, with every one paired.
+- For states, the engine's `states.phi.active` was compared with the lab's T3 (recommended) and T4 (CFAR on ln Λ, which is the engine's rule).
+
+### 13.1 Overall
+
+| Measure | Result | Spec 11 |
+| --- | --- | --- |
+| Window peak frequency, paired peaks | 2,355 paired (lab 3,251 peaks, engine 2,901). Median difference 0.031 Hz. **63.9% within 0.05 Hz** | Within 0.05 Hz: **not met** |
+| Integrated frequency, paired tracks | 2,401 paired (lab 3,352, engine 2,901). Median difference 0.055 Hz. **46.9% within 0.05 Hz** | **Not met** |
+| Same confirmed tracks | **995 of 1,843 windows (54%)** | Same tracks: **not met** |
+| Gate-2 sine | 44 of 45 peaks paired, all within 0.05 Hz (median 0.001 Hz). Same set in 52 of 53 windows | Met |
+| Background only, white noise | Neither confirms anything (0 and 0) | Met |
+| Golden state intervals | Agree with lab T4 in 59 to 100% of windows per file, and with lab T3 in 16 to 100%. Entry times differ by 6 to 40 s where both enter | Within one slow frame: **not met** |
+
+### 13.2 Disagreements, by file
+
+| Fixture | What differs |
+| --- | --- |
+| `phi3_10db_loss1pct` | **The engine loses almost everything under 1% packet loss.** Its spectra are null with reason "gap" for 67% of site-windows (2,261 of 3,360). It confirms tracks in 24 windows, against the lab's 210, and never enters the golden state (lab T3: in state 63% of the time). The fixture marks each lost packet as 12 NaN samples, and spec 3 says gaps of up to 12 samples are repaired. The engine (through `hb-run`) treats them as gaps that void the window. Either the repair is not in this path, or `hb-run` should hand NaN runs to the device layer's gap API. As it stands, this fails 10.3 G ("up to 1% loss: within the uncertainty of the clean run") |
+| `phi2_6db` | **Less sensitive at 6 dB.** The engine confirms 7 track-windows, the lab 42 peaks. Neither enters the golden state. The engine uses the analytic threshold split across sites (Bonferroni over 4 sites, each site's own spectrum). The lab uses a composite over channels with a tuned threshold. Per section 4.2, the analytic threshold alone is anti-conservative. The per-site split is the likely reason the engine is stricter here; not separated |
+| `phi3_10db`, `phi5_15db` | Fewer confirmed tracks: 188 against 268, and 483 against 459 with a different spread. Same set in only 32 and 25 of 113 windows. **Golden state:** the engine enters at 50.25 s and is in state 0.9% of the time on `phi3_10db`. The lab's T3 enters at 31 s and is in state 71% of the time; its T4 enters at 79 s. On `phi5_15db` the engine enters only at 119.5 s, the lab's T3 at 25 s. The engine's CFAR rule is much slower than the lab's T3, as section 7 found for T4-type rules |
+| `nearmiss_1.7_10db`, `nearmiss_1.8_10db` | **The engine enters the golden state on near-miss controls:** at 55.75 and 89.5 s on the 1.7 file, and at 63.25 s on the 1.8 file. The lab's T3 does not. The lab's T4 enters on the 1.8 file at 81 s. This is the control-ratio test of 10.3 B, on one file each. Not conclusive, but it matches the lab's finding that CFAR on ln Λ is looser at the controls |
+| `harmonic_8hz` | **The engine credits octave alignment to a harmonic.** At 53.25 s the 16 Hz track had lost its harmonic mark (`harmonic_of` null), and the octave state became active with cascade [8 Hz, 16 Hz]. It stayed active in 44 of 360 frames. The lab never enters the octave state on this file. This fails 10.3 D. The lab's "pending" rule (exclude until 3 tests have run) and "2 of the last 3" rule would hold the mark |
+| `artifact_blinks`, `artifact_jaw_clench` | The engine confirms more tracks in artifact files: 141 against 115, and 129 against 88. Their frequencies differ more: within 0.05 Hz in 41% of pairs, against 70% on clean files. The engine detects muscle at 30–45 Hz; the lab moved to 65–95 Hz (section 10). Whether the extra tracks are artifacts was not attributed on the engine side |
+| `harmonic_8hz` frequencies | Within 0.05 Hz in 41% of pairs, median 0.063 Hz. The engine reports each track from its strongest site; the lab from the channel composite |
+| `nearmiss_1.55_10db` | The lab's T3 enters (30 and 67 s), the engine does not. The lab's T3 is the looser of the two at 1.55 (section 5: 0.31 of the golden rate) |
+| `form_dissolve_120s` | Both enter during the schedule (25 to 70 s): the engine at 47.5 s, the lab's T3 at 42 and 67 s. Neither is in state outside it |
+| `octave3_10db`, `random_bands`, `drift_band_edge`, `artifact_railed_mains60`, `phi3_10db_phase_randomized` | No golden state in either on the first four. On the phase-randomized copy, both enter, as the corrected rule expects (engine 48.25 s, lab 25 s). Frequencies within 0.05 Hz in 59 to 75% of pairs |
+
+### 13.3 Why the two differ, and what is not a bug
+
+Some of these differences are design differences, not errors on either side. Spec 11 still asks for agreement, so they need a decision:
+
+1. **Per site against composite.** The engine scores each site and reports a track from its strongest site. The lab averages the spectra of clean channels. This alone moves a window centroid by a few hundredths of a hertz, and it moves which peaks pass.
+2. **Threshold.** The engine uses the analytic threshold split across sites. The lab uses one tuned on simulation (section 10, first row).
+3. **Spectrum.** The engine uses plain multitaper (S1) with a background curve. The lab uses S1Q with a power law.
+4. **State rule.** The engine uses CFAR on ln Λ (T4-type). The lab recommends a fixed T3.
+5. **Integrated frequency.** The engine uses the plain mean over 30 s at a 250 ms hop, as amended in 6.4. The lab uses a 1 s hop.
+
+Until the engine and the lab run the same method, the fixtures can only confirm agreement where the methods coincide. That is the case for the sine (100% within 0.05 Hz) and the empty files (both silent).
+
+**Disagreements that are engine faults whatever the method:**
+
+- The loss of nearly every window under 1% packet loss.
+- The octave state credited to a harmonic.
+
+The near-miss entries and the slow golden entries are the expected cost of the T4-type rule (section 7).

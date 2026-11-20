@@ -17,6 +17,35 @@ function bandAt(slow: SlowFrame | null, band: 'alpha' | 'theta' | 'beta'): KeyCe
   return cell(sp?.bands[band].above_bg_db);
 }
 
+/**
+ * The alpha:theta ratio of the strongest confirmed alpha peak over the strongest confirmed theta
+ * peak, with the engine's own distances from 2:1, 3:1 and the golden ratio (the `miss` of the
+ * pair's score for each target). Which peaks to look at is a choice of the strongest; the ratio
+ * and the distances are the engine's pair score, not computed here.
+ */
+export function alphaThetaRatio(slow: SlowFrame | null): Record<string, KeyCell> {
+  const none = (why: KeyCell['why']): Record<string, KeyCell> => ({
+    at_ratio: { v: null, why }, at_miss_2: { v: null, why }, at_miss_3: { v: null, why }, at_miss_phi: { v: null, why },
+  });
+  if (!slow) return none('no_data');
+  const strongest = (band: 'alpha' | 'theta') =>
+    slow.tracks
+      .filter((t) => t.band === band && t.state === 'confirmed' && t.height_db.v !== null)
+      .sort((a, b) => (b.height_db.v as number) - (a.height_db.v as number))[0];
+  const al = strongest('alpha');
+  const th = strongest('theta');
+  if (!al || !th) return none('not_confirmed');
+  const pair = slow.pairs.find((p) => (p.lo === th.id && p.hi === al.id) || (p.lo === al.id && p.hi === th.id));
+  if (!pair) return none('no_data');
+  const lr = pair.log_ratio;
+  return {
+    at_ratio: lr.v === null ? { v: null, why: lr.why === 'ok' ? 'no_data' : lr.why } : { v: Math.exp(lr.v), why: 'ok' },
+    at_miss_2: cell(pair.targets.octave?.miss),
+    at_miss_3: cell(pair.targets.ratio_3?.miss),
+    at_miss_phi: cell(pair.targets.phi?.miss),
+  };
+}
+
 export function buildCells(slow: SlowFrame | null, heart: HeartFrame | null, reward: number | null): Record<string, KeyCell> {
   const c: Record<string, KeyCell> = {};
   c.alpha_db = bandAt(slow, 'alpha');
@@ -36,6 +65,16 @@ export function buildCells(slow: SlowFrame | null, heart: HeartFrame | null, rew
   c.oct_excess_a = cell(oct?.excess_a);
   c.oct_excess_b = cell(oct?.excess_b);
   c.oct_steps = oct ? { v: oct.steps, why: 'ok' } : { v: null, why: 'no_data' };
+  const st = slow?.states;
+  const flag = (b: boolean | undefined): KeyCell => (b === undefined ? { v: null, why: 'no_data' } : { v: b ? 1 : 0, why: 'ok' });
+  const secs = (x: number | undefined): KeyCell => (x === undefined ? { v: null, why: 'no_data' } : { v: x, why: 'ok' });
+  c.phi_active = flag(st?.phi.active);
+  c.phi_for_s = secs(st?.phi.for_s);
+  c.oct_active = flag(st?.octave.active);
+  c.oct_for_s = secs(st?.octave.for_s);
+  c.both_active = flag(st?.both.active);
+  c.both_for_s = secs(st?.both.for_s);
+  Object.assign(c, alphaThetaRatio(slow));
   if (slow && slow.quality.length) {
     c.usable_channels = { v: slow.quality.filter((q) => q.usable).length, why: 'ok' };
     c.clean_fraction = { v: slow.quality.reduce((a, q) => a + q.clean_fraction, 0) / slow.quality.length, why: 'ok' };
@@ -48,6 +87,10 @@ export function buildCells(slow: SlowFrame | null, heart: HeartFrame | null, rew
   }
   c.hr_bpm = cell(heart?.hr_bpm);
   c.rmssd_ms = cell(heart?.rmssd_ms);
+  c.sdnn_ms = cell(heart?.sdnn_ms);
+  c.lf_power = cell(heart?.lf_power);
+  c.hf_power = cell(heart?.hf_power);
+  c.resonance_hz = cell(heart?.resonance_hz);
   c.resonance_strength = cell(heart?.resonance_strength);
   c.breath_bpm = cell(heart?.breath_bpm);
   c.pacer_adherence = cell(heart?.pacer_adherence);

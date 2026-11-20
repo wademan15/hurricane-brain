@@ -138,6 +138,7 @@ export function allNullSlow(t: number, why: Reason = 'bad_contact'): SlowFrame {
     states: {
       phi: { target: 'phi', active: false, for_s: 0, stat: nul(why), enter_at: null, exit_at: null },
       octave: { target: 'octave', active: false, for_s: 0, stat: nul(why), enter_at: null, exit_at: null },
+      both: { active: false, for_s: 0 },
     },
     hemispheres: [], front_back: [], mains_hz: 50, iaf_hz: null, band_edges: BAND_EDGES,
   };
@@ -150,6 +151,8 @@ export interface SlowOpts {
   phi?: Cascade;
   octave?: Cascade;
   match?: number | null;
+  /** The combined state (states.both). Default: inactive. */
+  both?: { active: boolean; for_s: number };
 }
 
 export function slowFrame(o: SlowOpts): SlowFrame {
@@ -168,6 +171,7 @@ export function slowFrame(o: SlowOpts): SlowFrame {
     states: {
       phi: { target: 'phi', active: (o.phi?.steps ?? 0) > 0, for_s: o.phi?.held_s ?? 0, stat: m(1.2), enter_at: 2, exit_at: 1 },
       octave: { target: 'octave', active: (o.octave?.steps ?? 0) > 0, for_s: o.octave?.held_s ?? 0, stat: m(0.5), enter_at: 2, exit_at: 1 },
+      both: o.both ?? { active: false, for_s: 0 },
     },
     hemispheres:
       o.match === undefined || o.dominant === null
@@ -211,6 +215,24 @@ export function octaveCascadeFrame(t: number, dominant: number | null = 2, heldS
     phi: { ...emptyCascade('phi', 'not_confirmed'), excess_a: m(0, 0.02) },
     octave: cascade('octave', [1, 2, 3], 0.85, heldS),
     match: 0.85,
+  });
+}
+
+/**
+ * (e) Golden ratio and octave cascades at once, with the combined state active:
+ * phi 3.8, 6.15, 9.95, 16.1 Hz and octave 3.8, 7.6, 15.2 Hz.
+ */
+export function combinedFrame(t: number, dominant: number | null = 4, bothForS = 30, active = true): SlowFrame {
+  const tracks = [
+    track(1, 3.8, 6, 'delta'), track(2, 6.15, 7, 'theta'), track(3, 7.6, 5, 'theta'),
+    track(4, 9.95, 11), track(5, 15.2, 5, 'beta'), track(6, 16.1, 6, 'beta'),
+  ];
+  return slowFrame({
+    t, tracks, dominant,
+    phi: cascade('phi', [1, 2, 4, 6], 0.8, 40),
+    octave: cascade('octave', [1, 3, 5], 0.7, 40),
+    match: 0.9,
+    both: { active, for_s: active ? bothForS : 0 },
   });
 }
 

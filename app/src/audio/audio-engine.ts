@@ -79,7 +79,22 @@ export class AudioEngine {
   }
 
   /** Create the context and worklet. Call from a click or key handler (autoplay policy). Idempotent. */
+  /**
+   * Begin a new session: forget the previous session's frames, clock mapping and beats, and let
+   * its sounds fade out over their declared fades. Called by start() and stop(); a backwards jump
+   * in frame time also triggers it automatically (settings.sessionJumpS).
+   */
+  reset(): void {
+    this.binder.reset();
+    this.post({ type: 'reset' });
+  }
+
+  /**
+   * Create the context and worklet. Call from a click or key handler (autoplay policy).
+   * Each call begins a new session (reset()); the context is created only once.
+   */
   start(): Promise<void> {
+    this.reset();
     if (this.node) return Promise.resolve();
     if (this.starting) return this.starting;
     const p = (async () => {
@@ -124,6 +139,7 @@ export class AudioEngine {
   handleFrame(frame: Frame): void {
     const out = this.binder.handleFrame(frame, this.coreNow());
     if (!this.node) return;
+    if (out.reset) this.post({ type: 'reset' });
     this.post({ type: 'control', control: out.control });
     for (const b of out.beats) this.post({ type: 'beat', atS: b.atS, flagged: b.flagged });
   }
@@ -155,6 +171,7 @@ export class AudioEngine {
   async stop(): Promise<void> {
     const node = this.node;
     const ctx = this.ctx;
+    this.binder.reset();
     this.node = null;
     this.ctx = null;
     this.status = null;
@@ -178,10 +195,11 @@ export class AudioEngine {
         if (tr.element === 'tone' && tr.trackId !== undefined) {
           const v = byId.get(tr.trackId);
           if (v && v.gate > 0) sounding.push({ ...tr, level: v.gate * v.loudness, pitchHz: v.pitchHz, targetPitchHz: v.targetPitchHz });
-        } else if ((tr.element === 'bloom_phi' || tr.element === 'bloom_octave') && tr.trackId !== undefined) {
+        } else if ((tr.element === 'bloom_phi' || tr.element === 'bloom_octave' || tr.element === 'bloom_both') && tr.trackId !== undefined) {
           const v = byId.get(tr.trackId);
-          const lvl = v ? (tr.element === 'bloom_phi' ? v.phi : v.octave) * v.gate : 0;
-          if (lvl > 0) sounding.push({ ...tr, level: lvl });
+          const amt = !v ? 0 : tr.element === 'bloom_phi' ? v.phi : tr.element === 'bloom_octave' ? v.octave : v.both;
+          const lvl = v ? amt * v.gate : 0;
+          if (lvl > 0 && tr.why !== 'muted') sounding.push({ ...tr, level: lvl });
         } else if (tr.element === 'bed' && st.bed.gate > 0) {
           sounding.push({ ...tr, level: st.bed.gate * st.bed.thin });
         } else if (tr.element === 'heart' && st.heart.activePulses > 0) {

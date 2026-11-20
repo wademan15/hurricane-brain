@@ -9,7 +9,7 @@ import { createStorage, type AppSettings, type Storage } from '../../storage';
 import type { UserProfile } from '../../training';
 import { SessionController } from '../session/controller';
 import { ChanceView } from '../session/hub';
-import { ProfileStore, SettingsStore, profileAfterSession } from './stores';
+import { ProfileStore, SettingsStore, profileAfterSession, profileWithJournal, type ProfileEntry } from './stores';
 
 export interface Services {
   controller: SessionController;
@@ -24,12 +24,13 @@ export async function createServices(storage: Storage = createStorage()): Promis
   const loaded = await storage.loadSettings();
   const profiles = await storage.listProfiles();
   const settings = new SettingsStore(loaded, (s) => storage.saveSettings(s));
-  const profile = new ProfileStore(profiles.find((p) => p.userId === 'local') ?? profiles[0] ?? null, (p) => storage.saveProfile(p));
+  const profile = new ProfileStore(profiles, settings, { save: (p) => storage.saveProfile(p), remove: (id) => storage.deleteProfile(id) });
   const controller: SessionController = new SessionController({
     createEngine: createEngineClient,
-    createAudio: () => new AudioEngine({ settings: settings.get().audio }),
+    createAudio: () => new AudioEngine({ settings: { ...settings.get().audio, bloomChance: settings.get().chanceDriver } }),
     getSettings: settings.get,
     getProfile: profile.get,
+    getProfileInfo: () => profile.info(profile.get()?.userId),
     persist: {
       saveRecording: (meta, bytes) => storage.saveRecording(meta, bytes),
       saveSession: (s) => storage.saveSession(s),
@@ -37,9 +38,20 @@ export async function createServices(storage: Storage = createStorage()): Promis
         const p = profile.get();
         if (p) await profile.put(profileAfterSession(p, record, new Date().toISOString()));
       },
+      sessionJournal: async (sessionId, journal) => {
+        const p = profile.get();
+        if (p) await profile.put(profileWithJournal(p, sessionId, journal));
+      },
     },
   });
-  settings.subscribe(() => controller.getAudio().setSettings(settings.get().audio));
+  let last = settings.get();
+  settings.subscribe(() => {
+    const now = settings.get();
+    if (now.audio !== last.audio || now.chanceDriver !== last.chanceDriver) controller.applyAudioSettings();
+    if (now.stream !== last.stream) controller.applyStreamSettings();
+    last = now;
+  });
+  controller.applyStreamSettings();
   const view = new ChanceView(controller.hub, () => settings.get().chanceDriver);
   return { controller, storage, settings, profile, view };
 }
@@ -69,6 +81,21 @@ export function useSettings(): AppSettings {
 export function useProfile(): UserProfile | null {
   const { profile } = useServices();
   return useSyncExternalStore(profile.subscribe, profile.get);
+}
+
+/** Everyone who uses this device, with their names and age groups. */
+export function useProfiles(): ProfileEntry[] {
+  const { profile } = useServices();
+  return useSyncExternalStore(profile.all.subscribe, profile.all.get);
+}
+
+/** The active person's name and age group (a default when there is no profile yet). */
+export function useProfileInfo() {
+  const { profile } = useServices();
+  const p = useProfile();
+  const s = useSettings();
+  void s.profileInfo;
+  return profile.info(p?.userId);
 }
 
 /** Load something async once (and again when `deps` change). */

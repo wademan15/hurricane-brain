@@ -3,7 +3,7 @@
  * A value that was not measured is an empty cell, and the per-second table has a companion
  * `_why` column carrying the engine's reason. Nothing is ever written as zero in its place.
  */
-import { KEY_COLUMNS, type StoredSession } from './types';
+import { KEY_COLUMNS, type CascadeEvent, type CascadeSnapshot, type KeyCell, type StoredSession } from './types';
 
 export function csvCell(v: unknown): string {
   if (v === null || v === undefined) return '';
@@ -25,6 +25,11 @@ export function sessionSummaryCsv(s: StoredSession): string {
   out.push(`# app version,${csvCell(s.settings.appVersion)}`);
   out.push(`# mains,${csvCell(s.settings.mains)}`);
   out.push(`# chance level driving the hurricane,${csvCell(s.settings.chanceDriver.toUpperCase())}`);
+  out.push(`# alignment response speed,${csvCell(s.settings.responseSpeed)}`);
+  out.push(`# harmonics count toward octave alignment,${s.settings.harmonicsCount}`);
+  out.push(`# reduced motion,${csvCell(s.settings.reducedMotion)}`);
+  out.push(`# sound only (screen dark),${s.settings.soundOnly}`);
+  if (s.settings.ageGroup) out.push(`# age group,${csvCell(s.settings.ageGroup)}`);
   out.push(`# audio and smoothing settings,${csvCell(JSON.stringify(s.settings.audio))}`);
   out.push(`# visual smoothing,${csvCell(JSON.stringify(s.settings.viz))}`);
   out.push(`# engine parameters,${csvCell(JSON.stringify(s.settings.engine.params))}`);
@@ -51,6 +56,14 @@ export function sessionSummaryCsv(s: StoredSession): string {
     }
   }
   out.push('');
+  out.push('# journal (written by the person after the session; empty = not answered)');
+  out.push(line(['note', 'mood_1_5', 'ease_1_5', 'depth_1_5', 'tags', 'written_at']));
+  if (s.journal) out.push(line([s.journal.note, s.journal.mood, s.journal.ease, s.journal.depth, s.journal.tags.join('; '), s.journal.writtenAt]));
+  out.push('');
+  out.push('# cascade events (golden ratio, octave, and both at once; derived from the engine frames)');
+  out.push(cascadeEventsHeader());
+  for (const e of s.cascadeEvents ?? []) out.push(cascadeEventRow(e));
+  out.push('');
   out.push('# per-second key measures (empty = not measured; the _why column says why)');
   const head: string[] = ['t_s', 'block'];
   for (const c of KEY_COLUMNS) head.push(`${c.id} [${c.unit}]`, `${c.id}_why`);
@@ -64,4 +77,34 @@ export function sessionSummaryCsv(s: StoredSession): string {
     out.push(line(row));
   }
   return out.join('\r\n') + '\r\n';
+}
+
+const v = (c: KeyCell | undefined): unknown => c?.v ?? null;
+const why = (c: KeyCell | undefined): string => (c ? (c.v === null ? c.why : 'ok') : 'not_in_session');
+
+function partColumns(p: CascadeSnapshot | undefined): unknown[] {
+  if (!p) return ['', '', '', '', '', '', '', '', ''];
+  return [
+    p.maxSteps,
+    p.members.map((m) => m.band).join(' > '),
+    p.members.map((m) => (m.freqHz.v === null ? `not measured (${m.freqHz.why})` : m.freqHz.v.toFixed(3))).join(' > '),
+    p.ratios.map((r) => (r.v === null ? `not measured (${r.why})` : r.v.toFixed(3))).join(' > '),
+    v(p.closeness),
+    v(p.chanceA),
+    v(p.chanceB),
+    v(p.pA),
+    p.closeness.v === null ? why(p.closeness) : 'ok',
+  ];
+}
+
+const PART_HEAD = ['max_steps', 'member_bands', 'member_hz', 'measured_ratios', 'closeness', 'chance_a', 'chance_b', 'p_chance_a', 'closeness_why'];
+
+export function cascadeEventsHeader(): string {
+  return line(['kind', 'start_s', 'end_s', 'duration_s', ...PART_HEAD.map((h) => `phi_${h}`), ...PART_HEAD.map((h) => `octave_${h}`)]);
+}
+
+export function cascadeEventRow(e: CascadeEvent): string {
+  const phi = e.parts.find((p) => p.target === 'phi');
+  const oct = e.parts.find((p) => p.target === 'octave');
+  return line([e.kind, e.tStart, e.tEnd, e.durationS, ...partColumns(phi), ...partColumns(oct)]);
 }

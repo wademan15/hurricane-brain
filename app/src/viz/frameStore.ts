@@ -29,6 +29,11 @@ export interface FrameSnapshot {
   heartAt: number | null;
   /** The most recent heartbeat that started a pulse. */
   lastBeat: ReceivedBeat | null;
+  /**
+   * The pulse before it. The drawn pulse is the larger of the two envelopes, so a new beat never
+   * cuts a fading pulse off abruptly (no extra luminance step).
+   */
+  prevBeat: ReceivedBeat | null;
 }
 
 export const EMPTY_SNAPSHOT: FrameSnapshot = {
@@ -37,6 +42,7 @@ export const EMPTY_SNAPSHOT: FrameSnapshot = {
   heart: null,
   heartAt: null,
   lastBeat: null,
+  prevBeat: null,
 };
 
 /**
@@ -59,6 +65,7 @@ export function applyFrame(
   }
   if (frame.kind === 'heart') {
     let lastBeat = snap.lastBeat;
+    let prevBeat = snap.prevBeat;
     const lastT = lastBeat ? lastBeat.beat.t : -Infinity;
     let newest: Beat | null = null;
     for (const b of frame.beats) {
@@ -66,11 +73,14 @@ export function applyFrame(
     }
     if (newest) {
       const tooSoon = lastBeat !== null && receivedAt - lastBeat.receivedAt < minPulseIntervalS;
-      if (!tooSoon) lastBeat = { beat: newest, receivedAt };
+      if (!tooSoon) {
+        prevBeat = lastBeat;
+        lastBeat = { beat: newest, receivedAt };
+      }
       // A suppressed beat still counts as seen, so it can never fire later.
       else lastBeat = { beat: newest, receivedAt: lastBeat!.receivedAt };
     }
-    return { ...snap, heart: frame, heartAt: receivedAt, lastBeat };
+    return { ...snap, heart: frame, heartAt: receivedAt, lastBeat, prevBeat };
   }
   return snap;
 }

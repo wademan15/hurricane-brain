@@ -9,7 +9,7 @@ describe('FrameBinder', () => {
     const b = new FrameBinder();
     b.handleFrame(slowFrame(0, { tracks: [{ id: 3, freq: 10.21 }], alphaDb: 2 }), 0);
     const out = b.handleFrame(fastFrame(0.03125, [{ id: 3, freq: 10.21, height: 9 }]), 0.03125);
-    expect(out.control.voices).toEqual([{ id: 3, on: true, freqHz: 10.21, heightDb: 9, phi: 0, octave: 0 }]);
+    expect(out.control.voices).toEqual([{ id: 3, on: true, freqHz: 10.21, heightDb: 9, phi: 0, octave: 0, both: 0 }]);
     const tone = b.traceAll().find((t) => t.element === 'tone');
     expect(tone?.fields['fast.tracks[id=3].freq.v']).toBe(10.21);
     expect(tone?.mapping).toContain('326.72 Hz = 10.210 Hz x 32');

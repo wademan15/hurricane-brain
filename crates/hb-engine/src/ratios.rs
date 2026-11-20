@@ -10,6 +10,9 @@ use crate::prng::Rng;
 use crate::types::{CascadeTarget, ChanceLevel, Measured, Reason, Target};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Number of scored targets (`Target::ALL`).
+pub const NT: usize = 5;
+
 /// A track as the scorer sees it: id, integrated frequency and its standard error.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScoreTrack {
@@ -25,7 +28,7 @@ pub type Baselines = BTreeMap<(u32, u32), (f64, f64)>;
 pub struct ScoreCtx<'a> {
     pub p: &'a Params,
     /// ln of each target ratio, in `Target::ALL` order.
-    pub ln_t: [f64; 4],
+    pub ln_t: [f64; NT],
     /// Unordered id pairs flagged harmonic.
     pub harmonic: &'a BTreeSet<(u32, u32)>,
     pub baselines: &'a Baselines,
@@ -70,7 +73,7 @@ impl<'a> ScoreCtx<'a> {
         let phi = (1.0 + m::sqrt(5.0)) / 2.0;
         ScoreCtx {
             p,
-            ln_t: [m::ln(phi), m::ln(2.0), m::ln(p.control_ratio_a), m::ln(p.control_ratio_b)],
+            ln_t: [m::ln(phi), m::ln(2.0), m::ln(p.control_ratio_a), m::ln(p.control_ratio_b), m::ln(3.0)],
             harmonic,
             baselines,
             ln_range: m::ln(p.peak_search_hi_hz / p.peak_search_lo_hz),
@@ -153,10 +156,10 @@ pub struct PairResult {
     pub resolved: bool,
     pub harmonic: bool,
     /// Per target (Target::ALL order): miss, closeness, log evidence (None if unresolved), aligned.
-    pub miss: [f64; 4],
-    pub closeness: [Option<f64>; 4],
-    pub log_ev: [Option<f64>; 4],
-    pub aligned: [bool; 4],
+    pub miss: [f64; NT],
+    pub closeness: [Option<f64>; NT],
+    pub log_ev: [Option<f64>; NT],
+    pub aligned: [bool; NT],
 }
 
 /// The best cascade for one target.
@@ -177,7 +180,8 @@ pub struct SetScore {
     pub pairs: Vec<PairResult>,
     /// Phi then octave.
     pub cascades: [CascadeResult; 2],
-    /// Aligned-state statistic: the largest log evidence over eligible resolved pairs.
+    /// Aligned-state statistic: the largest total log evidence along any chain of eligible
+    /// resolved pairs (`chain_stat`). For a single pair it is that pair's log evidence.
     pub stat: [Result<f64, Reason>; 2],
 }
 
@@ -200,7 +204,7 @@ pub fn score_set(tracks: &[ScoreTrack], ctx: &ScoreCtx) -> SetScore {
             let (x, sx, resolved) = pair_core(a, b, p);
             let harmonic = ctx.is_harmonic(a.id, b.id);
             let excluded = harmonic && p.exclude_harmonics;
-            let mut pr = PairResult { lo: i, hi: j, x, sx, resolved, harmonic, miss: [0.0; 4], closeness: [None; 4], log_ev: [None; 4], aligned: [false; 4] };
+            let mut pr = PairResult { lo: i, hi: j, x, sx, resolved, harmonic, miss: [0.0; NT], closeness: [None; NT], log_ev: [None; NT], aligned: [false; NT] };
             for (ti, t) in ctx.ln_t.iter().enumerate() {
                 let miss = x - t;
                 pr.miss[ti] = miss;
@@ -231,27 +235,61 @@ fn pair_core(a: &ScoreTrack, b: &ScoreTrack, p: &Params) -> (f64, f64, bool) {
 }
 
 /// Only the aligned-state statistics [phi, octave] of a sorted track set: the same pair
-/// arithmetic, eligibility and maximum as `score_set`, without building pair records or
+/// arithmetic, eligibility and chain as `score_set`, without building pair records or
 /// cascades. Used for the chance-B time series, where only the statistic is needed. A unit
 /// test checks it equals `score_set(..).stat` exactly.
 pub fn stats_only(tracks: &[ScoreTrack], ctx: &ScoreCtx) -> [Option<f64>; 2] {
     let p = ctx.p;
     let n = tracks.len();
-    let mut best: [Option<f64>; 2] = [None, None];
-    for i in 0..n {
-        for j in (i + 1)..n {
+    let mut out: [Option<f64>; 2] = [None, None];
+    for (ti, slot) in out.iter_mut().enumerate() {
+        *slot = chain_stat(n, |i, j| {
             let (a, b) = (&tracks[i], &tracks[j]);
             let (x, sx, resolved) = pair_core(a, b, p);
             if !resolved || (p.exclude_harmonics && ctx.is_harmonic(a.id, b.id)) {
-                continue;
+                None
+            } else {
+                Some(ctx.log_evidence(a.id, b.id, x, sx, ctx.ln_t[ti]))
             }
-            for (ti, slot) in best.iter_mut().enumerate() {
-                let e = ctx.log_evidence(a.id, b.id, x, sx, ctx.ln_t[ti]);
-                *slot = Some(slot.map_or(e, |v: f64| v.max(e)));
+        });
+    }
+    out
+}
+
+/// The aligned-state statistic (spec 8.4): the largest total log evidence along a chain of
+/// tracks of rising frequency, each step an eligible resolved pair. `ev(i, j)` is the log
+/// evidence of the pair (i, j), i < j, or None if the pair is not eligible. None if no pair
+/// is eligible.
+///
+/// A chain of one step is a pair, so with two tracks this is the pair's log evidence. The
+/// evidence of one pair cannot exceed about 4.5 nats however good the match (it is capped by
+/// the intrinsic tolerance), while among many tracks some unrelated pair reaches nearly that
+/// by chance. With the single best pair as the statistic, a five-member cascade among seven
+/// tracks therefore could not beat its own chance threshold, and a weaker three-member one
+/// could (fake test, November 2026). Independent steps multiply likelihood ratios, so their
+/// log evidence adds: a cascade of k good steps scores about k times one pair, and chance
+/// must produce a whole chain to match it. The surrogates are scored by this same function.
+pub fn chain_stat(n: usize, ev: impl Fn(usize, usize) -> Option<f64>) -> Option<f64> {
+    // best[j]: the largest total over chains that end at j, None if no eligible pair ends there.
+    let mut best: Vec<Option<f64>> = vec![None; n];
+    let mut top: Option<f64> = None;
+    for j in 0..n {
+        for i in 0..j {
+            if let Some(e) = ev(i, j) {
+                // Start a new chain at i, or extend the best one ending there if it adds.
+                let cand = e + best[i].map_or(0.0, |b| b.max(0.0));
+                if best[j].is_none_or(|b| cand > b) {
+                    best[j] = Some(cand);
+                }
+            }
+        }
+        if let Some(b) = best[j] {
+            if top.is_none_or(|t| b > t) {
+                top = Some(b);
             }
         }
     }
-    best
+    top
 }
 
 fn eligible(pr: &PairResult, ctx: &ScoreCtx) -> bool {
@@ -262,15 +300,17 @@ fn stat_for(n: usize, pairs: &[PairResult], ti: usize, ctx: &ScoreCtx) -> Result
     if n < 2 {
         return Err(Reason::NotConfirmed);
     }
-    let mut best: Option<f64> = None;
-    for pr in pairs {
+    // index of pair (i, j), i < j, in row-major upper-triangle order
+    let idx = |i: usize, j: usize| i * (2 * n - i - 1) / 2 + (j - i - 1);
+    chain_stat(n, |i, j| {
+        let pr = &pairs[idx(i, j)];
         if eligible(pr, ctx) {
-            if let Some(e) = pr.log_ev[ti] {
-                best = Some(best.map_or(e, |b: f64| b.max(e)));
-            }
+            pr.log_ev[ti]
+        } else {
+            None
         }
-    }
-    best.ok_or(Reason::Unresolved)
+    })
+    .ok_or(Reason::Unresolved)
 }
 
 /// Longest chain of aligned steps (spec 8.3), ties broken by total log evidence, then by
@@ -381,6 +421,41 @@ impl NullDist {
         };
         let ks = self.draws.iter().filter(|d| d.steps >= steps).count();
         ChanceLevel { closeness: Measured::with_se(mean, m::sqrt(var / n)), p, p_steps: Measured::ok((1.0 + ks as f64) / (1.0 + total)) }
+    }
+
+    /// Excess alignment of an observed cascade over this chance distribution (spec 8.5), and
+    /// the reference closeness it is measured from.
+    ///
+    /// The reference is the closeness that only a fraction `level` of surrogates reach or
+    /// beat, counting a surrogate with a longer cascade as closeness 1 and one with a shorter
+    /// cascade as 0, which is the order the percentile uses. The excess is
+    /// (c - reference) / (1 - reference), and 0 at or below the reference. So it is above
+    /// zero only when the percentile is at or under `level`: it cannot be large beside an
+    /// unremarkable p. (It used to be measured from the mean surrogate closeness. Among five
+    /// tracks the mean is about 0.15 while a quarter of surrogates hold a pair within
+    /// tolerance, and one such pair read "0.96 over chance" beside p = 0.4.)
+    /// None if too few surrogates could be scored.
+    pub fn excess(&self, steps: usize, closeness: f64, level: f64) -> Option<(f64, f64)> {
+        let scored = self.draws.iter().filter(|d| d.closeness.is_some()).count();
+        if self.draws.is_empty() || scored * 2 < self.draws.len() {
+            return None;
+        }
+        let mut e: Vec<f64> = self
+            .draws
+            .iter()
+            .map(|d| match d.steps.cmp(&steps) {
+                core::cmp::Ordering::Greater => 1.0,
+                core::cmp::Ordering::Less => 0.0,
+                core::cmp::Ordering::Equal => d.closeness.unwrap_or(0.0),
+            })
+            .collect();
+        e.sort_by(|a, b| b.total_cmp(a));
+        // The k-th largest, k = floor(level (N + 1)): beating it puts at most k - 1 surrogates
+        // at or above the observed value, so p = (1 + count) / (1 + N) <= level.
+        let k = m::floor(level * (e.len() as f64 + 1.0)) as usize;
+        let reference = if k == 0 { 1.0 } else { e[(k - 1).min(e.len() - 1)] };
+        let ex = if reference < 1.0 && closeness > reference { (closeness - reference) / (1.0 - reference) } else { 0.0 };
+        Some((ex.clamp(0.0, 1.0), reference))
     }
 
     pub fn mean_closeness(&self) -> Option<f64> {
@@ -707,6 +782,7 @@ pub fn target_index(t: Target) -> usize {
         Target::Octave => 1,
         Target::Control15 => 2,
         Target::Control18 => 3,
+        Target::Ratio3 => 4,
     }
 }
 

@@ -351,7 +351,12 @@ def sample_shuffle(rng, data):
 
 
 def block_shuffle(rng, data, block_s=1.0, fs=FS):
-    """Same block permutation on all channels; keeps within-block structure and inter-channel relations."""
+    """Same block permutation on all channels; keeps within-block structure and inter-channel relations.
+
+    Pass rule (corrected): blocks much longer than a rhythm's cycle (here 1 s, i.e. 3 or more cycles of
+    anything at 3 Hz and above) preserve the spectrum, so a correct engine SHOULD still show the source's
+    peaks and their ratios, cascades included.  Only sample shuffling, or blocks shorter than a cycle,
+    destroy them.  Score a block-shuffled file against its unshuffled source, not as "nothing there"."""
     b = int(block_s * fs)
     m = data.shape[1] // b
     perm = rng.permutation(m)
@@ -504,7 +509,11 @@ def make_table(seed, duration=90.0, mains_hz=50.0):
 
 
 def make_surrogate(seed, transform, duration=90.0):
-    """A surrogate of a recording of unrelated peaks (a stand-in for a real recording)."""
+    """A surrogate of a recording of unrelated peaks (a stand-in for a real recording).
+
+    Pass rules: sample_shuffle destroys every rhythm, so no peaks may be confirmed.  block_shuffle (blocks
+    longer than a cycle), phase_randomize and channel_shift keep each channel's spectrum, so the peaks and
+    ratios of the source must still be found; any alignment they show is the source's own (chance) alignment."""
     base = make_random_peaks(seed, duration, mode="loguniform")
     rng = np.random.default_rng(seed + 7)
     fn = {"sample_shuffle": sample_shuffle, "block_shuffle": block_shuffle,

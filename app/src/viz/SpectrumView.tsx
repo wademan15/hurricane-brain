@@ -13,6 +13,7 @@ import { FrameStore, type FrameSource } from './frameStore.ts';
 import { VIZ_SMOOTHING } from './params.ts';
 import { fmtNumber } from './readout.ts';
 import { reasonText, type VizReason } from './reasons.ts';
+import { cssVar } from './theme.ts';
 import './viz.css';
 
 export interface SpectrumViewProps {
@@ -26,19 +27,39 @@ export interface SpectrumViewProps {
 const PHI = (1 + Math.sqrt(5)) / 2;
 const F_MIN = 1;
 const F_MAX = 45;
-const COL = {
-  bg: '#03060c',
-  grid: 'rgba(140,165,200,0.12)',
-  axis: '#7d8aa0',
-  ink: '#c9d4e3',
-  psd: '#a9bedb',
-  fit: '#7d8aa0',
-  flat: '#d6e2f2',
-  peak: '#ffffff',
-  phi: '#e2b86b',
-  octave: '#6fc7c0',
-  band: ['rgba(120,140,190,0.07)', 'rgba(120,140,190,0.0)'],
-};
+interface SpecColors {
+  bg: string;
+  grid: string;
+  axis: string;
+  ink: string;
+  psd: string;
+  fit: string;
+  flat: string;
+  peak: string;
+  phi: string;
+  octave: string;
+  band: [string, string];
+  font: string;
+}
+
+/** All colours and the font come from CSS custom properties (viz.css), read at draw time. */
+function readColors(el: Element): SpecColors {
+  const v = (n: string, d: string) => cssVar(el, n, d);
+  return {
+    bg: v('--hb-bg', '#03060c'),
+    grid: v('--hb-spec-grid', 'rgba(140,165,200,0.12)'),
+    axis: v('--hb-ink-dim', '#7d8aa0'),
+    ink: v('--hb-ink', '#c9d4e3'),
+    psd: v('--hb-spec-psd', '#a9bedb'),
+    fit: v('--hb-spec-fit', '#7d8aa0'),
+    flat: v('--hb-spec-flat', '#d6e2f2'),
+    peak: v('--hb-spec-peak', '#ffffff'),
+    phi: v('--hb-gold', '#e2b86b'),
+    octave: v('--hb-octave', '#6fc7c0'),
+    band: [v('--hb-spec-band', 'rgba(120,140,190,0.07)'), 'rgba(0,0,0,0)'],
+    font: `${v('--hb-font-size-small', '12px')} ${v('--hb-font', 'system-ui, sans-serif')}`,
+  };
+}
 
 const now = (): number => performance.now() / 1000;
 
@@ -87,7 +108,7 @@ export function SpectrumView({ source, site, className, style }: SpectrumViewPro
     const ctx = c.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
-    drawSpectrum(ctx, size.w, size.h, stale ? null : frame, site, frame === null ? 'no_data' : 'stale');
+    drawSpectrum(ctx, readColors(c), size.w, size.h, stale ? null : frame, site, frame === null ? 'no_data' : 'stale');
   }, [frame, stale, site, size]);
 
   const spec = frame?.spectra.find((s) => s.site === site);
@@ -113,6 +134,7 @@ const db = (x: number): number => 10 * Math.log10(x);
 
 function drawSpectrum(
   ctx: CanvasRenderingContext2D,
+  COL: SpecColors,
   w: number,
   h: number,
   frame: SlowFrame | null,
@@ -121,7 +143,7 @@ function drawSpectrum(
 ): void {
   ctx.fillStyle = COL.bg;
   ctx.fillRect(0, 0, w, h);
-  ctx.font = '12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  ctx.font = COL.font;
   ctx.textBaseline = 'middle';
 
   const spec = frame?.spectra.find((s) => s.site === site) ?? null;
@@ -179,7 +201,7 @@ function drawSpectrum(
   const yMin = Math.floor(Math.min(...all) / 5) * 5;
   const yMax = Math.ceil(Math.max(...all) / 5) * 5;
   const YT = (v: number) => topY + topH - ((v - yMin) / Math.max(1e-6, yMax - yMin)) * topH;
-  axisY(ctx, padL, topY, topH, yMin, yMax, YT, 'dB µV²/Hz');
+  axisY(ctx, COL, padL, topY, topH, yMin, yMax, YT, 'dB µV²/Hz');
   line(ctx, idx.map(([f], k) => [X(f), YT(psdDb[k])]), COL.psd, 1.4);
   if (bgDb) {
     ctx.setLineDash([5, 4]);
@@ -203,7 +225,7 @@ function drawSpectrum(
   const fMax = Math.max(6, ...flatDb, ...confirmed.map((t) => t.height_db.v ?? 0));
   const fMin = Math.min(-2, ...flatDb);
   const YB = (v: number) => botY + botH - ((v - fMin) / (fMax + 2 - fMin)) * botH;
-  axisY(ctx, padL, botY, botH, fMin, fMax + 2, YB, 'dB above bg');
+  axisY(ctx, COL, padL, botY, botH, fMin, fMax + 2, YB, 'dB above bg');
   ctx.strokeStyle = COL.grid;
   ctx.beginPath();
   ctx.moveTo(padL, YB(0));
@@ -236,7 +258,7 @@ function drawSpectrum(
   ctx.textAlign = 'center';
   const placed: number[] = [];
   for (const t of confirmed) {
-    drawPeak(ctx, t, site, X, YB, placed);
+    drawPeak(ctx, COL, t, site, X, YB, placed);
   }
 
   // Frequency axis.
@@ -261,6 +283,7 @@ function drawSpectrum(
 
 function drawPeak(
   ctx: CanvasRenderingContext2D,
+  COL: SpecColors,
   t: Track,
   site: string,
   X: (f: number) => number,
@@ -314,6 +337,7 @@ function line(ctx: CanvasRenderingContext2D, pts: [number, number][], col: strin
 
 function axisY(
   ctx: CanvasRenderingContext2D,
+  COL: SpecColors,
   x: number,
   y: number,
   hgt: number,

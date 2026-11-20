@@ -4,7 +4,7 @@
  *
  * Coordinates: storm space, origin at the centre, unit = storm radius, y up.
  */
-import { VIZ_GEOMETRY, VIZ_MAPPING } from './params.ts';
+import { VIZ_GEOMETRY, VIZ_MAPPING, VIZ_PHOTOSAFE, VIZ_REDUCED_MOTION, type Motion } from './params.ts';
 
 export const TAU = Math.PI * 2;
 
@@ -45,9 +45,38 @@ export function eyeClarityFromHeld(heldS: number): number {
   return 1 - Math.exp(-Math.max(0, heldS) / VIZ_MAPPING.EYE_HELD_TAU_S);
 }
 
+/** Measured time in the combined state -> shared eye wall clarity 0..1. */
+export function bothClarityFromHeld(forS: number): number {
+  return 1 - Math.exp(-Math.max(0, forS) / VIZ_MAPPING.BOTH_HELD_TAU_S);
+}
+
 /** Hemisphere match (0..1) -> angular offset between left and right halves, radians. */
 export function symmetryOffsetFromMatch(match: number): number {
   return (1 - clamp(match, 0, 1)) * VIZ_MAPPING.SYMMETRY_MAX_OFFSET_RAD;
+}
+
+/**
+ * Measured dominant frequency (Hz) -> rotation rate (rev/s). Proportional, with a hard cap that
+ * keeps arms passing any point below MAX_FLICKER_HZ. Reduced motion: slower, lower cap.
+ */
+export function rotationRevPerS(hz: number, motion: Motion): number {
+  const k = motion === 'reduced' ? VIZ_REDUCED_MOTION.ROT_REV_PER_S_PER_HZ : VIZ_MAPPING.ROT_REV_PER_S_PER_HZ;
+  const cap = motion === 'reduced' ? VIZ_REDUCED_MOTION.ROT_MAX_REV_PER_S : VIZ_MAPPING.ROT_MAX_REV_PER_S;
+  return Math.min(Math.abs(hz) * k, cap);
+}
+
+/**
+ * Contrast gain for rotating texture whose features pass a point `passHz` times a second.
+ * 1 at or below MAX_FLICKER_HZ, falling as (MAX/passHz)^2 above it. The shader uses the same formula.
+ */
+export function flickerGain(passHz: number): number {
+  const m = VIZ_PHOTOSAFE.MAX_FLICKER_HZ;
+  return passHz <= m ? 1 : (m / passHz) * (m / passHz);
+}
+
+/** How often texture features of linear size `feature` (storm radii) pass a point at radius r. */
+export function featurePassHz(revPerS: number, r: number, feature: number): number {
+  return (TAU * r * Math.abs(revPerS)) / feature;
 }
 
 /** Heartbeat pulse envelope, 0..1, as a function of seconds since the beat arrived. */

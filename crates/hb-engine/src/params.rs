@@ -261,6 +261,9 @@ params! {
     harmonic_max_n: usize = 3,
     harmonic_plv_min: f64 = 0.7,
     harmonic_plv_excess: f64 = 0.3,
+    /// Harmonics: a mark is taken off when fewer than this fraction of the tests over the last
+    /// integration time passed (spec 6.6).
+    harmonic_release_fraction: f64 = 0.1,
     /// Phase comparisons: number of time-shifted surrogates and their minimum shift, s.
     compare_shifts: usize = 8,
     compare_min_shift_s: f64 = 1.0,
@@ -275,6 +278,12 @@ params! {
     baseline_mix: f64 = 0.1,
     /// Span of the chance-B time series used for the false-alarm threshold, s.
     chance_b_span_s: f64 = 120.0,
+    /// Lowest entry threshold of an aligned state, nats of log evidence: the state needs
+    /// evidence for the target whatever the chance threshold says (spec 8.4).
+    state_min_evidence: f64 = 1.0,
+    /// Excess alignment is zero unless the observed cascade beats all but this fraction of
+    /// the surrogates (spec 8.5).
+    excess_level: f64 = 0.05,
 }
 
 impl Params {

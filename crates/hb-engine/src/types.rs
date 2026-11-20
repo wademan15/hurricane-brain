@@ -95,10 +95,13 @@ pub enum Target {
     Control15,
     #[serde(rename = "control_1_8")]
     Control18,
+    /// 3:1. Scored and logged like the controls; never forms cascades or states (spec 8.1).
+    #[serde(rename = "ratio_3")]
+    Ratio3,
 }
 
 impl Target {
-    pub const ALL: [Target; 4] = [Target::Phi, Target::Octave, Target::Control15, Target::Control18];
+    pub const ALL: [Target; 5] = [Target::Phi, Target::Octave, Target::Control15, Target::Control18, Target::Ratio3];
 }
 
 /// `Record<Target, T>`.
@@ -106,6 +109,7 @@ impl Target {
 pub struct TargetMap<T> {
     pub phi: T,
     pub octave: T,
+    pub ratio_3: T,
     pub control_1_5: T,
     pub control_1_8: T,
 }
@@ -117,10 +121,11 @@ impl<T> TargetMap<T> {
             Target::Octave => &self.octave,
             Target::Control15 => &self.control_1_5,
             Target::Control18 => &self.control_1_8,
+            Target::Ratio3 => &self.ratio_3,
         }
     }
     pub fn from_fn(mut f: impl FnMut(Target) -> T) -> Self {
-        TargetMap { phi: f(Target::Phi), octave: f(Target::Octave), control_1_5: f(Target::Control15), control_1_8: f(Target::Control18) }
+        TargetMap { phi: f(Target::Phi), octave: f(Target::Octave), ratio_3: f(Target::Ratio3), control_1_5: f(Target::Control15), control_1_8: f(Target::Control18) }
     }
 }
 
@@ -301,6 +306,23 @@ pub struct AlignedState {
     pub exit_at: Option<f64>,
 }
 
+/// The combined state: active only while both the golden ratio state and the octave state
+/// are active. It has no statistic of its own; it is the conjunction of two measured states.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BothState {
+    pub active: bool,
+    /// Seconds in the current combined condition (active or not).
+    pub for_s: f64,
+}
+
+/// `states` of a slow frame.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct States {
+    pub phi: AlignedState,
+    pub octave: AlignedState,
+    pub both: BothState,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SiteComparison {
     pub track: u32,
@@ -343,7 +365,7 @@ pub struct SlowFrame {
     pub dominant: Option<u32>,
     pub pairs: Vec<PairScore>,
     pub cascades: PhiOctave<Cascade>,
-    pub states: PhiOctave<AlignedState>,
+    pub states: States,
     pub hemispheres: Vec<SiteComparison>,
     pub front_back: Vec<SiteComparison>,
     pub mains_hz: Option<u32>,

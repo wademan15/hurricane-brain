@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { Frame } from '../../engine/frames.ts';
 import { anchorFromSeed, neutralControlFor } from '../anchors.ts';
 import { DEFAULT_AUDIO_SETTINGS } from '../settings.ts';
+import { FrameBinder } from '../bindings.ts';
 import { SynthCore, softClip } from '../synth-core.ts';
 import {
   SR,
@@ -30,6 +31,8 @@ import {
 } from './helpers.ts';
 
 const TAU = DEFAULT_AUDIO_SETTINGS.pitchTauS;
+/** A confirmed alpha track in the slow frame only (no fast track, so no tone): lets the bed sound alone. */
+const ALPHA_ONLY: TrackSpec[] = [{ id: 9, freq: 10 }];
 
 /** A session where `tracks(t)` gives the fast tracks and slow frames confirm the same ids. */
 function session(tracks: (t: number) => TrackSpec[], slow: (t: number) => SlowSpec = () => ({}), artifact: (t: number) => boolean = () => false): Script {
@@ -229,7 +232,7 @@ describe('attacks: no layer starts with a step', () => {
     expect(maxAbs(head)).toBeLessThan(peak * 0.05);
   };
   it('tone', () => onsetCheck('tone', renderSession(session(() => [{ id: 1, freq: 10, height: 15 }]), 3).left, 0.05));
-  it('bed', () => onsetCheck('bed', renderSession(session(() => [], () => ({ alphaDb: 4 })), 4).left, 0.05));
+  it('bed', () => onsetCheck('bed', renderSession(session(() => [], () => ({ alphaDb: 4, tracks: ALPHA_ONLY })), 4).left, 0.05));
   it('heartbeat', () => onsetCheck('heart', renderSession((t, k) => (k === 16 ? [heartFrame(t, [{ t }])] : [fastFrame(t, [])]), 2).left, 0.005));
   it('breath guide', () => onsetCheck('breath', renderSession(() => [], 6, { breathGuide: { enabled: true } }).left, 0.05));
   it('anchor', () => onsetCheck('anchor', renderSession(() => [], 4, {}, (c) => c.playAnchor(anchorFromSeed(5))).left, 0.05));
@@ -310,7 +313,7 @@ describe('blooms', () => {
 
 describe('state bed', () => {
   it('warms as alpha above background rises relative to baseline (lower spectral centroid)', () => {
-    const at = (db: number) => renderSession(session(() => [], () => ({ alphaDb: db })), 30, {}, (_c, b) => b.setBaseline({ alphaAboveBgDbMean: 2 }));
+    const at = (db: number) => renderSession(session(() => [], () => ({ alphaDb: db, tracks: ALPHA_ONLY })), 30, {}, (_c, b) => b.setBaseline({ alphaAboveBgDbMean: 2 }));
     const cool = at(2);
     const warm = at(8);
     const cc = centroid(slice(cool.left, 26, 30));
@@ -323,7 +326,7 @@ describe('state bed', () => {
   });
 
   it('the bed fades in over >= 1 s and out to exact silence when alpha becomes null', () => {
-    const r = renderSession(session(() => [], (t) => ({ alphaDb: t < 5 ? 4 : null })), 12);
+    const r = renderSession(session(() => [], (t) => ({ alphaDb: t < 5 ? 4 : null, tracks: ALPHA_ONLY })), 12);
     const full = rms(slice(r.left, 4, 5));
     expect(rms(slice(r.left, 0.2, 0.5))).toBeLessThan(full * 0.25);
     expect(allZero(slice(r.left, 5.25 + DEFAULT_AUDIO_SETTINGS.bedFadeS + 0.05, 12))).toBe(true);
@@ -426,5 +429,159 @@ describe('no entrainment', () => {
   it('both channels carry the same dry signal (no binaural difference) when no room send is active', () => {
     const r = renderSession(session(() => [{ id: 1, freq: 10, height: 15 }], () => ({ alphaDb: 4 })), 4);
     expect(maxAbs(diff(r.left, r.right))).toBe(0);
+  });
+});
+
+describe('noise-only input is silent (fake test failure 4)', () => {
+  it('background-only frames (alpha above background small but measured, no tracks): exact zeros', () => {
+    const script: Script = (t, tick) => {
+      const out: Frame[] = [];
+      if (tick % 8 === 0) out.push(slowFrame(t, { alphaDb: 0.4 + 0.2 * Math.sin(t), tracks: [] }));
+      out.push(fastFrame(t, []));
+      return out;
+    };
+    const r = renderSession(script, 12);
+    expect(allZero(r.left) && allZero(r.right)).toBe(true);
+    const bed = r.binder.traceAll().find((x) => x.element === 'bed');
+    expect(bed?.on).toBe(false);
+    expect(bed?.why).toBe('not_confirmed');
+  });
+
+  it('the bed needs a confirmed alpha-band peak: a theta-only peak leaves it silent', () => {
+    const theta = renderSession(session(() => [], () => ({ alphaDb: 5, tracks: [{ id: 4, freq: 6 }] })), 6);
+    expect(allZero(theta.left)).toBe(true);
+    const unconfirmed = renderSession(session(() => [], () => ({ alphaDb: 5, tracks: [{ id: 4, freq: 10, state: 'new' }] })), 6);
+    expect(allZero(unconfirmed.left)).toBe(true);
+    const wrongSite = renderSession(session(() => [], () => ({ alphaDb: 5, tracks: [{ id: 4, freq: 10, site: 'AF7' }] })), 6);
+    expect(allZero(wrongSite.left)).toBe(true);
+    const channel = renderSession(session(() => [], () => ({ alphaDb: 5, tracks: [{ id: 4, freq: 10, site: 'TP10' }] })), 6);
+    expect(rms(slice(channel.left, 4, 6))).toBeGreaterThan(0);
+  });
+
+  it('the bed fades out over its declared fade when the alpha peak goes, then exact zero', () => {
+    const r = renderSession(session(() => [], (t) => ({ alphaDb: 4, tracks: t < 5 ? ALPHA_ONLY : [] })), 12);
+    expect(rms(slice(r.left, 5.3, 5.6))).toBeGreaterThan(0);
+    expect(maxDiff(slice(r.left, 4.5, 7.5))).toBeLessThanOrEqual(maxDiff(slice(r.left, 3, 4.5)) * 1.05);
+    expect(allZero(slice(r.left, 5.25 + DEFAULT_AUDIO_SETTINGS.bedFadeS + 0.05, 12))).toBe(true);
+  });
+});
+
+describe('consecutive sessions in one page load (fake test failure 5)', () => {
+  /** Session A for 6 s (10 Hz), then session B whose clock restarts at 0 (12 Hz, same track id). */
+  function twoSessions(explicit: boolean) {
+    const core = new SynthCore(SR);
+    const binder = new FrameBinder();
+    const total = 16 * SR;
+    const left = new Float32Array(total);
+    let tick = 0;
+    let resets = 0;
+    for (let pos = 0; pos < total; pos += 128) {
+      const coreT = pos / SR;
+      while (tick / 32 <= coreT) {
+        const ct = tick / 32;
+        const inB = ct >= 6;
+        if (inB && explicit && ct - 1 / 32 < 6) {
+          binder.reset();
+          core.newSession();
+        }
+        const t = inB ? ct - 6 : ct;
+        const tr: TrackSpec[] = [{ id: 1, freq: inB ? 12 : 10, height: 15 }];
+        const frames: Frame[] = [];
+        if (tick % 8 === 0) frames.push(slowFrame(t, { tracks: tr }));
+        frames.push(fastFrame(t, tr));
+        if (tick % 32 === 0 && t >= 1) frames.push(heartFrame(t, [{ t }]));
+        for (const f of frames) {
+          const out = binder.handleFrame(f, core.timeS);
+          if (out.reset) {
+            resets++;
+            core.newSession();
+          }
+          core.setControl(out.control);
+          for (const b of out.beats) core.scheduleBeat(b.atS, b.flagged);
+        }
+        tick++;
+      }
+      core.render(left, null, pos, Math.min(128, total - pos));
+    }
+    return { left, core, resets };
+  }
+
+  for (const explicit of [false, true]) {
+    it(`${explicit ? 'explicit reset' : 'automatic detection'}: the second session sounds, at its own pitch, with heartbeats, no click`, () => {
+      const { left, core, resets } = twoSessions(explicit);
+      expect(resets).toBe(explicit ? 0 : 1);
+      // Between beats of session B (beat at B-time 6 s sounds at core 12.3 s, ends 12.72 s).
+      const pitchB = zeroCrossFreq(slice(left, 12.75, 13.25));
+      const pitchA = zeroCrossFreq(slice(left, 4.75, 5.25));
+      console.log(`${explicit ? 'explicit' : 'auto'}: session A ${pitchA.toFixed(3)} Hz, session B ${pitchB.toFixed(3)} Hz, beats played ${core.status().heart.played}`);
+      expect(Math.abs(cents(pitchA, 320))).toBeLessThan(1);
+      expect(Math.abs(cents(pitchB, 384))).toBeLessThan(1);
+      // 5 beats in A (t = 1..5), 9 in B (t = 1..9; t=10 would sound after the render ends).
+      expect(core.status().heart.played).toBe(5 + 9);
+      // The changeover: the old tone fades out and the new one fades in; never a step.
+      const steady = Math.max(maxDiff(slice(left, 4, 5.9)), maxDiff(slice(left, 13, 15)));
+      const change = maxDiff(slice(left, 5.9, 9));
+      console.log(`changeover max |dx| ${change.toExponential(3)} vs steady ${steady.toExponential(3)}`);
+      expect(change).toBeLessThanOrEqual(steady * 1.05);
+    });
+  }
+});
+
+describe('combined state bloom and bloom settings', () => {
+  const two: TrackSpec[] = [{ id: 1, freq: 10, height: 15 }, { id: 2, freq: 16.18, height: 15 }];
+  const PHI = { tracks: [1, 2], excess: 1, active: true };
+  const OCT = { tracks: [1, 2], excess: 1, active: true };
+  const MUTE_PO = { blooms: { phi: { on: false }, octave: { on: false } } };
+  const run = (slow: SlowSpec, settings = {}, secs = 22) => renderSession(session(() => two, (t) => (t >= 2 ? slow : {})), secs, settings);
+  const base = run({});
+  const part = (r: { left: Float32Array }) => diff(r.left, base.left);
+
+  it('golden ratio, octave and combined blooms are mutually spectrally distinct', () => {
+    const phi = slice(part(run({ phi: PHI })), 16, 22);
+    const oct = slice(part(run({ octave: OCT })), 16, 22);
+    const both = slice(part(run({ phi: PHI, octave: OCT }, MUTE_PO)), 16, 22);
+    const spec = [phi, oct, both].map((x) => spectrum(x).mag);
+    const cos = (a: Float64Array, b: Float64Array) => {
+      let d = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) {
+        d += a[i] * b[i];
+        na += a[i] * a[i];
+        nb += b[i] * b[i];
+      }
+      return d / Math.sqrt(na * nb);
+    };
+    const c = [cos(spec[0], spec[1]), cos(spec[0], spec[2]), cos(spec[1], spec[2])];
+    console.log(`centroids: golden ratio ${centroid(phi).toFixed(0)} Hz, octave ${centroid(oct).toFixed(0)} Hz, combined ${centroid(both).toFixed(0)} Hz; cosine phi/oct ${c[0].toFixed(3)}, phi/both ${c[1].toFixed(3)}, oct/both ${c[2].toFixed(3)}`);
+    for (const x of c) expect(x).toBeLessThan(0.2);
+    expect(rms(both)).toBeGreaterThan(0);
+  });
+
+  it('the combined bloom never sounds unless states.both is active', () => {
+    const noBoth = run({ phi: PHI, octave: OCT, both: false }, MUTE_PO, 10);
+    expect(maxAbs(part(noBoth).subarray(0, noBoth.left.length))).toBe(0);
+    const phiOnlyFlag = run({ phi: PHI, both: true }, MUTE_PO, 10); // octave excess missing: min() is null
+    expect(maxAbs(part(phiOnlyFlag))).toBe(0);
+    const nonMembers = run({ phi: { ...PHI, tracks: [7, 8] }, octave: { ...OCT, tracks: [7, 9] } }, MUTE_PO, 10);
+    expect(maxAbs(part(nonMembers))).toBe(0);
+  });
+
+  it('the combined bloom gathers slowly, follows min(excess) and its level setting, and is mutable', () => {
+    const full = part(run({ phi: PHI, octave: OCT }, MUTE_PO));
+    const settled = rms(slice(full, 18, 22));
+    const at1 = rms(slice(full, 2.5, 3));
+    console.log(`combined bloom 0.5-1 s after entry: ${(at1 / settled * 100).toFixed(1)}% of settled`);
+    expect(at1).toBeLessThan(0.2 * settled);
+    const minEx = part(run({ phi: { ...PHI, excess: 0.9 }, octave: { ...OCT, excess: 0.5 } }, MUTE_PO));
+    expect(rms(slice(minEx, 18, 22)) / settled).toBeCloseTo(0.5, 1);
+    const half = part(run({ phi: PHI, octave: OCT }, { blooms: { ...MUTE_PO.blooms, both: { level: 0.5 } } }));
+    expect(rms(slice(half, 18, 22)) / settled).toBeCloseTo(0.5, 1);
+    const muted = run({ phi: PHI, octave: OCT }, { blooms: { phi: { on: false }, octave: { on: false }, both: { on: false } } });
+    expect(maxAbs(part(muted))).toBe(0);
+  });
+
+  it('bloomChance "b" scales the blooms by excess_b', () => {
+    const a = part(run({ phi: PHI, excessB: { phi: 0.5 } }));
+    const b = part(run({ phi: PHI, excessB: { phi: 0.5 } }, { bloomChance: 'b' }));
+    expect(rms(slice(b, 18, 22)) / rms(slice(a, 18, 22))).toBeCloseTo(0.5, 1);
   });
 });

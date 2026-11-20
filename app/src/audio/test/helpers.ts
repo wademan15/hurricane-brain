@@ -15,7 +15,13 @@ export interface TrackSpec {
   height?: number | null;
   locked?: boolean;
   state?: Track['state'];
+  /** Display band; by default from the fixed band edges. */
+  band?: Track['band'];
+  site?: string;
 }
+
+export const bandOf = (f: number | null): Track['band'] =>
+  f === null ? 'alpha' : f < 4 ? 'delta' : f < 8 ? 'theta' : f < 13 ? 'alpha' : f < 30 ? 'beta' : 'gamma';
 
 export function fastFrame(t: number, tracks: TrackSpec[], artifact = false): FastFrame {
   return {
@@ -57,6 +63,10 @@ export interface SlowSpec {
   alphaDb?: number | null;
   phi?: { tracks: number[]; excess: number; active: boolean };
   octave?: { tracks: number[]; excess: number; active: boolean };
+  /** Combined state; defaults to phi.active && octave.active, as the engine defines it. */
+  both?: boolean;
+  /** Excess against chance B (defaults to the same as excess_a). */
+  excessB?: { phi?: number; octave?: number };
 }
 
 export function slowFrame(t: number, spec: SlowSpec): SlowFrame {
@@ -79,7 +89,9 @@ export function slowFrame(t: number, spec: SlowSpec): SlowFrame {
           },
         ];
   const casc = (target: 'phi' | 'octave', c?: { tracks: number[]; excess: number; active: boolean }): Cascade =>
-    c ? { ...emptyCascade(target), tracks: c.tracks, steps: c.tracks.length - 1, excess_a: ok(c.excess) } : emptyCascade(target);
+    c
+      ? { ...emptyCascade(target), tracks: c.tracks, steps: c.tracks.length - 1, excess_a: ok(c.excess), excess_b: ok(spec.excessB?.[target] ?? c.excess) }
+      : emptyCascade(target);
   const state = (target: 'phi' | 'octave', c?: { active: boolean }) => ({ target, active: !!c?.active, for_s: 10, stat: ok(1), enter_at: 1, exit_at: 0.5 });
   return {
     kind: 'slow',
@@ -92,20 +104,24 @@ export function slowFrame(t: number, spec: SlowSpec): SlowFrame {
       (k): Track => ({
         id: k.id,
         state: k.state ?? 'confirmed',
-        site: 'temporal',
+        site: k.site ?? 'temporal',
         freq: k.freq === null ? nul() : ok(k.freq),
         freq_integrated: k.freq === null ? nul() : ok(k.freq),
         height_db: ok(k.height ?? 15),
         width_hz: ok(1),
         age_s: 10,
-        band: 'alpha',
+        band: k.band ?? bandOf(k.freq),
         harmonic_of: null,
       }),
     ),
     dominant: null,
     pairs: [],
     cascades: { phi: casc('phi', spec.phi), octave: casc('octave', spec.octave) },
-    states: { phi: state('phi', spec.phi), octave: state('octave', spec.octave) },
+    states: {
+      phi: state('phi', spec.phi),
+      octave: state('octave', spec.octave),
+      both: { active: spec.both ?? (!!spec.phi?.active && !!spec.octave?.active), for_s: 0 },
+    },
     hemispheres: [],
     front_back: [],
     mains_hz: 50,
@@ -168,6 +184,7 @@ export function renderSession(script: Script, seconds: number, settings: AudioSe
       const ft = nextTick / 32;
       for (const f of script(ft, nextTick)) {
         const out = binder.handleFrame(f, core.timeS);
+        if (out.reset) core.newSession();
         core.setControl(out.control);
         for (const b of out.beats) core.scheduleBeat(b.atS, b.flagged);
       }

@@ -32,7 +32,7 @@ export interface ScheduledBeat {
 
 /** One line of the tap-to-inspect panel: a sound element and the field driving it. */
 export interface BindingTrace {
-  element: 'tone' | 'bloom_phi' | 'bloom_octave' | 'bed' | 'bed_thin' | 'heart' | 'breath_guide' | 'anchor';
+  element: 'tone' | 'bloom_phi' | 'bloom_octave' | 'bloom_both' | 'bed' | 'bed_thin' | 'heart' | 'breath_guide' | 'anchor';
   /** Track id for tones and blooms. */
   trackId?: number;
   /** Is this element being asked to sound right now? */
@@ -44,12 +44,29 @@ export interface BindingTrace {
   /** Declared smoothing, e.g. "pitch one-pole tau 150 ms". */
   smoothing: string;
   /** When off, why (a Reason from the frames, or a binder reason). */
-  why: Reason | 'stale' | 'unconfirmed' | 'unlocked' | 'state_inactive' | 'not_member' | 'disabled' | 'no_source' | 'ok';
+  why: Reason | 'stale' | 'unconfirmed' | 'unlocked' | 'state_inactive' | 'not_member' | 'disabled' | 'no_source' | 'muted' | 'ok';
 }
 
 export interface BinderOutput {
   control: SynthControl;
   beats: ScheduledBeat[];
+  /**
+   * True when this frame started a new session (session time jumped backwards by more than
+   * `sessionJumpS`). The caller must call `SynthCore.newSession()` before applying `control`.
+   */
+  reset: boolean;
+}
+
+/** Composite sites and the channels they contain. */
+const COMPOSITES: Record<string, string[]> = {
+  temporal: ['TP9', 'TP10', 'temporal'],
+  frontal: ['AF7', 'AF8', 'Fpz', 'frontal'],
+};
+
+/** Does a track followed at `trackSite` count for the bound `site`? */
+function siteMatches(site: string, trackSite: string): boolean {
+  if (site === 'all' || trackSite === site) return true;
+  return (COMPOSITES[site] ?? []).includes(trackSite);
 }
 
 const CLOCK_WINDOW = 320; // ~10 s of fast frames
@@ -95,8 +112,30 @@ export class FrameBinder {
     return this.offsets.length ? Math.min(...this.offsets) : null;
   }
 
+  /**
+   * Forget everything about the previous session: frames, clock mapping, beat history, traces.
+   * The baseline and settings are kept. Pair with `SynthCore.newSession()` (AudioEngine does).
+   */
+  reset(): void {
+    this.slow = null;
+    this.fast = null;
+    this.heart = null;
+    this.latestT = -Infinity;
+    this.offsets = [];
+    this.lastBeatT = -Infinity;
+    this.dropped = 0;
+    this.traces = [];
+    this.lastBeat = null;
+  }
+
   /** Feed one frame. `coreNowS` is the audio core's current time in seconds. */
   handleFrame(frame: Frame, coreNowS: number): BinderOutput {
+    let reset = false;
+    if (Number.isFinite(frame.t) && frame.t < this.latestT - this.s.sessionJumpS) {
+      // Session time went backwards: a new session in the same page. Start clean.
+      this.reset();
+      reset = true;
+    }
     if (Number.isFinite(frame.t)) {
       this.latestT = Math.max(this.latestT, frame.t);
       this.offsets.push(coreNowS - frame.t);
@@ -109,7 +148,7 @@ export class FrameBinder {
       this.heart = frame;
       this.scheduleBeats(frame, coreNowS, beats);
     }
-    return { control: this.build(), beats };
+    return { control: this.build(), beats, reset };
   }
 
   /** Latest trace for each sound element (for getDebug). */
@@ -148,8 +187,12 @@ export class FrameBinder {
     const oct = slow ? slow.cascades.octave : null;
     const phiActive = !!slow && slow.states.phi.active;
     const octActive = !!slow && slow.states.octave.active;
-    const phiExcess = num(phi?.excess_a);
-    const octExcess = num(oct?.excess_a);
+    const bothActive = !!slow && !!slow.states.both && slow.states.both.active === true;
+    const ex = s.bloomChance === 'b' ? 'excess_b' : 'excess_a';
+    const phiExcess = num(phi?.[ex]);
+    const octExcess = num(oct?.[ex]);
+    const bothExcess = phiExcess !== null && octExcess !== null ? Math.min(phiExcess, octExcess) : null;
+    const bl = s.blooms;
 
     // ---- tones ----
     const voices: VoiceControl[] = [];
@@ -172,7 +215,8 @@ export class FrameBinder {
       const isOct = !!oct && oct.tracks.includes(ft.id);
       const phiT = on && phiActive && isPhi && phiExcess !== null ? phiExcess : 0;
       const octT = on && octActive && isOct && octExcess !== null ? octExcess : 0;
-      voices.push({ id: ft.id, on, freqHz: on ? freq : null, heightDb: on ? height : null, phi: phiT, octave: octT });
+      const bothT = on && bothActive && (isPhi || isOct) && bothExcess !== null ? bothExcess : 0;
+      voices.push({ id: ft.id, on, freqHz: on ? freq : null, heightDb: on ? height : null, phi: phiT, octave: octT, both: bothT });
 
       const base = `fast.tracks[id=${ft.id}]`;
       traces.push({
@@ -193,26 +237,43 @@ export class FrameBinder {
         smoothing: `pitch one-pole tau ${ms(s.pitchTauS)}; loudness one-pole tau ${ms(s.toneLoudnessTauS)}; presence fade ${s.toneFadeS} s`,
         why,
       });
+      const exWhy = (c: typeof phi) => (c ? c[ex].why : 'no_data');
+      const muteNote = (m: boolean) => (m ? '' : ' (MUTED in settings)');
       if (isPhi || phiActive) {
         traces.push({
           element: 'bloom_phi',
           trackId: ft.id,
-          on: phiT > 0,
-          fields: { 'slow.states.phi.active': phiActive, 'slow.cascades.phi.excess_a.v': phiExcess, 'slow.cascades.phi.tracks': phi ? phi.tracks.join(',') : null },
-          mapping: `sub-octave pad of this tone in the room, level ${phiT.toFixed(2)} x tone loudness`,
+          on: phiT > 0 && bl.phi.on,
+          fields: { 'slow.states.phi.active': phiActive, [`slow.cascades.phi.${ex}.v`]: phiExcess, 'slow.cascades.phi.tracks': phi ? phi.tracks.join(',') : null },
+          mapping: `sub-octave pad of this tone in the room, level ${phiT.toFixed(2)} x tone loudness x ${bl.phi.level}${muteNote(bl.phi.on)}`,
           smoothing: `one-pole tau ${s.bloomTauS} s rising, ${s.bloomReleaseTauS} s thinning`,
-          why: !on ? why : !phiActive ? 'state_inactive' : !isPhi ? 'not_member' : phiExcess === null ? (phi?.excess_a.why ?? 'no_data') : 'ok',
+          why: !on ? why : !phiActive ? 'state_inactive' : !isPhi ? 'not_member' : phiExcess === null ? exWhy(phi) : !bl.phi.on ? 'muted' : 'ok',
         });
       }
       if (isOct || octActive) {
         traces.push({
           element: 'bloom_octave',
           trackId: ft.id,
-          on: octT > 0,
-          fields: { 'slow.states.octave.active': octActive, 'slow.cascades.octave.excess_a.v': octExcess, 'slow.cascades.octave.tracks': oct ? oct.tracks.join(',') : null },
-          mapping: `hollow upper-octave pad of this tone, dry, level ${octT.toFixed(2)} x tone loudness`,
+          on: octT > 0 && bl.octave.on,
+          fields: { 'slow.states.octave.active': octActive, [`slow.cascades.octave.${ex}.v`]: octExcess, 'slow.cascades.octave.tracks': oct ? oct.tracks.join(',') : null },
+          mapping: `hollow upper-octave pad of this tone, dry, level ${octT.toFixed(2)} x tone loudness x ${bl.octave.level}${muteNote(bl.octave.on)}`,
           smoothing: `one-pole tau ${s.bloomTauS} s rising, ${s.bloomReleaseTauS} s thinning`,
-          why: !on ? why : !octActive ? 'state_inactive' : !isOct ? 'not_member' : octExcess === null ? (oct?.excess_a.why ?? 'no_data') : 'ok',
+          why: !on ? why : !octActive ? 'state_inactive' : !isOct ? 'not_member' : octExcess === null ? exWhy(oct) : !bl.octave.on ? 'muted' : 'ok',
+        });
+      }
+      if (bothActive && (isPhi || isOct)) {
+        traces.push({
+          element: 'bloom_both',
+          trackId: ft.id,
+          on: bothT > 0 && bl.both.on,
+          fields: {
+            'slow.states.both.active': bothActive,
+            [`slow.cascades.phi.${ex}.v`]: phiExcess,
+            [`slow.cascades.octave.${ex}.v`]: octExcess,
+          },
+          mapping: `combined bloom: fifth and twelfth above this tone, deep in the room, level min(phi, octave) = ${bothT.toFixed(2)} x tone loudness x ${bl.both.level}${muteNote(bl.both.on)}`,
+          smoothing: `one-pole tau ${s.combinedBloomTauS} s rising, ${s.bloomReleaseTauS} s thinning`,
+          why: !on ? why : bothExcess === null ? (phiExcess === null ? exWhy(phi) : exWhy(oct)) : !bl.both.on ? 'muted' : 'ok',
         });
       }
     }
@@ -223,19 +284,26 @@ export class FrameBinder {
     const ref = this.baseline ? this.baseline.alphaAboveBgDbMean : 0;
     const warmth = alpha !== null ? clamp01((alpha - ref) / s.warmthRangeDb) : 0;
     const artifact = !!fast && fast.artifact;
-    const bedOn = alpha !== null;
+    // The bed needs a confirmed alpha peak at the bound site: a measurable band power alone is
+    // not a rhythm (CLAUDE.md rule 2). Confirmed or in its hold time ('fading') both count.
+    const alphaTrack = slow
+      ? slow.tracks.find((t) => t.band === 'alpha' && (t.state === 'confirmed' || t.state === 'fading') && siteMatches(s.bedSite, t.site))
+      : undefined;
+    const bedOn = alpha !== null && alphaTrack !== undefined;
     traces.push({
       element: 'bed',
       on: bedOn,
       fields: {
         [`slow.spectra[site=${s.bedSite}].bands.alpha.above_bg_db.v`]: alpha,
+        'slow.tracks[band=alpha].id': alphaTrack ? alphaTrack.id : null,
+        'slow.tracks[band=alpha].state': alphaTrack ? alphaTrack.state : null,
         'baseline.alphaAboveBgDbMean': this.baseline ? this.baseline.alphaAboveBgDbMean : null,
       },
       mapping: bedOn
         ? `warmth ${(warmth * 100).toFixed(0)}% = (${alpha!.toFixed(2)} - ${ref.toFixed(2)} dB) / ${s.warmthRangeDb} dB${this.baseline ? '' : ' (no baseline set: relative to background)'}`
         : `fading out over ${s.bedFadeS} s`,
       smoothing: `warmth one-pole tau ${s.warmthTauS} s; steadiness (hold) tau ${s.steadyTauS} s; presence fade ${s.bedFadeS} s`,
-      why: bedOn ? 'ok' : !slow ? 'stale' : !spec ? 'no_data' : spec.bands.alpha.above_bg_db.why,
+      why: bedOn ? 'ok' : !slow ? 'stale' : !spec ? 'no_data' : alpha === null ? spec.bands.alpha.above_bg_db.why : 'not_confirmed',
     });
     traces.push({
       element: 'bed_thin',

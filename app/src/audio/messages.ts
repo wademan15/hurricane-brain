@@ -11,7 +11,9 @@ export type ToWorklet =
   | { type: 'control'; control: SynthControl }
   | { type: 'beat'; atS: number; flagged: boolean }
   | { type: 'anchor'; params: AnchorSynthParams }
-  | { type: 'anchorStop' };
+  | { type: 'anchorStop' }
+  /** A new session: retire everything measured from the previous one (fades, no click). */
+  | { type: 'reset' };
 
 export type FromWorklet = { type: 'status'; status: SynthStatus };
 

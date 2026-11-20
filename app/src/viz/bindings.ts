@@ -26,13 +26,22 @@ import {
   brightnessFromDb,
   clamp,
   eyeClarityFromHeld,
+  bothClarityFromHeld,
   pulseEnvelope,
+  rotationRevPerS,
   symmetryOffsetFromMatch,
   TAU,
   windingFromExcess,
   wrapAngle,
 } from './geometry.ts';
-import { VIZ_GEOMETRY, VIZ_MAPPING, VIZ_SMOOTHING } from './params.ts';
+import {
+  VIZ_GEOMETRY,
+  VIZ_MAPPING,
+  VIZ_REDUCED_MOTION,
+  VIZ_SMOOTHING,
+  type ChanceDriver,
+  type Motion,
+} from './params.ts';
 import { reasonText, type VizReason } from './reasons.ts';
 
 export interface Bound {
@@ -50,6 +59,16 @@ export interface Bound {
 
 export type StormMode = 'calm' | 'bands' | 'storm';
 
+/** Viewer preferences. Neither changes what is measured; they choose which field or how gently. */
+export interface VizOptions {
+  /** Which chance level's excess drives winding, rings and the combined state. Default 'a'. */
+  chance: ChanceDriver;
+  /** 'reduced' honours prefers-reduced-motion. Default 'full'. */
+  motion: Motion;
+}
+
+export const DEFAULT_VIZ_OPTIONS: VizOptions = { chance: 'a', motion: 'full' };
+
 /** One linear ramp: drawn value goes from `from` to `to` over RAMP_S starting at `t0`. */
 interface Ramp {
   from: number;
@@ -59,6 +78,7 @@ interface Ramp {
 
 export interface VisualState {
   now: number;
+  options: VizOptions;
   /** What the latest frames support. The picture fades between modes over RAMP_S. */
   mode: StormMode;
   /** Text shown over calm water, or null when there is structure. */
@@ -69,6 +89,11 @@ export interface VisualState {
   rotation: Bound;
   /** Rotation phase, radians. Integrated from `rotation`; not itself a measurement. */
   rotationPhase: number;
+  /**
+   * Rotation rate in rev/s, ramped (0 when rotation is null). Used only to soften fine texture at
+   * high rotation speed (photosensitivity). The phase itself stops at once on null.
+   */
+  motionRate: number;
   armCount: Bound;
   /** One per arm slot (MAX_ARMS). Slot i is cascade member i, lowest frequency first. */
   arms: Bound[];
@@ -81,6 +106,12 @@ export interface VisualState {
   bands: Bound[];
   bandTracks: (number | null)[];
   eye: Bound;
+  /** Combined state: golden ratio and octave aligned at once (slow.states.both.active), 1 or 0. */
+  combined: Bound;
+  /** Strength of the combined look: the smaller of the two excess values. */
+  combinedStrength: Bound;
+  /** Clarity of the shared eye wall: slow.states.both.for_s. */
+  combinedHeld: Bound;
   symmetry: Bound;
   pulse: Bound;
   swell: Bound;
@@ -224,7 +255,15 @@ function cascadeMembers(c: Cascade, confirmed: Track[]): Track[] {
 // The binding table
 // ---------------------------------------------------------------------------
 
-export function computeVisualState(prev: VisualState | null, frames: FrameSnapshot, now: number): VisualState {
+export function computeVisualState(
+  prev: VisualState | null,
+  frames: FrameSnapshot,
+  now: number,
+  options: VizOptions = DEFAULT_VIZ_OPTIONS,
+): VisualState {
+  const { chance, motion } = options;
+  const exKey = chance === 'a' ? 'excess_a' : 'excess_b';
+  const chanceName = chance === 'a' ? 'chance A' : 'chance B';
   const ctx: RampCtx = { prev: prev?.ramps ?? {}, next: {}, now, T: VIZ_SMOOTHING.RAMP_S };
 
   const slowFresh =
@@ -243,8 +282,8 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
   const phi = slow?.cascades.phi;
   const members = phi ? cascadeMembers(phi, confirmed) : [];
   const phiExcess = phi
-    ? fromMeasured('slow.cascades.phi.excess_a', phi.excess_a, 'not_available')
-    : nullRead('slow.cascades.phi.excess_a', calmWhy);
+    ? fromMeasured(`slow.cascades.phi.${exKey}`, phi[exKey], 'not_available')
+    : nullRead(`slow.cascades.phi.${exKey}`, calmWhy);
   const stormForms = members.length >= 2 && phiExcess.measured !== null;
   const noStormWhy: VizReason =
     calmWhy !== 'ok' ? calmWhy : members.length < 2 ? 'no_cascade' : phiExcess.why;
@@ -271,7 +310,7 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
   }
 
   const winding = bind(
-    ctx, 'winding', 'How tightly the arms wind (golden ratio excess alignment)', '0..1',
+    ctx, 'winding', `How tightly the arms wind (golden ratio alignment beyond ${chanceName})`, '0..1',
     stormForms ? phiExcess : { ...phiExcess, measured: null, se: null, why: noStormWhy },
     0,
   );
@@ -286,11 +325,40 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
 
   // --- Octave ring ---------------------------------------------------------------------------
   const oct = slow?.cascades.octave;
-  const ring = bind(
-    ctx, 'ring', 'Ring structure (octave excess alignment)', '0..1',
-    oct && confirmed.length > 0
-      ? fromMeasured('slow.cascades.octave.excess_a', oct.excess_a, 'not_available')
-      : nullRead('slow.cascades.octave.excess_a', calmWhy),
+  const octExcess = oct && confirmed.length > 0
+    ? fromMeasured(`slow.cascades.octave.${exKey}`, oct[exKey], 'not_available')
+    : nullRead(`slow.cascades.octave.${exKey}`, calmWhy);
+  const ring = bind(ctx, 'ring', `Ring structure (octave alignment beyond ${chanceName})`, '0..1', octExcess, 0);
+
+  // --- Combined state: golden ratio and octave at once ------------------------------------
+  const both = slow?.states.both;
+  const bothActive = both?.active === true;
+  const notBothWhy: VizReason = calmWhy !== 'ok' ? calmWhy : 'not_combined';
+  const combined = bind(
+    ctx, 'combined', 'Combined state (golden ratio and octave aligned at once)', 'on/off',
+    slow && both
+      ? { field: 'slow.states.both.active', measured: bothActive ? 1 : 0, se: null, why: 'ok' }
+      : nullRead('slow.states.both.active', slow ? 'not_available' : slowMissing),
+    0,
+  );
+  const minField = `min(slow.cascades.phi.${exKey}, slow.cascades.octave.${exKey})`;
+  const combinedStrength = bind(
+    ctx, 'combinedStrength', `Strength of the combined look (the weaker of the two alignments beyond ${chanceName})`, '0..1',
+    bothActive && phiExcess.measured !== null && octExcess.measured !== null
+      ? {
+          field: minField,
+          measured: Math.min(phiExcess.measured, octExcess.measured),
+          se: phiExcess.measured <= octExcess.measured ? phiExcess.se : octExcess.se,
+          why: 'ok',
+        }
+      : nullRead(minField, bothActive ? (phiExcess.measured === null ? phiExcess.why : octExcess.why) : notBothWhy),
+    0,
+  );
+  const combinedHeld = bind(
+    ctx, 'combinedHeld', 'Clarity of the shared eye wall (time in the combined state)', 's',
+    bothActive && both
+      ? { field: 'slow.states.both.for_s', measured: both.for_s, se: null, why: 'ok' }
+      : nullRead('slow.states.both.for_s', notBothWhy),
     0,
   );
 
@@ -347,8 +415,11 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
   if (prev && rotation.value !== null && prev.rotation.value !== null) {
     // Integrate with the rate at the start of the step (both ends are measured values).
     const dt = clamp(now - prev.now, 0, 0.1);
-    rotationPhase = (rotationPhase + TAU * VIZ_MAPPING.ROT_REV_PER_S_PER_HZ * prev.rotation.value * dt) % TAU;
+    rotationPhase = (rotationPhase + TAU * rotationRevPerS(prev.rotation.value, motion) * dt) % TAU;
   }
+  const motionRate = ramp(
+    ctx, 'motionRate', rotation.value === null ? 0 : rotationRevPerS(rotation.value, motion), 0,
+  ).value;
 
   // --- Hemisphere symmetry ----------------------------------------------------------------
   let symRead: FieldRead;
@@ -365,8 +436,13 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
 
   // --- Heart: pulse and swell -------------------------------------------------------------
   const lb = frames.lastBeat;
-  const sinceBeat = lb ? now - lb.receivedAt : Infinity;
-  const env = pulseEnvelope(sinceBeat, VIZ_SMOOTHING.PULSE_S);
+  const pb = frames.prevBeat;
+  const pulseS = motion === 'reduced' ? VIZ_REDUCED_MOTION.PULSE_S : VIZ_SMOOTHING.PULSE_S;
+  // The larger of the newest and the previous pulse, so a new beat never cuts a fading one short.
+  const env = Math.max(
+    lb ? pulseEnvelope(now - lb.receivedAt, pulseS) : 0,
+    pb ? pulseEnvelope(now - pb.receivedAt, pulseS) : 0,
+  );
   const pulse: Bound = {
     key: 'pulse',
     label: 'Pulse through the eye wall (detected heartbeat)',
@@ -408,11 +484,13 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
 
   return {
     now,
+    options,
     mode,
     message,
     messageWhy: mode === 'calm' ? calmWhy : null,
     rotation,
     rotationPhase,
+    motionRate,
     armCount,
     arms,
     armTracks,
@@ -422,6 +500,9 @@ export function computeVisualState(prev: VisualState | null, frames: FrameSnapsh
     bands,
     bandTracks,
     eye,
+    combined,
+    combinedStrength,
+    combinedHeld,
     symmetry,
     pulse,
     swell,
@@ -463,12 +544,19 @@ export interface HurricaneUniforms {
   pulse: number;
   /** Scale of the whole picture (breath swell), around 1. */
   swell: number;
+  /** Combined state strength 0..1: arms and rings interlock (beads, shared eye wall). */
+  both: number;
+  /** Clarity of the shared eye wall in the combined state 0..1. */
+  bothEye: number;
+  /** Rotation rate, rev/s (ramped). Softens fine rotating texture so nothing flickers above 3 Hz. */
+  rotRate: number;
 }
 
 const v0 = (b: Bound, rest: number): number => (b.value === null ? rest : b.value);
 
 /** The display mappings from bound field values to shader uniforms (all in geometry.ts). */
 export function toUniforms(s: VisualState): HurricaneUniforms {
+  const reduced = s.options.motion === 'reduced';
   return {
     rotation: s.rotationPhase,
     armCount: clamp(v0(s.armCount, 0), 0, VIZ_GEOMETRY.MAX_ARMS),
@@ -479,7 +567,10 @@ export function toUniforms(s: VisualState): HurricaneUniforms {
     ring: clamp(v0(s.ring, 0), 0, 1),
     eye: eyeClarityFromHeld(v0(s.eye, 0)),
     symmetry: symmetryOffsetFromMatch(v0(s.symmetry, 1)),
-    pulse: s.pulse.value ?? 0,
-    swell: 1 + VIZ_MAPPING.SWELL_AMPLITUDE * s.swellAmount * Math.cos(s.swellPhase),
+    pulse: (s.pulse.value ?? 0) * (reduced ? VIZ_REDUCED_MOTION.PULSE_GAIN_SCALE : 1),
+    swell: 1 + VIZ_MAPPING.SWELL_AMPLITUDE * (reduced ? VIZ_REDUCED_MOTION.SWELL_SCALE : 1) * s.swellAmount * Math.cos(s.swellPhase),
+    both: clamp(v0(s.combined, 0), 0, 1) * clamp(v0(s.combinedStrength, 0), 0, 1),
+    bothEye: clamp(v0(s.combined, 0), 0, 1) * bothClarityFromHeld(v0(s.combinedHeld, 0)),
+    rotRate: s.motionRate,
   };
 }

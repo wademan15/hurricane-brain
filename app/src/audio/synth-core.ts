@@ -14,6 +14,8 @@
  *  b. State bed: a fixed, seeded noise carrier whose level and colour move only with alpha power
  *     above background (relative to baseline). Blooms: the measured tones themselves gain a soft
  *     sub-octave pad in a room (golden ratio) or a hollow octave-above pad, dry (octave alignment).
+ *     When both states hold at once (`states.both`), a third bloom gathers: the fifth and twelfth
+ *     above each member (the 3rd and 6th harmonics of its own sub-octave), deep in the room.
  *  c. Heartbeat: a low, rounded pulse with a smooth envelope on each scheduled measured beat.
  *  d. Breath guide: a slow swell of soft air at the pacer rate. Off by default. Not a measurement.
  *  e. Personal anchors: a small parametric voice, played only on explicit request.
@@ -44,6 +46,8 @@ export interface VoiceControl {
   phi: number;
   /** Octave bloom target 0..1 for this tone: cascades.octave.excess_a likewise. */
   octave: number;
+  /** Combined bloom target 0..1: min(phi excess, octave excess) while states.both is active and this track is in either cascade, else 0. */
+  both: number;
 }
 
 export interface BedControl {
@@ -78,6 +82,7 @@ export interface VoiceStatus {
   loudness: number;
   phi: number;
   octave: number;
+  both: number;
   fadingOut: boolean;
 }
 
@@ -105,6 +110,8 @@ export interface SynthStatus {
 
 const TWO_PI = 2 * Math.PI;
 const LN2 = Math.LN2;
+const LN15 = Math.log(1.5);
+const LN3 = Math.log(3);
 const SNAP = 1e-9;
 const FLUSH = 1e-12;
 
@@ -268,6 +275,8 @@ interface ToneVoice {
   phiTarget: number;
   oct: number;
   octTarget: number;
+  both: number;
+  bothTarget: number;
 }
 
 interface Pulse {
@@ -324,6 +333,8 @@ export class SynthCore {
   private kSteady = 0;
   private kBloomUp = 0;
   private kBloomDown = 0;
+  private kBothUp = 0;
+  private retiredId = -1;
   private kGain = 0;
   private rollExp = 0;
   private logRollStart = 0;
@@ -364,7 +375,7 @@ export class SynthCore {
 
   // mix
   private room: Room;
-  private g = { tones: 1, bed: 1, bloom: 1, heart: 1, breath: 1, anchor: 1, master: 1 };
+  private g = { tones: 1, bed: 1, bloom: 1, heart: 1, breath: 1, anchor: 1, master: 1, bPhi: 1, bOct: 1, bBoth: 1 };
   private env = 0;
   private envAtk = 0;
   private envRel = 0;
@@ -407,6 +418,7 @@ export class SynthCore {
     this.kSteady = tauCoef(s.steadyTauS, sr);
     this.kBloomUp = tauCoef(s.bloomTauS, sr);
     this.kBloomDown = tauCoef(s.bloomReleaseTauS, sr);
+    this.kBothUp = tauCoef(s.combinedBloomTauS, sr);
     this.kGain = tauCoef(s.gainTauS, sr);
     this.rollExp = s.rolloffDbPerOctave / (20 * Math.log10(2));
     this.logRollStart = Math.log(s.rolloffStartHz);
@@ -416,7 +428,7 @@ export class SynthCore {
     this.breathGate.setLevel(s.breathGuide.enabled ? 1 : 0);
     while (this.voices.length < s.maxVoices) {
       const gate = new Fade();
-      this.voices.push({ id: null, gate, logF: 0, logFTarget: 0, phase: 0, loud: 0, loudTarget: 0, phi: 0, phiTarget: 0, oct: 0, octTarget: 0 });
+      this.voices.push({ id: null, gate, logF: 0, logFTarget: 0, phase: 0, loud: 0, loudTarget: 0, phi: 0, phiTarget: 0, oct: 0, octTarget: 0, both: 0, bothTarget: 0 });
     }
     // Voices beyond a reduced maxVoices fade out and are not reused.
     for (let i = s.maxVoices; i < this.voices.length; i++) this.voices[i].gate.setLevel(0);
@@ -429,7 +441,7 @@ export class SynthCore {
     this.envRel = tauCoef(0.4, sr);
     if (initial) {
       const g = s.gains;
-      this.g = { ...g, master: dbToAmp(s.masterDb) };
+      this.g = { ...g, master: dbToAmp(s.masterDb), ...bloomGains(s) };
       this.bedA = lpCoef(1500, sr);
       this.brA = lpCoef(300, sr);
     }
@@ -469,18 +481,21 @@ export class SynthCore {
           v.loud = 0;
           v.phi = 0;
           v.oct = 0;
+          v.both = 0;
         }
         v.logFTarget = lf;
         const range = this.s.heightFullDb - this.s.heightFloorDb;
         v.loudTarget = clamp01(((vc.heightDb as number) - this.s.heightFloorDb) / range);
         v.phiTarget = clamp01(Number.isFinite(vc.phi) ? vc.phi : 0);
         v.octTarget = clamp01(Number.isFinite(vc.octave) ? vc.octave : 0);
+        v.bothTarget = clamp01(Number.isFinite(vc.both) ? vc.both : 0);
         v.gate.setLevel(this.voices.indexOf(v) < this.s.maxVoices ? 1 : 0);
       } else {
         // Measurement gone: fade at the last measured pitch, never move the pitch.
         v.gate.setLevel(0);
         v.phiTarget = 0;
         v.octTarget = 0;
+        v.bothTarget = 0;
       }
     }
     for (const v of this.voices) {
@@ -488,6 +503,7 @@ export class SynthCore {
         v.gate.setLevel(0);
         v.phiTarget = 0;
         v.octTarget = 0;
+        v.bothTarget = 0;
       }
     }
     // Bed
@@ -505,6 +521,29 @@ export class SynthCore {
       this.bedGate.setLevel(0);
     }
     this.thin.setLevel(b.artifact ? this.s.thinLevel : 1);
+  }
+
+  /**
+   * A new session starts (explicit, or the binder saw session time jump backwards). Everything
+   * measured from the previous session fades out over its own declared fade and is never reused:
+   * old voices are retired (a new session's track ids cannot pick them up), the bed fades, pending
+   * beats are cleared. Anchors and the breath guide are not measurements and are left alone.
+   */
+  newSession(): void {
+    for (const v of this.voices) {
+      if (v.id === null) continue;
+      v.id = this.retiredId--;
+      v.gate.setLevel(0);
+      v.phiTarget = 0;
+      v.octTarget = 0;
+      v.bothTarget = 0;
+    }
+    this.bedGate.setLevel(0);
+    this.thin.setLevel(1);
+    this.pending = [];
+    this.lastControl = SILENT_CONTROL;
+    this.lastControlN = this.n;
+    this.watchdog = false;
   }
 
   /**
@@ -573,6 +612,7 @@ export class SynthCore {
         loudness: v.loud,
         phi: v.phi,
         octave: v.oct,
+        both: v.both,
         fadingOut: v.gate.target === 0,
       });
     });
@@ -624,6 +664,7 @@ export class SynthCore {
     const kGain = this.kGain;
     const tg = s.gains;
     const masterT = dbToAmp(s.masterDb);
+    const bloomT = bloomGains(s);
     const ceiling = this.ceiling;
     const thr = ceiling * 0.8;
     const knee = ceiling * 0.6;
@@ -642,6 +683,12 @@ export class SynthCore {
       g.breath += (tg.breath - g.breath) * kGain;
       g.anchor += (tg.anchor - g.anchor) * kGain;
       g.master += (masterT - g.master) * kGain;
+      g.bPhi += (bloomT.bPhi - g.bPhi) * kGain;
+      g.bOct += (bloomT.bOct - g.bOct) * kGain;
+      g.bBoth += (bloomT.bBoth - g.bBoth) * kGain;
+      if (g.bPhi < SNAP && bloomT.bPhi === 0) g.bPhi = 0;
+      if (g.bOct < SNAP && bloomT.bOct === 0) g.bOct = 0;
+      if (g.bBoth < SNAP && bloomT.bBoth === 0) g.bBoth = 0;
 
       let dry = 0;
       let send = 0;
@@ -656,6 +703,7 @@ export class SynthCore {
           v.id = null;
           v.phi = 0;
           v.oct = 0;
+          v.both = 0;
           continue;
         }
         v.logF += (v.logFTarget - v.logF) * kPitch;
@@ -664,6 +712,8 @@ export class SynthCore {
         v.oct += (v.octTarget - v.oct) * (v.octTarget > v.oct ? this.kBloomUp : this.kBloomDown);
         if (v.phi < SNAP && v.phiTarget === 0) v.phi = 0;
         if (v.oct < SNAP && v.octTarget === 0) v.oct = 0;
+        v.both += (v.bothTarget - v.both) * (v.bothTarget > v.both ? this.kBothUp : this.kBloomDown);
+        if (v.both < SNAP && v.bothTarget === 0) v.both = 0;
         const f = Math.exp(v.logF);
         v.phase += f * inv;
         if (v.phase >= 2) v.phase -= 2;
@@ -678,15 +728,26 @@ export class SynthCore {
         const s2 = Math.sin(2 * p);
         const amp = gate * v.loud;
         dry += g.tones * LAYER_LEVELS.tone * amp * (r1 * s1 + h2 * r2 * s2);
-        if (v.phi > 0 || v.oct > 0) {
+        if (v.phi > 0 || v.oct > 0 || v.both > 0) {
           const bl = g.bloom * LAYER_LEVELS.bloom * amp;
           // Golden ratio bloom: the measured tone and its own sub-octave, into the room.
           const sub = Math.sin(0.5 * p);
-          const phiPad = bl * v.phi * (0.6 * sub + 0.35 * r1 * s1);
+          const phiPad = bl * g.bPhi * v.phi * (0.6 * sub + 0.35 * r1 * s1);
           // Octave bloom: hollow upper octaves of the same tone, dry and close.
-          const octPad = bl * v.oct * (0.55 * r2 * s2 + 0.3 * r4 * Math.sin(4 * p));
+          const octPad = bl * g.bOct * v.oct * (0.55 * r2 * s2 + 0.3 * r4 * Math.sin(4 * p));
           dry += 0.35 * phiPad + 0.9 * octPad;
           send += 1.0 * phiPad + 0.15 * octPad;
+          if (v.both > 0) {
+            // Combined bloom: the fifth (1.5x) and twelfth (3x) above the tone, i.e. the 3rd and
+            // 6th harmonics of its own sub-octave (phase-locked, no beating), mostly in the room.
+            const over15 = over + LN15;
+            const r15 = over15 > 0 ? Math.exp(-rollExp * over15) : 1;
+            const over3 = over + LN3;
+            const r3 = over3 > 0 ? Math.exp(-rollExp * over3) : 1;
+            const bothPad = bl * g.bBoth * v.both * (0.5 * r15 * Math.sin(1.5 * p) + 0.22 * r3 * Math.sin(3 * p));
+            dry += 0.3 * bothPad;
+            send += 1.4 * bothPad;
+          }
         }
       }
 
@@ -848,6 +909,11 @@ export class SynthCore {
     an.t++;
     return env * ((1 - p.noise) * tonal + p.noise * air);
   }
+}
+
+function bloomGains(s: AudioSettings): { bPhi: number; bOct: number; bBoth: number } {
+  const b = s.blooms;
+  return { bPhi: b.phi.on ? b.phi.level : 0, bOct: b.octave.on ? b.octave.level : 0, bBoth: b.both.on ? b.both.level : 0 };
 }
 
 /** Linear below the knee, then a smooth tanh shoulder that approaches but never reaches the ceiling. */

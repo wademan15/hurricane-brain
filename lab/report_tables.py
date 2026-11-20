@@ -321,12 +321,18 @@ def passmarks(R, cfg, rule="T1", fghcfg=None):
     n = sum(Cc[x]["peak_window_rate"]["n"] for x in nopeak)
     mark("C", "confirmed peaks in no-rhythm noise at or under alpha_peak = 1% of windows",
          fr({"k": k, "n": n, "rate": k / n}, 2), k / n <= 0.01)
-    t = Cc["_total"]
-    mark("C", "aligned state entered at or under 1 false entry per 10 min (all C files)",
-         f'{t["per_10min"]["phi"][rule]:.2f} per 10 min; files with an entry {fr(t["files_with_entry"]["phi"][rule])}',
-         t["per_10min"]["phi"][rule] <= 1.0)
-    c4 = sum(v["phi_casc_ge4_files"] for kk, v in Cc.items() if kk != "_total")
-    c3 = sum(v["phi_casc_ge3_files"] for kk, v in Cc.items() if kk != "_total")
+    # spectrum-preserving surrogates (block shuffle with blocks longer than a cycle, phase randomization,
+    # channel shift) SHOULD keep the source's peaks and ratios, so they are not counted as false entries
+    keep = [k for k in ("background_only", "white_noise", "headset_on_table", "surrogate_sample_shuffle",
+                        "random_loguniform", "random_bands") if k in Cc]
+    mins = sum(Cc[k]["minutes"] for k in keep)
+    rate = sum(Cc[k]["states"]["phi"][rule]["per_10min"] * Cc[k]["minutes"] for k in keep) / mins
+    nf = sum(Cc[k]["states"]["phi"][rule]["files_with_entry"]["k"] for k in keep)
+    nn = sum(Cc[k]["states"]["phi"][rule]["files_with_entry"]["n"] for k in keep)
+    mark("C", "aligned state entered at or under 1 false entry per 10 min (C files without spectrum-preserving surrogates)",
+         f'{rate:.2f} per 10 min over {mins:.0f} min; files with an entry {nf}/{nn}', rate <= 1.0)
+    c4 = sum(Cc[k]["phi_casc_ge4_files"] for k in keep)
+    c3 = sum(Cc[k]["phi_casc_ge3_files"] for k in keep)
     mark("C", "golden cascades of 3 or more steps (4 members): none", f"{c4} files", c4 == 0)
     mark("C", "hurricane structure (golden cascade of 3 members, two arms or more): none", f"{c3} files", c3 == 0)
     mark("D", ">= 95% of harmonics marked harmonic (2x)", fr(D["marked_x2"]), D["marked_x2"]["rate"] >= 0.95)

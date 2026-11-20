@@ -14,24 +14,43 @@
  */
 import type { AudioEngine } from '../../audio';
 import { sanitizeAnchor, type AnchorSynthParams } from '../../audio/anchors.ts';
+import { DEFAULT_AUDIO_SETTINGS, mergeSettings } from '../../audio/settings.ts';
 import {
   MuseDevice, PolarH10, ReplaySource, SessionClock, bluetoothAvailable, describeError, mergeStreams, readRecording,
   type ConnectionState, type DeviceSource, type ParsedRecording, type StatusEvent,
 } from '../../device';
 import type { EngineClient } from '../../engine/client';
 import type { EngineConfig, Frame, Marker, StreamDescription } from '../../engine/frames';
-import type { AppSettings, RecordingMeta, RecordingSessionRef, SessionSettings, StoredSession } from '../../storage';
+import type { AppSettings, Journal, ProfileInfo, RecordingMeta, RecordingSessionRef, ResponseSpeed, SessionSettings, StoredSession } from '../../storage';
+import { StreamOut, type StreamStatus } from '../../stream';
 import { VIZ_SMOOTHING } from '../../viz';
 import {
   createSessionRunner, getProgram, instantiateProgram, SIGNATURE_FIELD,
   type RatingKey, type RunnerEvent, type RunnerOutput, type SessionRecord, type SessionRunner, type UserProfile,
 } from '../../training';
-import { FrameHub, swapToChanceB } from './hub';
+import { CascadeLogger } from './cascadeLog';
+import { FrameHub } from './hub';
 import { KeyRowSampler } from './keyrows';
 import { LinkRecorder } from './linkRecorder';
 import { freeSessionSpec, newSessionId, prepareProgramSession, type ProgramRequest, type SessionSpec } from './plan';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
+
+/**
+ * Alignment response speed as an engine parameter (spec 6.4 and 15): the integration time of the
+ * frequency estimate. Steady is the engine default and is not passed. The engine recomputes the
+ * chance level for the chosen speed.
+ */
+export const RESPONSE_SPEED_INTEGRATION_S: Record<ResponseSpeed, number | null> = { quicker: 15, steady: null, slower: 60 };
+
+/** Engine parameters the settings choose (not the tolerance overrides), by name. */
+export function enginePrefs(settings: Pick<AppSettings, 'responseSpeed' | 'harmonicsCount'>): Record<string, number | boolean> {
+  const out: Record<string, number | boolean> = {};
+  const s = RESPONSE_SPEED_INTEGRATION_S[settings.responseSpeed];
+  if (s !== null) out.integration_s = s;
+  if (settings.harmonicsCount) out.exclude_harmonics = false;
+  return out;
+}
 const ALPHA_FIELD = 'spectra[temporal].bands.alpha.above_bg_db';
 
 export interface ControllerDeps {
@@ -39,11 +58,16 @@ export interface ControllerDeps {
   createAudio: () => AudioEngine;
   getSettings: () => AppSettings;
   getProfile: () => UserProfile | null;
+  getProfileInfo?: () => ProfileInfo | null;
+  /** The live stream out (off unless the user turned it on and entered an address). */
+  createStream?: () => StreamOut;
   /** Save a recording snapshot and a session; fold a finished program session into the profile. */
   persist: {
     saveRecording: (meta: RecordingMeta, bytes: Uint8Array) => Promise<void>;
     saveSession: (s: StoredSession) => Promise<void>;
     sessionFinished: (record: SessionRecord) => Promise<void>;
+    /** The journal entry for a saved session was written; fold it into the profile. */
+    sessionJournal?: (sessionId: string, journal: Journal) => Promise<void>;
   };
   now?: () => Date;
   random?: () => number;
@@ -96,6 +120,10 @@ export interface FinishedView {
   record: SessionRecord | null;
   stored: boolean;
   completed: boolean;
+  /** True until a journal entry has been saved or skipped (saved sessions only). */
+  journalOpen: boolean;
+  journal: Journal | null;
+  elapsedS: number;
 }
 
 export interface ControllerState {
@@ -113,6 +141,7 @@ export interface ControllerState {
   session: SessionView | null;
   finished: FinishedView | null;
   replay: null | { label: string; speed: 1 | 4 | 'fast'; ended: boolean; error: string | null };
+  stream: StreamStatus;
   notice: string | null;
   soundOn: boolean;
 }
@@ -129,7 +158,7 @@ interface Link {
   streams: StreamDescription;
   seed: number;
   mainsHz: 50 | 60 | null;
-  overrides: Record<string, number>;
+  overrides: Record<string, number | boolean>;
   engine: EngineClient;
   unsubEngine: () => void;
   engineReady: boolean;
@@ -153,6 +182,7 @@ interface ActiveSession {
   runner: SessionRunner | null;
   programName: string;
   sampler: KeyRowSampler;
+  cascades: CascadeLogger;
   sentMarkers: Set<string>;
   notes: { t: number; text: string }[];
   sessionSettings: SessionSettings | null;
@@ -176,6 +206,10 @@ export class SessionController {
   private tick: ReturnType<typeof setInterval> | null = null;
   private autosave: ReturnType<typeof setInterval> | null = null;
   private audioActive = false;
+  private stream: StreamOut | null = null;
+  private streamOff: (() => void) | null = null;
+  private lastReplayInput: { parsed: ParsedRecording; label: string; sessionId: string | null } | null = null;
+  private finishedCtx: { runner: SessionRunner | null; stored: StoredSession; t: number } | null = null;
   private replayTimer: ReturnType<typeof setInterval> | null = null;
   private lastFrameWall = 0;
   private replayNotes: { tUs: number; json: Record<string, unknown> }[] = [];
@@ -188,6 +222,7 @@ export class SessionController {
       bluetooth: (deps.bluetoothAvailable ?? bluetoothAvailable)(),
       link: null, muse: emptyDevice(), strap: emptyDevice(), engine: 'none', engineError: null, engineInfo: null,
       streams: null, gaps: 0, clockS: null, session: null, finished: null, replay: null, notice: null, soundOn: true,
+      stream: { state: 'idle' },
     };
   }
 
@@ -221,16 +256,17 @@ export class SessionController {
     this.set({ notice: null });
   }
   dismissFinished(): void {
+    this.finishedCtx = null;
     this.set({ finished: null });
   }
 
   // ---- links --------------------------------------------------------------------------------
-  private newLink(kind: 'live' | 'replay', heartOnly: boolean, hdr?: { seed: number; mains: 50 | 60 | null; overrides: Record<string, number> }): Link {
+  private newLink(kind: 'live' | 'replay', heartOnly: boolean, hdr?: { seed: number; mains: 50 | 60 | null; overrides: Record<string, number | boolean> }): Link {
     const settings = this.deps.getSettings();
     const clock = kind === 'live' ? new SessionClock({ eegRateHz: heartOnly ? null : 256, hostOriginMs: performance.now() }) : null;
     const seed = hdr?.seed ?? Math.floor(this.rand() * 2 ** 31);
     const mains = hdr ? hdr.mains : settings.mains === 'auto' ? null : settings.mains;
-    const overrides = hdr?.overrides ?? { ...settings.engineOverrides };
+    const overrides = hdr?.overrides ?? { ...settings.engineOverrides, ...enginePrefs(settings) };
     const created = this.now().toISOString();
     const engine = this.deps.createEngine();
     const link: Link = {
@@ -317,14 +353,22 @@ export class SessionController {
         const t = (e.firstIndex + e.nSamples) / link.eegRate;
         if (t > link.eegT) link.eegT = t;
         this.lastDataWall = performance.now();
+        if (this.streamRaw()) this.stream?.handleEeg(e.firstIndex, e.samples);
         this.push(link, (en) => en.pushEeg(e.firstIndex, e.samples));
         this.set({ clockS: link.eegT });
       }),
-      src.on('ppg', (e) => this.push(link, (en) => en.pushPpg(e.t, e.samples))),
-      src.on('motion', (e) => this.push(link, (en) => en.pushMotion(e.t, e.acc, e.gyro))),
+      src.on('ppg', (e) => {
+        if (this.streamRaw()) this.stream?.handlePpg(e.t, e.samples);
+        this.push(link, (en) => en.pushPpg(e.t, e.samples));
+      }),
+      src.on('motion', (e) => {
+        if (this.streamRaw()) this.stream?.handleMotion(e.t, e.acc, e.gyro);
+        this.push(link, (en) => en.pushMotion(e.t, e.acc, e.gyro));
+      }),
       src.on('rr', (e) => {
         this.lastDataWall = performance.now();
         if (link.heartOnly && e.t > link.eegT) link.eegT = e.t;
+        if (this.streamRaw()) this.stream?.handleRr(e.t, e.rrMs);
         this.push(link, (en) => en.pushRr(e.t, e.rrMs));
       }),
       src.on('battery', (b) => {
@@ -353,6 +397,7 @@ export class SessionController {
     const merged = mergeStreams(link.streams, s);
     if (JSON.stringify(merged) === JSON.stringify(link.streams)) return;
     link.streams = merged;
+    this.stream?.setStreams(merged);
     if (merged.eeg) link.eegRate = merged.eeg.rate_hz;
     this.set({ streams: merged });
     this.initEngine(link);
@@ -416,7 +461,7 @@ export class SessionController {
     }
     link.recorder?.finish();
     this.hub.reset();
-    this.audioActive = false;
+    this.releaseAudio();
     this.set({ link: null, muse: emptyDevice(), strap: emptyDevice(), engine: 'none', engineInfo: null, streams: null, clockS: null, replay: null });
   }
 
@@ -436,6 +481,8 @@ export class SessionController {
     if (f.t > this.lastFrameT) this.lastFrameT = f.t;
     this.lastFrameWall = performance.now();
     const a = this.active;
+    if (f.kind === 'slow' && a && !a.finishing) a.cascades.push(f);
+    this.stream?.handleFrame(f);
     if (a?.runner) {
       a.runner.push(f);
       this.afterRunner(link, a);
@@ -451,7 +498,7 @@ export class SessionController {
     }
     this.hub.emit(f);
     if (this.audioActive && this.audio) {
-      this.audio.handleFrame(this.deps.getSettings().chanceDriver === 'b' ? swapToChanceB(f) : f);
+      this.audio.handleFrame(f);
     }
     if (a && !a.finishing && f.kind === 'slow') this.refreshView(link, a, f.t);
   }
@@ -510,12 +557,13 @@ export class SessionController {
     const t0 = startT ?? this.sessionNow(link);
     const sampler = new KeyRowSampler();
     sampler.start(t0);
+    this.finishedCtx = null;
     const view: SessionView = {
       id, kind: spec.kind, mode, programId: spec.programId, programName, tStart: t0, elapsedS: 0, output: null, blockTitle: null,
       guidance: null, tether: null, checkFit: false, pacerBpm: null, guideOffNotice: false, ratingRequest: null, finished: false, completed: false,
     };
     const a: ActiveSession = {
-      spec, id, mode, startedAtIso: this.now().toISOString(), tStart: t0, runner, programName, sampler, sentMarkers: new Set(), notes: [],
+      spec, id, mode, startedAtIso: this.now().toISOString(), tStart: t0, runner, programName, sampler, cascades: new CascadeLogger(), sentMarkers: new Set(), notes: [],
       sessionSettings: null, view, lastRunnerT: t0, tetherUntil: 0, finishing: false,
     };
     this.active = a;
@@ -537,28 +585,51 @@ export class SessionController {
   private snapshotSettings(settings: AppSettings): SessionSettings {
     const info = this.state.engineInfo;
     return {
-      audio: (this.audio ?? this.deps.createAudio()).getSettings(),
+      audio: this.audio?.getSettings() ?? mergeSettings(DEFAULT_AUDIO_SETTINGS, { ...settings.audio, bloomChance: settings.chanceDriver }),
       viz: { quality: settings.vizQuality, rampS: VIZ_SMOOTHING.RAMP_S, slowStaleS: VIZ_SMOOTHING.SLOW_STALE_S, heartStaleS: VIZ_SMOOTHING.HEART_STALE_S },
       mains: settings.mains,
       chanceDriver: settings.chanceDriver,
+      responseSpeed: settings.responseSpeed,
+      harmonicsCount: settings.harmonicsCount,
+      reducedMotion: settings.reducedMotion,
+      soundOnly: settings.soundOnly,
+      ageGroup: this.deps.getProfileInfo?.()?.ageGroup ?? null,
       engine: { version: info?.version ?? null, params: info?.params ?? null },
       engineOverrides: { ...settings.engineOverrides },
       appVersion: APP_VERSION,
     };
   }
 
+  /**
+   * Sound for one session. The audio engine is created fresh for every session (and dropped when
+   * the session ends), so no smoothing state, frame clock or voice carries over from the last one.
+   */
   private async startAudio(settings: AppSettings): Promise<void> {
     if (!this.audio) this.audio = this.deps.createAudio();
-    this.audio.setSettings(settings.audio);
+    this.audio.setSettings({ ...settings.audio, bloomChance: settings.chanceDriver });
     this.audio.setSettings({ breathGuide: { enabled: false } });
     await this.audio.start();
+  }
+
+  /** Fade the current session's sound out and forget the engine. */
+  private releaseAudio(): void {
+    const au = this.audio;
+    this.audio = null;
+    this.audioActive = false;
+    if (au) void au.stop().catch(() => {});
+  }
+
+  /** Settings changed: apply the sound settings to a sound that is running. */
+  applyAudioSettings(): void {
+    const s = this.deps.getSettings();
+    this.audio?.setSettings({ ...s.audio, bloomChance: s.chanceDriver });
   }
 
   /** Called from a tap on the live screen to make sure sound is running (for example after a reload). */
   async ensureAudio(): Promise<void> {
     if (!this.deps.getSettings().soundOn) return;
     await this.startAudio(this.deps.getSettings());
-    this.audioActive = true;
+    this.audioActive = !!this.active || !!this.state.replay;
   }
 
   getAudio(): AudioEngine {
@@ -566,11 +637,15 @@ export class SessionController {
     return this.audio;
   }
 
+  /** Audition sound (anchors) outside a session: uses its own engine, released afterwards. */
+  hasAudio(): boolean {
+    return this.audio !== null;
+  }
+
   setSoundOn(on: boolean): void {
-    this.audioActive = on && !!this.active;
     this.set({ soundOn: on });
-    if (!on && this.audio) void this.audio.stop();
-    else if (on && this.active) void this.ensureAudio();
+    if (!on) this.releaseAudio();
+    else if (this.active) void this.ensureAudio();
   }
 
   private onTick(link: Link): void {
@@ -608,6 +683,7 @@ export class SessionController {
   }
 
   private sendMarker(link: Link, m: Marker): void {
+    this.stream?.handleMarker(m);
     this.push(link, (en) => en.pushMarker(m));
     if (link.kind === 'live') link.recorder?.note({ type: 'marker', marker: m });
   }
@@ -748,7 +824,9 @@ export class SessionController {
         id: a.id, kind: a.spec.kind, startedAt: a.startedAtIso, endedAt: endIso, programId: a.spec.programId, programName: a.programName,
         state: record?.program.state ?? null, recordingId: link.recordingId, tStart: a.tStart, tEnd: t, record, keyRows: a.sampler.rows,
         settings: a.sessionSettings ?? this.snapshotSettings(this.deps.getSettings()), completed: done, notes: a.notes,
+        profileId: this.deps.getProfile()?.userId ?? 'local', cascadeEvents: a.cascades.finish(), journal: null,
       };
+      this.finishedCtx = { runner: a.runner, stored, t };
       try {
         await this.saveRecordingSnapshot(link, false);
         await this.deps.persist.saveSession(stored);
@@ -756,16 +834,79 @@ export class SessionController {
       } catch (e) {
         this.set({ notice: `The session could not be saved on this device: ${e instanceof Error ? e.message : String(e)}` });
       }
-      if (this.audio && this.audioActive) {
-        this.audioActive = false;
-        void this.audio.stop();
-      }
+      this.releaseAudio();
     }
     this.active = null;
     this.set({
       session: null,
-      finished: { sessionId: a.id, kind: a.spec.kind, mode: a.mode, programName: a.programName, record, stored: a.mode === 'live', completed: done },
+      finished: {
+        sessionId: a.id, kind: a.spec.kind, mode: a.mode, programName: a.programName, record, stored: a.mode === 'live', completed: done,
+        journalOpen: a.mode === 'live', journal: null, elapsedS: Math.max(0, t - a.tStart),
+      },
     });
+  }
+
+  /**
+   * The short entry after a session. Saved with the session. Ratings go to the training runner
+   * through its own `rate` and `report` calls (so the block record and the profile see them);
+   * the profile is updated through the `sessionJournal` hook. Pass null to skip.
+   */
+  async submitJournal(journal: Journal | null): Promise<void> {
+    const ctx = this.finishedCtx;
+    const fin = this.state.finished;
+    if (!ctx || !fin || fin.sessionId !== ctx.stored.id) {
+      this.set({ finished: fin ? { ...fin, journalOpen: false } : fin });
+      return;
+    }
+    if (!journal) {
+      this.set({ finished: { ...fin, journalOpen: false } });
+      return;
+    }
+    let record = ctx.stored.record;
+    if (ctx.runner) {
+      const ratings: Partial<Record<RatingKey, number>> = {};
+      if (journal.ease !== null) ratings.ease = journal.ease;
+      if (journal.depth !== null) ratings.depth = journal.depth;
+      if (journal.mood !== null) ratings.pleasantness = journal.mood;
+      if (Object.keys(ratings).length) ctx.runner.rate(ctx.t, ratings);
+      if (journal.note.trim()) ctx.runner.report(ctx.t, journal.note.trim());
+      record = ctx.runner.record();
+    }
+    const stored: StoredSession = { ...ctx.stored, journal, record };
+    this.finishedCtx = { ...ctx, stored };
+    try {
+      await this.deps.persist.saveSession(stored);
+      await this.deps.persist.sessionJournal?.(stored.id, journal);
+    } catch (e) {
+      this.set({ notice: `The journal entry could not be saved on this device: ${e instanceof Error ? e.message : String(e)}` });
+    }
+    this.set({ finished: { ...fin, journalOpen: false, journal, record } });
+  }
+
+  // ---- live stream out ------------------------------------------------------------------------
+  private streamRaw(): boolean {
+    return !!this.stream && this.deps.getSettings().stream.rawEeg;
+  }
+
+  /** Apply the stream settings: connect to the address the person entered, or disconnect. */
+  applyStreamSettings(): void {
+    const st = this.deps.getSettings().stream;
+    if (!st.enabled) {
+      if (this.stream) {
+        this.stream.disconnect();
+        this.streamOff?.();
+        this.streamOff = null;
+        this.stream = null;
+      }
+      if (this.state.stream.state !== 'idle') this.set({ stream: { state: 'idle' } });
+      return;
+    }
+    if (!this.stream) {
+      this.stream = (this.deps.createStream ?? (() => new StreamOut()))();
+      this.streamOff = this.stream.on('status', (status) => this.set({ stream: status }));
+      if (this.link?.streams) this.stream.setStreams(this.link.streams);
+    }
+    this.stream.connect(st.url);
   }
 
   private async saveRecordingSnapshot(link: Link, quiet: boolean): Promise<void> {
@@ -797,7 +938,8 @@ export class SessionController {
     if (this.link) await this.disposeLink();
     const parsed = bytes instanceof Uint8Array ? readRecording(bytes) : bytes;
     const speed = opts.speed ?? this.deps.getSettings().replaySpeed;
-    const meta = (parsed.header.meta ?? {}) as { seed?: number; mains_hz?: 50 | 60 | null; engineOverrides?: Record<string, number>; heartOnly?: boolean };
+    this.lastReplayInput = { parsed, label: opts.label, sessionId: opts.sessionId ?? null };
+    const meta = (parsed.header.meta ?? {}) as { seed?: number; mains_hz?: 50 | 60 | null; engineOverrides?: Record<string, number | boolean>; heartOnly?: boolean };
     const link = this.newLink('replay', !!meta.heartOnly, { seed: typeof meta.seed === 'number' ? meta.seed : 1, mains: meta.mains_hz ?? null, overrides: meta.engineOverrides ?? {} });
     link.eegRate = parsed.header.clock.eegRateHz ?? 256;
     this.replayNotes = parsed.records
@@ -859,10 +1001,7 @@ export class SessionController {
       if (this.replayTimer) clearInterval(this.replayTimer);
       this.replayTimer = null;
       if (this.active) void this.finishReplaySession();
-      if (this.audio && this.audioActive) {
-        this.audioActive = false;
-        void this.audio.stop();
-      }
+      this.releaseAudio();
       const r = this.state.replay;
       if (r) this.set({ replay: { ...r, ended: true } });
     }, 100);
@@ -872,6 +1011,14 @@ export class SessionController {
     if (this.active && this.active.mode === 'replay') await this.finishSession(false);
   }
 
+  /** Play the same recording again, at another speed (1x with sound, 4x, or as fast as possible with no sound). */
+  async replayAgain(speed: 1 | 4 | 'fast'): Promise<void> {
+    const last = this.lastReplayInput;
+    if (!last) return;
+    await this.disposeLink();
+    await this.startReplay(last.parsed, { label: last.label, sessionId: last.sessionId, speed });
+  }
+
   /** Close a replay and return to the idle state. */
   async closeReplay(): Promise<void> {
     if (this.active?.mode === 'replay') {
@@ -879,6 +1026,7 @@ export class SessionController {
       this.active = null;
     }
     this.replayNotes = [];
+    this.lastReplayInput = null;
     await this.disposeLink();
     this.set({ session: null, finished: null, replay: null });
   }
@@ -891,6 +1039,7 @@ export class SessionController {
   async shutdown(): Promise<void> {
     if (this.active) await this.finishSession(false);
     await this.disposeLink();
-    await this.audio?.stop();
+    this.releaseAudio();
+    this.stream?.disconnect();
   }
 }
