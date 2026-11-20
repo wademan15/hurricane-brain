@@ -35,6 +35,15 @@ STAGE_CONFIGS = {
     "S1W1-P1": {"spectrum": "S1W1", "confirm": "P1"},
     "S1Q-P1": {"spectrum": "S1Q", "confirm": "P1"},
     "S1Q-P1-excess": {"spectrum": "S1Q", "confirm": "P1", "freq": "centroid_excess"},
+    # chance A placed inside each track's own band (spec 8.5 as amended); affects T4 and T4c only
+    "S1Q-P1-band": {"spectrum": "S1Q", "confirm": "P1", "chance_band": True},
+    "S1Q-P1-excess-band": {"spectrum": "S1Q", "confirm": "P1", "freq": "centroid_excess", "chance_band": True},
+    # the amended spec 8.4 threshold under chance A: exceeded by 3.3% of unrelated placements (5% with margin)
+    "S1Q-P1-excess-band-a033": {"spectrum": "S1Q", "confirm": "P1", "freq": "centroid_excess", "chance_band": True,
+                                "alpha_state": 0.033},
+    # the same with the amended T3 evidence ratio (smaller of its values at s_x and at s_x = 0); T3 and T4 change
+    "S1Q-P1-excess-band-a033-t3min": {"spectrum": "S1Q", "confirm": "P1", "freq": "centroid_excess",
+                                      "chance_band": True, "alpha_state": 0.033, "t3_min_sx0": True},
     # confirmation stage (spectrum S1)
     "S1-P2": {"spectrum": "S1", "confirm": "P2"},
     "S1-P3": {"spectrum": "S1", "confirm": "P3"},

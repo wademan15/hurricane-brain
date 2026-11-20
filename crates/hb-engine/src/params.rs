@@ -199,8 +199,8 @@ params! {
     /// Background fit fails if inlier RMS residual exceeds this multiple of the expected log-SD.
     bg_fit_max_ratio: f64 = 3.0,
     /// Background curve: number of polynomial coefficients in log power against log frequency
-    /// (2 = a plain power law, 4 = a cubic). Spec 6.2.
-    bg_curve_terms: usize = 4,
+    /// (2 = a plain power law, 3 = a quadratic, 4 = a cubic). Spec 6.2.
+    bg_curve_terms: usize = 3,
     /// Background fit fails if the lack-of-fit statistic (block-averaged residual over its
     /// noise level) exceeds this. Spec 6.2.
     bg_lack_of_fit_max: f64 = 1.25,

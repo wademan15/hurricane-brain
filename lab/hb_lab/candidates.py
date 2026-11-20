@@ -684,6 +684,9 @@ def chanceA_density(x, lo=None, hi=None):
     return np.clip(2 * (L - x) / L ** 2, 1e-6, None)
 
 
+T3_OPTS = {"min_at_sx0": False}  # set per analysis from the configuration (pipeline.analyze)
+
+
 def pair_stats(x, sx, target, resolved):
     """Per pair: miss, closeness, ln-evidence (T3), and the T1/T2 entry/exit conditions."""
     eps, tau, k = PARAMS["eps"], PARAMS["tau"], PARAMS["T2_k"]
@@ -692,6 +695,11 @@ def pair_stats(x, sx, target, resolved):
     c = np.exp(-0.5 * (miss / eps) ** 2)
     var = sx ** 2 + tau ** 2
     lnL = -0.5 * miss ** 2 / var - 0.5 * np.log(2 * np.pi * var) - np.log(chanceA_density(x))
+    if T3_OPTS["min_at_sx0"]:
+        # amended spec 8.4: Lambda is the smaller of its values at s_x and at s_x = 0 (non-increasing in s_x)
+        v0 = tau ** 2
+        lnL0 = -0.5 * miss ** 2 / v0 - 0.5 * np.log(2 * np.pi * v0) - np.log(chanceA_density(x))
+        lnL = np.minimum(lnL, lnL0)
     t1_in = np.abs(miss) < eps
     t1_hold = np.abs(miss) < hy * eps
     lim = np.minimum(k * sx, eps)
@@ -723,15 +731,36 @@ def longest_chain(f, ok_pair):
     return chain[::-1]
 
 
-def surrogate_sets(rng, n_tracks, rel_se, n_surr, lo=None, hi=None, min_sep_hz=None):
-    """Chance A surrogates: n_tracks peaks placed log-uniformly over the search range with at least the
-    tracker's joining distance between them, carrying the observed relative standard errors."""
+BANDS = ((1.0, 4.0), (4.0, 8.0), (8.0, 13.0), (13.0, 30.0), (30.0, 45.0))
+
+
+def band_of(f):
+    """Display band (spec 6.5) holding frequency f, as (lo, hi); edges belong to the band above."""
+    for lo, hi in BANDS:
+        if lo <= f < hi:
+            return lo, hi
+    return BANDS[0] if f < BANDS[0][0] else BANDS[-1]
+
+
+def surrogate_sets(rng, n_tracks, rel_se, n_surr, lo=None, hi=None, min_sep_hz=None, freqs=None):
+    """Chance A surrogates: n_tracks peaks placed log-uniformly with at least the tracker's joining
+    distance between them, carrying the observed relative standard errors.
+
+    freqs None: placed over the whole search range (the first build's null).
+    freqs given: each surrogate peak is placed inside the band that holds the corresponding real track
+    (spec 8.5 as amended by the milestone review)."""
     lo, hi = PARAMS["search"] if lo is None else (lo, hi)
     min_sep_hz = PARAMS["join_hz"] if min_sep_hz is None else min_sep_hz
+    if freqs is not None:
+        bl = np.log(np.array([band_of(f)[0] for f in freqs]))
+        bh = np.log(np.array([band_of(f)[1] for f in freqs]))
     got = []
     n_got = 0
     while n_got < n_surr:
-        f = np.sort(np.exp(rng.uniform(np.log(lo), np.log(hi), (4 * n_surr, n_tracks))), axis=1)
+        if freqs is None:
+            f = np.sort(np.exp(rng.uniform(np.log(lo), np.log(hi), (4 * n_surr, n_tracks))), axis=1)
+        else:
+            f = np.sort(np.exp(bl[None, :] + (bh - bl)[None, :] * rng.random((4 * n_surr, n_tracks))), axis=1)
         ok = np.all(np.diff(f, axis=1) > min_sep_hz, axis=1) if n_tracks > 1 else np.ones(f.shape[0], bool)
         got.append(f[ok])
         n_got += int(ok.sum())

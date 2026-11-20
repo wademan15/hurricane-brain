@@ -316,6 +316,7 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
     if cfg_in:
         cfg.update(cfg_in)
     rng = np.random.default_rng(cfg["seed"] * 1000003 + rec.seed % 1000003)
+    C.T3_OPTS["min_at_sx0"] = bool(cfg.get("t3_min_sx0", False))
     raw = rec.data[:, start_offset:]
     data, repaired, invalid = repair_gaps(raw)
     x, mains = condition(data)
@@ -541,7 +542,8 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
         if cfg["chance"] and len(integ) >= 2 and (chanceA_cache is None or wi % refresh == 0 or
                                                    chanceA_cache[0] != len(integ)):
             srng = np.random.default_rng([cfg["seed"], rec.seed % (2 ** 31), wi])
-            fs_s, ss_s = C.surrogate_sets(srng, len(integ), sl / fl, PARAMS["n_surr"])
+            fs_s, ss_s = C.surrogate_sets(srng, len(integ), sl / fl, PARAMS["n_surr"],
+                                           freqs=fl if cfg.get("chance_band") else None)
             ca = {}
             for tk in C.TARGETS:
                 if cfg["chance_same_search"]:
@@ -549,7 +551,7 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
                 else:  # broken build: chance computed for a single random pair, not the full search
                     cc, ll = C.best_scores(fs_s[:, :2], ss_s[:, :2], tk)
                 casc = C.surrogate_cascades(fs_s, ss_s, tk) if tk in ("phi", "octave") else None
-                a_st = PARAMS["alpha_state"]
+                a_st = cfg.get("alpha_state", PARAMS["alpha_state"])
                 ca[tk] = {"cc": cc, "ll": ll, "casc": casc,
                           "thr_l": float(np.quantile(ll, 1 - a_st)), "thr_l_exit": float(np.quantile(ll, 0.95)),
                           "thr_c": float(np.quantile(cc, 1 - a_st)), "thr_c_exit": float(np.quantile(cc, 0.95))}

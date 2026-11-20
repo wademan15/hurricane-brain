@@ -19,6 +19,13 @@ There are no real Muse recordings here yet.
   named inside it, one entry per 1 s analysis window (the engine updates every 250 ms; compare at matching
   window end times). Spec 11 asks Rust and Python to agree on peak frequencies within 0.05 Hz, the same
   confirmed tracks and the same aligned-state intervals within one slow frame.
+  The committed set was written with `--expected lab/out/bakeoff_results_pass2.json --config S1Q-P1-excess-band-a033`
+  (the bake-off's recommended configuration, see docs/spec/bakeoff-report.md: S1Q spectrum, P1 with the tuned
+  factor 1.280, excess centroid, chance A placed by band, CFAR thresholds at the 3.3% exceedance of the amended
+  spec 8.4). The lab hops 1 s, so compare at the engine frames whose end time is a whole second.
+  Per window: `peaks` = `[frequency Hz, window SE Hz (-1 if none), height dB over background, width Hz]`,
+  `tracks` = `[track id, integrated frequency Hz, integrated SE Hz]`, `null` = reason or null.
+  `states[target][rule]` = window end times at which that state was entered.
 
 SNR convention: the rhythm's nominal peak spectral density over the background density at its centre
 (the same as `lab/precision_and_chance_sketch.py`). Bursting, drift and the estimator's own smoothing

@@ -41,7 +41,8 @@ export interface Measured {
   why: Reason;
 }
 
-export type Target = 'phi' | 'octave' | 'control_1_5' | 'control_1_8';
+/** 'ratio_3' (3:1) is scored and logged like the controls; it never forms cascades or states. */
+export type Target = 'phi' | 'octave' | 'ratio_3' | 'control_1_5' | 'control_1_8';
 export type BandName = 'delta' | 'theta' | 'alpha' | 'beta' | 'gamma';
 /** A channel name ('TP9', 'AF7', 'AF8', 'TP10', ...) or a composite. */
 export type Site = string | 'temporal' | 'frontal' | 'all';
@@ -209,7 +210,16 @@ export interface SlowFrame {
   dominant: number | null;
   pairs: PairScore[];
   cascades: { phi: Cascade; octave: Cascade };
-  states: { phi: AlignedState; octave: AlignedState };
+  states: {
+    phi: AlignedState;
+    octave: AlignedState;
+    /**
+     * The combined state: active only while BOTH the golden ratio state and the octave state
+     * are active. `for_s` counts seconds in the current combined condition. It has no statistic
+     * of its own: it is the conjunction of two measured states.
+     */
+    both: { active: boolean; for_s: number };
+  };
   /** Left (TP9) against right (TP10), one entry per track present on both. */
   hemispheres: SiteComparison[];
   /** Frontal pair against temporal pair. */

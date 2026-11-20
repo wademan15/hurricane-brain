@@ -1611,11 +1611,14 @@ impl Engine {
                 if nn < 2 || nn as usize > p.harmonic_max_n {
                     continue;
                 }
-                if m::ln(r / nn as f64).abs() > p.tolerance {
-                    continue;
-                }
+                // Review: the upper track is a candidate when it sits inside the band where
+                // the harmonic would be (n times as wide as the lower rhythm), or within the
+                // error of the two centres. The alignment tolerance is not the right gate
+                // here: one window's centres are off by more than 3 % for a broad rhythm,
+                // and the phase test below, made at exactly n times the lower frequency,
+                // is what decides.
                 let nf = nn as f64;
-                let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df);
+                let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df).max(0.5 * nf * pl.width);
                 if (ph.f - nf * pl.f).abs() > tol {
                     continue;
                 }
@@ -1641,7 +1644,11 @@ impl Engine {
                 let a_lo = self.analytic.band(&x, self.rate, pl.f, sd);
                 let a_hi = self.analytic.band(&x, self.rate, nf * pl.f, nf * sd);
                 if let Some((plv, sur)) = compare::locking(&a_lo, &a_hi, nn, trim, p.compare_shifts, min_shift) {
-                    if plv >= p.harmonic_plv_min && plv - sur >= p.harmonic_plv_excess {
+                    // Review: a pair whose locking survives the time shifts too is steady at
+                    // exactly n:1 for the whole window. A shift cannot tell that from a harmonic
+                    // (a strictly periodic waveform is its own shifted copy), so it is flagged.
+                    let steady = sur >= p.harmonic_plv_min;
+                    if plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady) {
                         passes.push(((lo.id, hi.id), nn));
                     }
                 }

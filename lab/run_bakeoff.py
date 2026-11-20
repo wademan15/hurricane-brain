@@ -324,8 +324,12 @@ def main():
     q = a.quick
     # ---- 1. tuning thresholds on tuning seeds only
     tune_jobs = B.jobs_tuning(6 if q else 48)
-    tune_cfgs = sorted({n for n in cfgs if n in B.STAGE_CONFIGS and B.STAGE_CONFIGS[n].get("thr_mode") != "analytic"
-                        and n in ("S1-P1", "S2-P1", "S3-P1", "S1W1-P1", "S1Q-P1", "S1-P2", "S1-P3", "S1-P4")})
+    # one representative configuration per spectrum/confirmation pair (the threshold depends on nothing else)
+    rep = {}
+    for n in cfgs:
+        if n in B.STAGE_CONFIGS and B.STAGE_CONFIGS[n].get("thr_mode") != "analytic":
+            rep.setdefault(f'{B.STAGE_CONFIGS[n]["spectrum"]}/{B.STAGE_CONFIGS[n]["confirm"]}', n)
+    tune_cfgs = sorted(rep.values())
     print("tuning thresholds:", tune_cfgs, flush=True)
     tr = B.run_pool([(j, tune_cfgs, {}) for j in tune_jobs], a.procs, "tune")
     thresholds = {}

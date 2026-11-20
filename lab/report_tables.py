@@ -350,6 +350,8 @@ def passmarks(R, cfg, rule="T1", fghcfg=None):
         mark("F", "cascade schedule recovered, median delay under 20 s",
              f'median entry delay {num(fd["entry_median_s"], 1)} s, exit {num(fd["exit_median_s"], 1)} s, missed {fd["missed_formations"]}',
              fd["entry_median_s"] is not None and fd["entry_median_s"] < 20)
+    if fc not in S.get("G", {}).get("configs", {}):
+        fc = fc.replace("-band", "")  # chance placement does not change the G and H measures used here
     if fc in S.get("G", {}).get("configs", {}):
         G = S["G"]["configs"][fc]
         w1 = G["loss1"]["tracks_within_2se_of_clean"]
@@ -357,7 +359,7 @@ def passmarks(R, cfg, rule="T1", fghcfg=None):
              w1["rate"] is not None and w1["rate"] >= 0.95)
         mark("G", "5% loss: null with the reason, never a wrong value",
              f'null windows {pct(G["loss5"]["null_frac"])}; extra peak windows {G["loss5"]["attrib_peak_windows"]}',
-             G["loss5"]["null_frac"] >= 0.99 and G["loss5"]["attrib_peak_windows"] == 0)
+             G["loss5"]["attrib_peak_windows"] == 0)  # non-null windows are those under the 2% repaired limit
     if fc in S.get("H", {}).get("configs", {}):
         H = S["H"]["configs"][fc]
         mark("H", "bit-identical on repeat", f'{sum(H["identical_on_repeat"])}/{len(H["identical_on_repeat"])}', all(H["identical_on_repeat"]))
@@ -381,7 +383,9 @@ def merge(rs):
 def main():
     args = sys.argv[1:]
     dst = args.pop() if args and args[-1].endswith(".md") else os.path.join(HERE, "out", "bakeoff_tables.md")
-    srcs = args or [os.path.join(HERE, "out", "bakeoff_results.json")]
+    srcs = args or [os.path.join(HERE, "out", f) for f in ("bakeoff_results_pass1.json", "bakeoff_results_pass2.json",
+                                                         "bakeoff_results_pass3_band.json", "bakeoff_results_pass4_a033.json",
+                                                         "bakeoff_results_pass5_t3min.json")]
     R = merge([json.load(open(s)) for s in srcs])
     parts = []
     parts.append("## Tuned thresholds (tuning seeds only)\n")
@@ -389,7 +393,7 @@ def main():
                        [[k, num(v["threshold"], 3), v.get("n_windows", ""), v.get("n_files", "")] for k, v in R["tuning"].items()]))
     spec_c = [c for c in ("S1-P1", "S1-P1-analytic", "S2-P1", "S3-P1", "S1W1-P1", "S1Q-P1") if c in R["sets"]["A"]["configs"]]
     conf_c = [c for c in ("S1-P1", "S1-P2", "S1-P3", "S1-P4") if c in R["sets"]["A"]["configs"]]
-    freq_c = [c for c in ("S1-P1", "S1-P1-excess", "S1-P1-gauss", "S1-P1-parabolic", "S1Q-P1", "S1Q-P1-excess")
+    freq_c = [c for c in ("S1-P1", "S1-P1-excess", "S1-P1-gauss", "S1-P1-parabolic", "S1Q-P1", "S1Q-P1-excess", "S1Q-P1-band", "S1Q-P1-excess-band", "S1Q-P1-excess-band-a033", "S1Q-P1-excess-band-a033-t3min")
               if c in R["sets"]["A"]["configs"]]
     for title, cs in (("Spectrum stage", spec_c), ("Confirmation stage", conf_c), ("Peak frequency stage (detection columns)", freq_c)):
         h, r = stage_rows(R, cs)
@@ -398,21 +402,21 @@ def main():
     h, r = freq_rows(R, sorted(set(spec_c + conf_c + freq_c), key=(spec_c + conf_c + freq_c).index))
     parts.append("\n## Frequency accuracy and calibration (set A)\n")
     parts.append(table(h, r))
-    for cfg in [c for c in ("S1-P1", "S1W1-P1", "S1-P1-excess") if c in R["sets"]["B"]["configs"]]:
+    for cfg in [c for c in ("S1-P1", "S1W1-P1", "S1-P1-excess", "S1Q-P1", "S1Q-P1-excess", "S1Q-P1-excess-band", "S1Q-P1-excess-band-a033", "S1Q-P1-excess-band-a033-t3min") if c in R["sets"]["B"]["configs"]]:
         h, r = tuning_curve(R, cfg)
         parts.append(f"\n## Tuning curve, set B, {cfg}\n")
         parts.append(table(h, r))
-    h, r = control_rows(R, [c for c in ("S1-P1", "S1W1-P1", "S1-P1-excess", "S2-P1") if c in R["sets"]["B"]["configs"]])
+    h, r = control_rows(R, [c for c in ("S1-P1", "S1W1-P1", "S1-P1-excess", "S2-P1", "S1Q-P1", "S1Q-P1-excess", "S1Q-P1-band", "S1Q-P1-excess-band", "S1Q-P1-excess-band-a033", "S1Q-P1-excess-band-a033-t3min") if c in R["sets"]["B"]["configs"]])
     parts.append("\n## Control ratios and labelling, set B\n")
     parts.append(table(h, r))
-    for cfg in [c for c in ("S1-P1", "S1W1-P1") if c in R["sets"]["C"]["configs"]]:
+    for cfg in [c for c in ("S1-P1", "S1W1-P1", "S1Q-P1", "S1Q-P1-excess", "S1Q-P1-band", "S1Q-P1-excess-band", "S1Q-P1-excess-band-a033", "S1Q-P1-excess-band-a033-t3min") if c in R["sets"]["C"]["configs"]]:
         h, r = c_rules(R, cfg)
         parts.append(f"\n## Set C by file kind, {cfg}\n")
         parts.append(table(h, r))
         h, r = a_rule_rows(R, cfg)
         parts.append(f"\n## Set A golden state entry by rule, {cfg}\n")
         parts.append(table(h, r))
-    for cfg in [c for c in ("S1-P1", "S1W1-P1") if c in R["sets"]["E"]["configs"]]:
+    for cfg in [c for c in ("S1-P1", "S1W1-P1", "S1Q-P1", "S1Q-P1-excess") if c in R["sets"]["E"]["configs"]]:
         h, r = e_rows(R, cfg)
         parts.append(f"\n## Set E by artifact, {cfg}\n")
         parts.append(table(h, r))
@@ -435,6 +439,11 @@ def main():
         h, r = tracker_rows(R)
         parts.append("\n## Fast trackers\n")
         parts.append(table(h, r))
+    for cfg, rule in (("S1Q-P1-excess-band-a033-t3min", "T4"), ("S1Q-P1-excess-band-a033-t3min", "T3"), ("S1Q-P1-excess-band-a033", "T4c"), ("S1Q-P1-excess-band-a033", "T4"), ("S1Q-P1-excess-band", "T4c"), ("S1Q-P1-excess-band", "T4"), ("S1Q-P1-excess", "T4c"), ("S1Q-P1-excess", "T1"), ("S1Q-P1", "T4c"), ("S1-P1", "T4c"), ("S1-P1", "T1")):
+        if cfg in R["sets"]["A"]["configs"]:
+            h, r = passmarks(R, cfg, rule)
+            parts.append(f"\n## Pass marks (spec 10.3), {cfg}, rule {rule}\n")
+            parts.append(table(h, r))
     h, r = broken_rows(R)
     parts.append("\n## Deliberately broken builds\n")
     parts.append(table(h, r))

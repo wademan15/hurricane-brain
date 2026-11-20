@@ -142,20 +142,20 @@ The "flattened spectrum" is the spectrum divided by the fitted background. A fla
 
 **Review: the background is a curve, not a straight line.** A real spectrum is rarely one power law from 2 to 45 Hz. It has a knee, an amplifier noise floor, and filter edges. The height test in 6.3 is steep: where the fitted background is 10% too low, false peaks are about four times as frequent. Measured on background-only noise with a straight-line fit, against a stated 1% per window:
 
-| Background | False peaks per window, straight line | With the curve below |
-| --- | --- | --- |
-| 1/f, exponent 1 to 2, or white | 0.25 to 0.35% | 0.10 to 0.15% |
-| Knee at 15 Hz, 1/f³ above | 29% | 0.25% |
-| 1/f² over a noise floor | 12% | 0.20% |
-| Low-pass edge at 30 Hz | 11% | 0.50% |
-| High-pass edge at 4 Hz | 5% | 0.30% |
+| Background | False peaks per window, straight line | Quadratic (adopted) | Cubic |
+| --- | --- | --- | --- |
+| 1/f, exponent 1 to 2, or white | 0.25 to 0.35% | 0.3 to 0.4% | 0.10 to 0.15% |
+| Knee at 5, 10 or 15 Hz | 1.5%, 3.8%, 29% | 0.35 to 0.45% | 0.15 to 0.25% |
+| 1/f^1.5 or 1/f² over a noise floor | 4.3%, 12% | 0.35% | 0.15 to 0.20% |
+| Low-pass edge at 30 Hz | 11% | 1.6% | 0.50% |
+| High-pass edge at 4 Hz | 5% | 1.9% | 0.30% |
 
-Through the whole engine the straight line confirmed tracks in 14% of frames on 1/f² over a noise floor (112 tracks in 40 minutes of pure noise), most of them below 3 Hz, where the line was extrapolated below its fitted range. Persistence does not protect against this, because a misfit sits at the same frequency in every window.
+Through the whole engine the straight line confirmed tracks in 14% of frames on 1/f² over a noise floor (112 tracks in 40 minutes of pure noise), most of them below 3 Hz, where the line was extrapolated below its fitted range. Persistence does not protect against this, because a misfit sits at the same frequency in every window. With either curve the engine confirmed no track in 40 minutes of noise of each shape.
 
 So the fit has two stages:
 
 1. The robust power law, as above. Its exponent and offset are the ones reported in the frame: they describe the best single power law.
-2. A robust polynomial in log power against log frequency (provisional: a cubic, 4 coefficients), fitted the same way, starting from the bins the power law kept. Outside the fitted range the curve continues as a straight line along its tangent. Nothing is extrapolated as a polynomial. The spectrum is flattened by this curve, and the fast path and the muscle measure read the background from it.
+2. A robust polynomial in log power against log frequency (provisional: a quadratic, 3 coefficients), fitted the same way, starting from the bins the power law kept. Outside the fitted range the curve continues as a straight line along its tangent. Nothing is extrapolated as a polynomial. The spectrum is flattened by this curve, and the fast path and the muscle measure read the background from it.
 
 Both stages model the estimator's own smoothing and the high-pass filter, and set their level so that the median of the flattened spectrum is the median of the chi-squared law in 6.1.
 
@@ -164,7 +164,16 @@ The fit error has two parts, and either one makes the site null with reason "bad
 - The residual of the kept bins (provisional limit: 3 times the expected spread).
 - **Lack of fit.** The first part cannot see a background the model does not follow, because the robust fit has already dropped what sits above it. So the flattened spectrum is averaged over blocks 2 Hz wide (the median within each block), and the spread of the block values is compared with what estimator noise alone gives. Provisional limit: 1.25, which pure background exceeds in under 0.1% of windows.
 
-The cost, which the bake-off must weigh: a curve can bend into a broad rhythm near the bottom of the fitted range. Single-window detection of a 10 dB rhythm 1 Hz wide falls from 99% to 89% at 5.3 Hz and from 96% to 41% at 3 Hz. At 10 Hz and above it is unchanged. A quadratic (3 coefficients) keeps theta detection at 99% and fails only the filter-edge cases (1.4% per window). By the decision rule in 10.4, staying quiet comes first, so the cubic is the starting value. The number of coefficients is in section 14.
+Why a quadratic and not a cubic: a curve can bend into a broad rhythm, most easily near the bottom of the fitted range, and the more freely it bends the more rhythms it swallows. Measured with three planted rhythms (5.3, 10 and 19 Hz) through the whole engine, as the fraction of frames in which each has a confirmed track:
+
+| Rhythms | Straight line | Quadratic | Cubic |
+| --- | --- | --- | --- |
+| 10 dB, 0.5 Hz wide | 100% | 100% | 100% |
+| 10 dB, 1 Hz wide | 100% | 100% | 17%, 95%, 100% |
+| 6 dB, 0.5 Hz wide | 36%, 61%, 77% | 40%, 43%, 68% | 10%, 32%, 70% |
+| 6 dB, 1 Hz wide | 18%, 54%, 88% | 19%, 20%, 66% | 0%, 4%, 83% |
+
+The cubic fails test A outright (a 10 dB theta rhythm 1 Hz wide is confirmed 17% of the time). The quadratic keeps every 10 dB rhythm and holds the false-peak rate under the stated 1% for power laws, knees and noise floors. It does not fully absorb a filter edge inside the fitted range (1.6 to 1.9% per window, against 5 to 11% for the straight line). If a headset turns out to have such an edge, the edge belongs in the conditioning model beside the engine's own high-pass, where it costs nothing. The number of coefficients is in section 14. Note also that none of these variants reaches the 6 dB pass mark of 10.3 (80% of planted peaks confirmed); that was already so before the review, and it follows from splitting α_peak across seven sites and one try per 1/T of search range.
 
 ### 6.3 Peak confirmation
 
@@ -206,7 +215,7 @@ Consequences, which shape the rest of this document:
 - Slow windows that overlap are not independent. Estimates taken every 250 ms from 8 s windows over 30 s are worth (30 + 8) / 8 = 4.75 independent ones, not 121.
 - A mean weighted by 1 / error² is worse than a plain mean here, because the weights come from noisy seven-taper errors and favour windows whose error happens to come out small. With the weights the actual error was 20 to 30% larger.
 
-The integrated frequency is therefore the plain mean, and its variance pools two estimates: v1 = mean(window error²) / n_eff from the windows' own errors, and v2 = mean((f − mean)²) / (n_eff − 1) from the scatter of the estimates, where n_eff is the number of non-overlapping windows spanned. The result is (ν v1 + (n_eff − 1) v2) / (ν + n_eff − 1) with ν = 1 (provisional). While the estimates span less than two windows there is no scatter, and the window error is doubled (provisional), which covers its worst measured shortfall.
+The integrated frequency is therefore the plain mean, and its variance pools two estimates: v1 = mean(window error²) / n_eff from the windows' own errors, and v2 = mean((f − mean)²) / (n_eff − 1) from the scatter of the estimates, where n_eff is the number of non-overlapping windows spanned. The result is (ν v1 + (n_eff − 1) v2) / (ν + n_eff − 1) with ν = 0.5 (provisional). While the estimates span less than two windows there is no scatter, and the window error is doubled (provisional), which covers its worst measured shortfall.
 
 | Rhythm width | Actual error ÷ reported, before | After |
 | --- | --- | --- |
@@ -228,6 +237,8 @@ Tracks are named by frequency only. Band names (delta 1 to 4, theta 4 to 8, alph
 A rhythm that is not a pure sine has harmonics. A 10 Hz alpha rhythm with a slightly pointed shape produces a real spectral bump at exactly 20 Hz. That is one rhythm, not two rhythms an octave apart, and counting it would make octave alignment partly fake.
 
 For every pair of tracks whose ratio is within tolerance of an integer, the engine tests whether the upper one is a harmonic of the lower: the two frequencies move together over time at exactly that integer ratio, and their phases are locked (bicoherence, or phase locking of the upper track to the lower track's phase multiplied by the integer). A pair that passes is marked "harmonic". It is shown, it is excluded from octave alignment and from cascades by default, and the exclusion is a visible setting.
+
+Review: the phase test compares the locking with the locking of time-shifted copies, and passes a pair whose locking exceeds the shifted copies' by a margin. That alone misses the plainest harmonic there is. A strictly periodic waveform is its own shifted copy, so its locking is as high after the shift as before and the excess is nil. A 4 Hz train of small pulses on the forehead was credited as an octave pair (4 and 8 Hz) in 513 of 720 frames. The rule now has a second arm: a pair is also marked harmonic when the locking of the shifted copies is itself above the locking limit, that is, when both lines hold exactly the integer ratio steadily for the whole window. Two independent rhythms that steady cannot be told from one waveform by any test on that window, and section 10.4 says which way to err. Still open: the "frequencies move together over time" half of the test is not implemented, and a broad rhythm with a weak harmonic is missed in most frames (section 10.3 test D is not met; see the engine notes).
 
 ## 7. Fast path: tracking
 
@@ -536,7 +547,7 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Slow update | 250 ms | 6 |
 | Peak search range | 1 to 45 Hz | 6.1 |
 | Background fit range | 2 to 45 Hz | 6.2 |
-| Background curve coefficients | 4 (a cubic in log-log; 2 is a plain power law) | 6.2 |
+| Background curve coefficients | 3 (a quadratic in log-log; 2 is a plain power law, 4 a cubic) | 6.2 |
 | Background residual limit | 3 times the expected spread | 6.2 |
 | Background lack-of-fit limit | 1.25, over blocks 2 Hz wide | 6.2 |
 | α_peak, false peaks per window | 1% | 6.3 |
@@ -544,7 +555,7 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Persistence | 2 of the last 3 windows | 6.3 |
 | Peak hold after last pass | 2 s | 6.3 |
 | Integration time for ratio scoring | 30 s | 6.4 |
-| Weight of window errors in the integrated error | 1 degree of freedom | 6.4 |
+| Weight of window errors in the integrated error | 0.5 degrees of freedom | 6.4 |
 | Window error factor before two windows of history | 2 | 6.4 |
 | Track joining distance | 3 standard errors or 1 Hz | 6.5 |
 | Fast update | 32 per second | 7 |

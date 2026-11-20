@@ -530,8 +530,6 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
     }
     let terms = p.bg_curve_terms.clamp(2, BG_MAX_TERMS);
     let mut bg = shape.iter().map(|v| v * level).collect::<Vec<f64>>();
-    let mut inl_final: Vec<bool> = Vec::new();
-    let mut corr_final = corr.clone();
     if terms > 2 {
         // Curve stage: the same robust fit with a polynomial in u, starting from the power
         // law's smoothing correction. The underlying curve is tangent-continued outside the
@@ -629,13 +627,8 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
             return Err(Reason::BadFit);
         }
         bg = sm.iter().map(|v| v * lv).collect();
-        for (j, &i) in idx.iter().enumerate() {
-            corr_final[j] = m::log10(sm[i] / under[i]);
-        }
-        inl_final = inl;
         out = cv;
     }
-    let _ = (&inl_final, &corr_final);
     // Lack of fit. The robust fit drops what sits above the line, so its inlier residual
     // cannot see a background the model does not follow. Average the flattened spectrum's
     // log over blocks about 2 Hz wide (peaks excluded by a median within the block) and

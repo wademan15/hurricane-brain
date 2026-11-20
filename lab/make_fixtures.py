@@ -8,7 +8,7 @@ Format (fixed, see lab/fixtures/README.md):
 Optionally, with --expected, also write lab/fixtures/expected/<name>.lab.json: the Python lab's own
 output for that file under the chosen configuration, so the Rust engine can be compared window by window.
 
-    python3 lab/make_fixtures.py [--expected lab/out/bakeoff_results.json --config S1-P1]
+    python3 lab/make_fixtures.py [--expected lab/out/bakeoff_results_pass2.json --config S1Q-P1-excess-band]
 """
 from __future__ import annotations
 
