@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+/**
+ * Renders the real hurricane shader headlessly and checks the authenticity rules.
+ * TEST ONLY. Run from anywhere:   node app/src/viz/test/playwright-check.mjs
+ *
+ * (a) all-null frames  -> calm water, two screenshots 1 s apart are pixel-identical
+ * (b) the same static frame repeated:
+ *       rotation bound to a measured frequency -> the image rotates (screenshots differ)
+ *       dominant = null                        -> pixel-identical across time
+ * (c) a 3-step golden ratio cascade vs (d) an octave cascade -> look different
+ * Also: frame time of the shader at 1920x1080, and animation-frame intervals of the live view.
+ * Screenshots are written to app/src/viz/test/out/.
+ */
+import { createRequire } from 'node:module';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const appRoot = resolve(here, '../../..');
+const out = resolve(here, 'out');
+mkdirSync(out, { recursive: true });
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+const { createServer } = await import(resolve(appRoot, 'node_modules/vite/dist/node/index.js'));
+
+const server = await createServer({ root: appRoot, configFile: resolve(appRoot, 'vite.config.ts'), logLevel: 'error', server: { port: 0, host: '127.0.0.1' } });
+await server.listen();
+const addr = server.httpServer.address();
+const base = `http://127.0.0.1:${addr.port}/src/viz/test/harness.html`;
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+const errors = [];
+page.on('pageerror', (e) => errors.push(String(e)));
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+
+const results = [];
+const check = (name, ok, detail = '') => {
+  results.push({ name, ok, detail });
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
+};
+const wait = (ms) => page.waitForTimeout(ms);
+const shot = async (name) => {
+  const buf = await page.screenshot({ type: 'png' });
+  writeFileSync(resolve(out, `${name}.png`), buf);
+  return buf;
+};
+/** Mean absolute difference per channel (0..255) and fraction of changed pixels, computed in the page. */
+const diff = (a, b) =>
+  page.evaluate(async ([a, b]) => {
+    const load = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+    const [ia, ib] = await Promise.all([load(a), load(b)]);
+    const px = (img) => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      return x.getImageData(0, 0, c.width, c.height).data;
+    };
+    const da = px(ia), db = px(ib);
+    let sum = 0, changed = 0;
+    for (let i = 0; i < da.length; i += 4) {
+      const d = Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]);
+      sum += d;
+      if (d > 0) changed++;
+    }
+    return { mean: sum / (da.length / 4) / 3, changed: changed / (da.length / 4) };
+  }, [`data:image/png;base64,${a.toString('base64')}`, `data:image/png;base64,${b.toString('base64')}`]);
+
+try {
+  await page.goto(base);
+  await page.waitForFunction(() => !!window.hb);
+  const api = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    return c.getContext('webgl2') ? 'webgl2' : c.getContext('webgl') ? 'webgl1' : 'none';
+  });
+  console.log(`WebGL in this browser: ${api}`);
+
+  // (a) all-null -> calm water, pixel-stable.
+  await page.evaluate(() => window.hb.setScenario('null'));
+  await wait(1500);
+  const a1 = await shot('a-null-1');
+  await wait(1000);
+  const a2 = await shot('a-null-2');
+  check('(a) all-null frames: two screenshots 1 s apart are pixel-identical', a1.equals(a2));
+  const calmText = await page.locator('.hb-calm-message').textContent();
+  check('(a) calm water shows the reason', /Calm water: poor sensor contact/.test(calmText ?? ''), calmText ?? '');
+
+  // (b) static frame, rotation bound to a measured 9.95 Hz -> rotates.
+  await page.evaluate(() => window.hb.setScenario('static-rot'));
+  await wait(1500);
+  const b1 = await shot('b-static-rot-1');
+  await wait(1000);
+  const b2 = await shot('b-static-rot-2');
+  const db = await diff(b1, b2);
+  check('(b) static frame with measured dominant frequency: image rotates', !b1.equals(b2) && db.changed > 0.05,
+    `${(db.changed * 100).toFixed(1)}% of pixels changed in 1 s`);
+
+  // (b) static frame, dominant = null -> identical.
+  await page.evaluate(() => window.hb.setScenario('static-norot'));
+  await wait(1500);
+  const n1 = await shot('b-static-norot-1');
+  await wait(1000);
+  const n2 = await shot('b-static-norot-2');
+  check('(b) static frame with dominant = null: pixel-identical across 1 s', n1.equals(n2));
+
+  // Bands only (confirmed tracks, no cascade).
+  await page.evaluate(() => window.hb.setScenario('bands'));
+  await wait(1500);
+  await shot('bands-no-cascade');
+
+  // (c) phi cascade building to 3 steps; (d) octave cascade.
+  await page.evaluate(() => window.hb.setScenario('phi'));
+  await wait(500);
+  await shot('c-phi-0-bands');
+  await wait(1200);
+  await shot('c-phi-1-one-step');
+  await wait(2800);
+  const c = await shot('c-phi-3-steps');
+  await page.evaluate(() => window.hb.setScenario('octave'));
+  await wait(2500);
+  const d = await shot('d-octave');
+  const cd = await diff(c, d);
+  check('(c) vs (d): golden ratio and octave cascades look different', cd.mean > 2 && cd.changed > 0.2,
+    `mean |diff| ${cd.mean.toFixed(2)}/255, ${(cd.changed * 100).toFixed(1)}% pixels differ`);
+
+  // Heart: pulse and swell, and tap-to-inspect readout.
+  await page.evaluate(() => window.hb.setScenario('phi-heart'));
+  await wait(2000);
+  await shot('e-phi-heart');
+  await page.mouse.click(640, 400);
+  await wait(400);
+  await shot('f-readout-eye');
+  const readoutTitle = await page.locator('.hb-readout h3').textContent();
+  check('tap on the centre opens a readout for the eye', /eye/i.test(readoutTitle ?? ''), readoutTitle ?? '');
+  const hasAlignment = await page.locator('.hb-readout-alignment').count();
+  check('readout shows golden ratio, octave and chance side by side', hasAlignment === 1);
+  await page.keyboard.press('Escape');
+  await page.mouse.click(640 + 120, 400 - 30);
+  await wait(400);
+  await shot('g-readout-arm');
+  console.log(`  readout at (760,370): ${await page.locator('.hb-readout h3').textContent()}`);
+
+  // Live view frame pacing while rotating (redraws every frame).
+  const iv = await page.evaluate(() => window.hb.rafIntervals(180));
+  iv.sort((x, y) => x - y);
+  const med = iv[Math.floor(iv.length / 2)];
+  const p95 = iv[Math.floor(iv.length * 0.95)];
+  console.log(`  live view 1280x800 rAF interval: median ${med.toFixed(2)} ms, p95 ${p95.toFixed(2)} ms`);
+
+  // Shader cost at 1080p with the GPU waited for.
+  const bench = await page.evaluate(() => window.hb.bench(1920, 1080, 60));
+  console.log(`  shader at 1920x1080 (${bench.api}): mean ${bench.meanMs.toFixed(2)} ms, p95 ${bench.p95Ms.toFixed(2)} ms per frame incl. glFinish`);
+  const bench720 = await page.evaluate(() => window.hb.bench(1280, 720, 60));
+  console.log(`  shader at 1280x720  (${bench720.api}): mean ${bench720.meanMs.toFixed(2)} ms, p95 ${bench720.p95Ms.toFixed(2)} ms`);
+
+  // Spectrum view.
+  await page.goto(`${base}?view=spectrum&site=temporal`);
+  await page.waitForFunction(() => !!window.hb);
+  await page.evaluate(() => window.hb.setScenario('static-rot'));
+  await wait(700);
+  await shot('h-spectrum-phi');
+  await page.evaluate(() => window.hb.setScenario('null'));
+  await wait(700);
+  await shot('h-spectrum-null');
+
+  writeFileSync(resolve(out, 'results.json'), JSON.stringify({ results, bench, bench720, raf: { med, p95 }, errors }, null, 2));
+} finally {
+  await browser.close();
+  await server.close();
+}
+
+if (errors.length) console.log(`Page errors:\n  ${errors.join('\n  ')}`);
+const failed = results.filter((r) => !r.ok).length + (errors.length ? 1 : 0);
+console.log(failed ? `${failed} check(s) failed` : 'All checks passed');
+process.exit(failed ? 1 : 0);

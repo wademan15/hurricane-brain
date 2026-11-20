@@ -1,0 +1,54 @@
+{
+  "results": [
+    {
+      "name": "(a) all-null frames: two screenshots 1 s apart are pixel-identical",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "(a) calm water shows the reason",
+      "ok": true,
+      "detail": "Calm water: poor sensor contact"
+    },
+    {
+      "name": "(b) static frame with measured dominant frequency: image rotates",
+      "ok": true,
+      "detail": "37.0% of pixels changed in 1 s"
+    },
+    {
+      "name": "(b) static frame with dominant = null: pixel-identical across 1 s",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "(c) vs (d): golden ratio and octave cascades look different",
+      "ok": true,
+      "detail": "mean |diff| 10.14/255, 45.0% pixels differ"
+    },
+    {
+      "name": "tap on the centre opens a readout for the eye",
+      "ok": true,
+      "detail": "The eye"
+    },
+    {
+      "name": "readout shows golden ratio, octave and chance side by side",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "bench": {
+    "meanMs": 206.3283333333287,
+    "p95Ms": 256.5,
+    "api": "webgl2"
+  },
+  "bench720": {
+    "meanMs": 81.92000000000698,
+    "p95Ms": 98.89999999990687,
+    "api": "webgl2"
+  },
+  "raf": {
+    "med": 104.70000000018626,
+    "p95": 132
+  },
+  "errors": []
+}
