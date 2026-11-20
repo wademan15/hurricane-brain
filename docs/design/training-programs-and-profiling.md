@@ -45,7 +45,7 @@ engine spec; this doc states what it needs from that spec.
 | `upper_alpha` | Calm alertness | IAF to IAF+2 Hz alpha, eyes open | TP9, TP10 | B | Fair |
 | `alpha_theta` | Twilight / hypnagogic edge | theta/alpha ratio, crossover events, not asleep | TP9, TP10 | B–C | Fair |
 | `descent` | Sleep wind-down | alpha dropout, theta rise, then spindles/delta (Muse S) | all | A (stages exist) | Good on Muse S |
-| `golden` | Golden ratio alignment | alpha:theta peak ratio near phi (spec owns detector) | TP9, TP10 | C (R6.1) | Fair |
+| `golden` | Golden ratio alignment | alpha:theta peak ratio near phi, plus octave and golden ratio cascades (spec owns detector) | TP9, TP10 | C for the ratio theory, F for cascades (R6.1, R6.5) | Fair |
 | `approach` | Approach / positive-mood asymmetry | AF8 vs AF7 alpha asymmetry | AF7, AF8 | C | Experimental |
 | `calm_heart` (later) | High-HRV resonance | 0.1 Hz HR oscillation amplitude, RMSSD | Polar H10 | A | Needs H10 |
 
@@ -142,7 +142,7 @@ Used only as Bayesian priors (§5.6), never as a label.
 - Meditation experience: none / some / regular / years, and which styles.
 - Anxiety: 2 items (GAD-2).
 - Chronotype and usual sleep.
-- Comfort with technology / sense of control (2 items).
+- Comfort with technology / sense of control (2 items). Note: in the one small study, *higher* tech control beliefs predicted *poorer* learning (R5.7), so this enters the model as an exploratory covariate with no assumed direction.
 
 ### 5.3 Stage C: physiological calibration (about 8 minutes, once, repeated monthly)
 1. **Artifact calibration (90 s):** guided blinks, look left/right, look up,
@@ -356,7 +356,7 @@ a moving target.
   reaches sleep onset, then the app goes silent and keeps recording if the user
   allowed overnight recording.
 - Framed as wind-down, not as a sleep treatment (R5.5).
-- Later option: replay the user's calm anchor softly in light sleep (targeted
+- Later option: replay the user's calm anchor softly in NREM sleep (targeted
   reactivation, R7.4), as an experiment the user opts into.
 
 **P7 Golden Ratio Alignment** (`golden`)
@@ -480,7 +480,7 @@ from a neutral state:
 warmth, confidence), each with its own sound. Sounds must be clearly distinct
 from one another to avoid generalisation between them.
 
-**Later options:** play the calm anchor during light sleep (targeted
+**Later options:** play the calm anchor during NREM sleep (targeted
 reactivation experiment), share the anchor sound as a file for offline use,
 and use HRV-confirmed pairing once the H10 is in.
 

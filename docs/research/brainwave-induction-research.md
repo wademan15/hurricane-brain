@@ -9,10 +9,12 @@ neurofeedback, and what that means for an app built on Muse headsets. It is
 written to be honest about evidence. Where a practice is traditional or
 anecdotal we say so, and where the Muse cannot see a rhythm we say that too.
 
-Citations are given as author and year so the team can look them up. They were
-written from the research literature as known to the author, not from a fresh
-database pull, so anything that ends up in user-facing or marketing copy must be
-re-checked against the original paper first.
+Citations are given as author and year so the team can look them up. Every
+reference was checked against the real paper (publisher pages, PubMed records,
+library catalogues) on 2026-11-20; claims that overstated or misattributed a
+paper were corrected and grades adjusted. A few page numbers and DOIs could not
+be fetched and are marked "unverified". Frontier observations (Grade F) are
+kept on purpose and are not expected to have citations.
 
 ---
 
@@ -52,7 +54,7 @@ et al. 2018 published an automated IAF estimator). Fixed 8–12 Hz bands mislabe
 part of one person's alpha as theta or beta. The engine should estimate IAF in
 onboarding and define bands relative to it (for example theta = IAF−6 to IAF−2,
 alpha = IAF−2 to IAF+2). Grade A for the existence of IAF variation, B for the
-benefit of IAF-relative training (Nan et al. 2012; Zoefel et al. 2011).
+use of IAF-based bands in successful training studies (Nan et al. 2012; Zoefel et al. 2011). Whether IAF-based bands train *better* than fixed bands has not been tested head to head: Grade C.
 
 ### 2.2 Muse sensor geometry and its consequences
 
@@ -85,14 +87,15 @@ neurofeedback rewards the wrong thing.
 
 ## 3. The foundational fact about "alpha training"
 
-Early alpha biofeedback (Kamiya 1960s; Hardt and Kamiya 1978) showed people can
-learn to raise alpha. Lynch and Paskewitz (1971) and Mulholland (1970s) then
-showed that much of that "gain" is **learning to stop blocking alpha**: alpha is
+Early alpha biofeedback (Kamiya 1968, 1969) showed people can
+learn to raise alpha. Lynch and Paskewitz (1971), Mulholland (1968, 1972) and
+Paskewitz and Orne (1973) then argued that much of that "gain" is **learning to stop blocking alpha**: alpha is
 suppressed by visual input, visual fixation and focusing (accommodation and
 vergence), eye movement, and effortful attention to the outside. With eyes
-closed, a calm person is already near their natural alpha ceiling.
+closed, a calm person is already near their natural alpha ceiling. Kamiya and
+Hardt disputed how far this goes, so treat it as Grade B.
 
-Consequences for us (Grade A–B):
+Consequences for us (Grade B):
 
 1. The meaningful baseline is the person's **eyes-closed resting alpha**, not
    zero. Gains above that ceiling are modest; the real skill is reaching and
@@ -101,10 +104,12 @@ Consequences for us (Grade A–B):
    among the most reliable alpha blockers. Instructions should invite
    *allowing*, not *achieving*.
 3. Kober et al. (2013) found that in SMR training, people who reported **no
-   specific strategy** learned best, and several groups have found effortful
-   strategies predict poorer success (see also a 2025 CNS poster on alpha power
-   and mental effort). We should treat "no strategy / let the sound guide you"
-   as a first-class strategy in the profile, not a fallback.
+   specific strategy** learned best, though that comparison rests on very few
+   people (Grade C). A 2025 conference poster (McGowan et al., CNS*2025, n = 11)
+   found lower reported effort went with higher posterior alpha (Grade C–D).
+   Together with the alpha-blocking literature this is enough to treat
+   "no strategy / let the sound guide you" as a first-class strategy in the
+   profile, not a fallback, and to test it rather than assume it.
 
 ---
 
@@ -126,7 +131,9 @@ profiling engine to test, not facts.
 
 ### 4.2 Gaze: soft gaze, defocus, and "between the eyes"
 - **Mechanism:** Visual fixation and accommodation suppress alpha; a defocused,
-  wide "panoramic" gaze suppresses it less (Mulholland and Peper 1971).
+  wide "panoramic" gaze should therefore suppress it less. Mulholland and Peper
+  (1971) tied alpha suppression to focusing, converging, tracking and fast eye
+  movements; the panoramic-gaze step is our inference, not tested directly.
   Practices that direct attention to the brow point (ajna, "third eye"),
   candle gazing (trataka), or an upward eye roll have long traditions; the
   upward roll is also part of Spiegel's hypnotic induction.
@@ -143,16 +150,17 @@ profiling engine to test, not facts.
 
 ### 4.3 Breath
 - **Slow paced breathing (about 4.5–6.5 breaths per minute):** Zaccaro et al.
-  (2018) systematically reviewed slow breathing and found increased alpha and
-  decreased theta during practice, alongside raised HRV and parasympathetic
-  markers. Breathing at each person's **resonance frequency** (Lehrer and
+  (2018) systematically reviewed slow breathing (defined as under 10 breaths
+  per minute) and found raised HRV and parasympathetic markers; the EEG
+  evidence (increased alpha, decreased theta) rests on four small studies, two
+  clearly supportive, one mixed and one null. Breathing at each person's **resonance frequency** (Lehrer and
   Gevirtz 2014) maximises heart-rate oscillation and is the clearest bridge to
-  the Polar H10 phase. Grade B for EEG effect, A for autonomic effect.
+  the Polar H10 phase. Grade C for the EEG effect, A for the autonomic effect.
 - **Long exhale / cyclic sighing:** Balban et al. (2023) found five minutes of
   daily cyclic sighing improved mood and lowered respiratory rate more than
-  mindfulness meditation. EEG not measured. Grade B (autonomic and mood), C (EEG).
+  mindfulness meditation in a single remote randomised trial. EEG not measured. Grade B–C (autonomic and mood), C (EEG).
 - **Breath counting / breath attention:** A core concentration practice; raises
-  alpha and in experienced meditators frontal theta (Lomas et al. 2015). Grade B.
+  alpha and in experienced meditators frontal theta, based on the general mindfulness EEG literature (Lomas et al. 2015 review; breath counting was not analysed separately). Grade B–C.
 - **Humming / bhramari / "Om":** Small studies report increased theta or alpha
   and calm; humming also lengthens exhale. Grade C. Muse caveat: vocalising
   vibrates the skull and creates EMG, so score only in the silent phase after.
@@ -162,33 +170,37 @@ profiling engine to test, not facts.
   hypocapnia, not a trained state.
 - **Suits (hypothesis):** People with high interoceptive awareness (MAIA-2) or
   who find visual imagery hard.
-- **Brainwave–breath coupling:** Breathing phase modulates cortical activity,
-  including alpha (Zelano et al. 2016; Heck et al. 2017 for respiration-locked
-  oscillations). This is a natural future "coupling" metric once breath can be
+- **Brainwave–breath coupling:** Breathing phase modulates brain activity.
+  Zelano et al. (2016) showed nasal breathing entrains limbic delta and theta
+  in intracranial recordings; Heck et al. (2017) reviewed respiration-locked
+  oscillations (mostly animal evidence); Kluger and Gross (2021) and Kluger et
+  al. (2021) report breathing-phase modulation of scalp alpha in humans
+  (details unverified). This is a natural future "coupling" metric once breath can be
   estimated (from H10 ECG-derived respiration or accelerometer).
 
 ### 4.4 Visualization and imagery
 - **Mechanism:** Internally directed attention raises alpha (Cooper et al.
-  2003; Benedek et al. 2014 found alpha rises during internally focused
-  creative ideation). But *vivid, effortful* visual imagery can engage visual
+  2003; Benedek et al. 2014 found right-parietal alpha rises reflect focused
+  internal attention, not creativity as such). But *vivid, effortful* visual imagery can engage visual
   cortex and reduce alpha in some people. Calm, slow, low-detail scenes
   (a lake, warm light, floating) tend to support alpha; dreamy drifting imagery
   supports theta as drowsiness rises.
 - **Grade:** B for internal attention raising alpha; C for specific scripts.
 - **Important individual difference:** Visual imagery vividness varies
-  enormously (VVIQ, Marks 1973). About 2–4% of people have aphantasia (no
-  voluntary imagery). For them visualization is not a path, and the app should
+  enormously (VVIQ, Marks 1973). About 4% of people have absent or very weak
+  imagery and under 1% none at all (Dance et al. 2022: 3.9% and 0.8%, n = 1,004;
+  Zeman et al. 2015). For them visualization is not a path, and the app should
   learn that quickly and move on, without making them feel broken.
 - **Suits (hypothesis):** High VVIQ, high absorption (Tellegen Absorption Scale).
 
 ### 4.5 Body scan, progressive relaxation, warmth and heaviness (autogenic)
 - **Mechanism:** Reducing muscle tone lowers EMG (which cleans the EEG) and
   shifts arousal down. Autogenic training ("my arms are heavy and warm") has a
-  long clinical record for anxiety (Stetter and Kupper 2002 meta-analysis).
+  long clinical record for anxiety (Stetter and Kupper 2002 meta-analysis of studies from 1952–1999).
   Green and Green at the Menninger Clinic combined hand-warming biofeedback with
   alpha-theta work (*Beyond Biofeedback*, 1977).
 - **EEG:** Alpha rises, and with continued relaxation theta rises.
-- **Grade:** A for relaxation benefits, B for EEG shift.
+- **Grade:** A–B for relaxation benefits (meta-analysis of older studies), B for EEG shift.
 - **Muse bonus:** Forehead and jaw EMG are directly measurable, so we can give
   real feedback on "soften the jaw, soften the brow", which is often the
   fastest early win.
@@ -230,15 +242,16 @@ profiling engine to test, not facts.
 - Grade A for arousal effects of posture, C for specific EEG prescriptions.
 
 ### 4.10 Sound and entrainment
-- **Binaural beats:** A meta-analysis (Garcia-Argibay et al. 2019) found small to
-  moderate behavioural effects on anxiety, memory and attention, but
+- **Binaural beats:** A meta-analysis (Garcia-Argibay et al. 2019) found a medium overall behavioural effect (g ≈ 0.45) on anxiety, memory and attention, but
   systematic reviews of EEG data (for example Ingendoh et al. 2023) find
   **inconsistent evidence of actual brainwave entrainment** at alpha or theta
   rates. Grade B for subjective calm, C for entrainment.
 - **Isochronic tones and rhythmic drumming:** Auditory steady-state responses
   are robust around 40 Hz but weak at theta and alpha rates. Shamanic drumming
-  near 4–4.5 Hz is reported to induce trance; Hove et al. (2016) found network
-  changes but not simple theta entrainment. Grade C.
+  near 4–4.5 Hz is reported to induce trance. Hove et al. (2016) scanned
+  shamanic practitioners with fMRI (no EEG) and found brain-network
+  reconfiguration and reduced auditory-pathway connectivity during drumming
+  trance; theta entrainment was not tested. Grade C.
 - **Audio-visual entrainment (flicker):** Photic driving does entrain occipital
   rhythms (Grade A for entrainment), but flicker carries a **photosensitive
   seizure risk** and is excluded from this product.
@@ -257,16 +270,21 @@ profiling engine to test, not facts.
 
 ### 4.11 Hypnosis and guided induction
 - Hypnotic induction (relaxation, descent imagery, counting down) raises theta
-  in highly hypnotisable people (review: Jensen et al. 2015). Hypnotisability is
-  a stable trait (about 10–15% high). Grade B.
+  in highly hypnotisable people, though the review evidence shows a tendency
+  rather than a firm finding (Jensen et al. 2015). Hypnotisability is a stable
+  trait, with roughly 10–15% of people highly hypnotisable on standard scales.
+  Grade B–C.
 - **Suits (hypothesis):** High absorption, high hypnotisability.
 
 ### 4.12 Sleep-onset and hypnagogic work
-- Hori et al. (1994) described nine EEG stages of sleep onset, from alpha
+- Hori et al. (1994; chapter in Ogilvie and Harsh, eds., *Sleep Onset*) described nine EEG stages of sleep onset, from alpha
   dropout through theta ripples to spindles. Hypnagogic imagery appears in the
   theta-dominant stages.
-- Peniston-style alpha-theta training and the MIT "Dormio" work (Haar Horowitz
-  et al. 2020) deliberately hold people near this edge.
+- Peniston-style alpha-theta training deliberately holds people near this
+  edge. The MIT "Dormio" work (Haar Horowitz et al. 2020) works with the same
+  stage differently: it detects sleep onset from heart rate, skin conductance
+  and finger flexion (no EEG) and repeatedly wakes the person with a prompt
+  to capture hypnagogic imagery.
 - The challenge is staying on the edge without falling asleep, which needs a
   gentle "tether" (see the design doc).
 - Grade A that these stages exist; B–C for training at the edge.
@@ -295,13 +313,15 @@ profile is not confounded:
 ## 5. Neurofeedback protocol literature
 
 ### 5.1 Alpha upregulation
-- Classic eyes-closed alpha enhancement improves self-reported calm; effects on
-  anxiety are real but overlap with relaxation and placebo (Hardt and Kamiya
-  1978; reviews of anxiety NF). Grade B.
+- Classic eyes-closed alpha enhancement improves self-reported calm. Hardt and
+  Kamiya (1978) found anxiety fell with alpha gains only in high-anxiety
+  people, independent of muscle tension and breathing; later reviews argue much
+  of the clinical effect overlaps with relaxation and expectation (Thibault and
+  Raz 2017). Grade B.
 - **Individual upper-alpha training** improved short-term memory (Nan et al.
   2012) and mental rotation (Zoefel et al. 2011, Hanslmayr et al. 2005 for
   cognitive performance). Grade B.
-- Gruzelier (2014) reviewed healthy-performance neurofeedback in three parts and
+- Gruzelier (2014) reviewed healthy-performance neurofeedback in three papers and
   concluded alpha and alpha-theta show promise but with many small samples.
 
 ### 5.2 Alpha-theta (the "deep states" protocol)
@@ -310,19 +330,21 @@ profile is not confounded:
   The aim is a **theta/alpha crossover**, where theta power exceeds alpha as the
   person drifts toward hypnagogia while staying awake.
 - **Clinical history:** Peniston and Kulkosky (1989, 1991) reported large
-  effects in alcoholism and combat PTSD; later replications (Scott et al. 2005)
-  were positive in addiction programs but used combined protocols. Grade B–C.
+  effects in alcoholism and combat PTSD in small, unblinded single-lab
+  studies; Scott et al. (2005) was positive in an addiction program but used a
+  combined protocol. Grade C.
 - **Performance:** Egner and Gruzelier (2003) found alpha-theta improved music
-  performance in conservatoire students; later replicated in dance and
-  singing. Grade B.
+  performance in conservatoire students. Gruzelier's group reported similar
+  results in dance and singing in separate papers (see Gruzelier 2014 part II).
+  Grade B–C.
 - **Safety:** This protocol can surface strong memories and emotions. Clinical
   use was supervised. The consumer app must include an "I need to stop" path,
   gentle grounding, and avoid marketing it as therapy.
 
 ### 5.3 Frontal alpha asymmetry
 - Relative left-frontal activity (more right alpha) links to approach and
-  positive mood (Davidson; Allen et al. 2001 trained asymmetry and shifted
-  mood). Muse AF7/AF8 approximate it. Results are mixed and the measure is
+  positive mood (Davidson 1992). Allen et al. (2001, n = 18) trained asymmetry
+  and changed emotional responses to film clips and facial EMG. Muse AF7/AF8 approximate it. Results are mixed and the measure is
   noisy. Grade C on Muse. Offer as an experimental program only.
 
 ### 5.4 Theta upregulation for focus or memory
@@ -346,17 +368,22 @@ consumer product this cuts two ways:
   brain changed, which almost no consumer product does.
 
 ### 5.7 Responders and non-responders
-- Alkoby et al. (2018) reviewed the "inefficacy problem": between roughly
-  **16% and 57%** of participants across studies fail to learn to modulate the
-  trained rhythm.
+- Alkoby et al. (2018) reviewed the "inefficacy problem": a substantial
+  minority of participants fail to learn to modulate the trained rhythm; the
+  commonly quoted range is roughly **16% to 57%** across studies (figure taken
+  from the full text, not the abstract; recheck before any public use).
 - Predictors with some support (Grade B–C):
   - **Baseline power of the trained band** (people with more resting alpha learn
-    alpha training better; Wan et al. 2014, Nan et al. 2012).
+    alpha training better; Wan et al. 2014). Nan et al. (2012) also found the
+    mental strategies that worked differed between people, with "positive
+    thinking" the most common successful one, which supports profiling.
   - **Early learning**: performance in the first few sessions predicts later
     success.
-  - **Psychological factors**: locus of control in dealing with technology,
-    motivation, mood, and attention (Kadosh and Staunton 2019 review; Witte
-    et al. 2013).
+  - **Psychological factors**: motivation, mood and attention (Cohen Kadosh
+    and Staunton 2019 review). Locus of control in dealing with technology
+    mattered in a small study, but in the *opposite* direction to intuition:
+    higher tech control beliefs went with poorer SMR learning (Witte et al.
+    2013, r ≈ −0.7, n = 10, preliminary; Grade C).
   - **Strategy style**: relaxed, non-effortful approaches beat effortful ones
     (Kober et al. 2013).
 - **Design consequences:** detect likely non-responders early, switch them to
@@ -387,34 +414,44 @@ only the Dan Winter and FlameInMind material. This section covers it. The
 this section supplies the scientific grounding and the training implications.
 
 ### 6.1 The golden mean in the frequency architecture of the brain
-- **Roopun et al. (2008)**, working in rat neocortex slices with Kopell and
-  Whittington, observed that the centre frequencies of distinct cortical
-  rhythms are spaced roughly by the golden ratio (about 1.618), and proposed
-  this lets rhythms coexist with minimal interference. Grade B (strong lab
-  work, animal model).
+- **Roopun et al. (2008)**, a review of the Whittington and Kopell group's
+  rat neocortex slice work, noted that the centre frequencies of distinct
+  cortical rhythms are spaced approximately by the golden ratio (about 1.618),
+  and proposed this lets rhythms coexist with minimal interference. Grade B–C
+  (strong underlying lab work, animal model, review paper).
 - **Pletzer, Kerschbaum and Klimesch (2010)**, "When frequencies never
   synchronize: the golden mean and the resting EEG" (*Brain Research*), argued
   that classical human EEG bands (delta, theta, alpha, beta, gamma) have centre
   frequencies in a geometric series with ratio near phi. Because phi is the
   "most irrational" number, two rhythms at a phi ratio never fall into stable
-  phase alignment, which avoids spurious cross-talk and allows
-  **multiplexing**: separate information channels sharing one network.
-  Rhythms at integer ratios (2:1, 3:1) can phase-lock, which **couples** them
-  for communication. Grade B (theoretical with supporting EEG data).
-- **Klimesch (2013, 2018)** extended this into a "binary hierarchy" model:
-  band centre frequencies roughly double from band to band, and switching
-  between harmonic (coupled) and golden-mean (decoupled) ratios is a proposed
-  mechanism for the brain to flexibly connect or separate processes,
-  extending to brain-body rhythms such as heart and breath. Grade B–C.
+  phase alignment, so a phi ratio marks a maximally **uncoupled "resting"**
+  state with only occasional irregular coupling. Rhythms at integer ratios
+  (2:1, 3:1) can phase-lock, which **couples** them for communication. (Calling
+  this "multiplexing" is our gloss.) The paper is a mathematical, theoretical
+  argument with no new EEG data analysis. Grade C.
+- **Klimesch (2013)**, a speculative opinion paper, proposed a "binary
+  hierarchy": band centre frequencies double from band to band (2.5, 5, 10,
+  20, 40 Hz), with golden-mean values marking band boundaries, extending to
+  brain-body rhythms such as heart and breath. **Klimesch (2018)** developed
+  the idea that switching between harmonic (coupled) and golden-mean
+  (decoupled) relations lets the brain flexibly connect or separate
+  processes. Grade C.
 - **Rodriguez-Larios and Alaerts (2019, *Journal of Neuroscience*)** tracked
   the instantaneous ratio between individual alpha and theta peak frequencies.
   Transient **2:1 harmonic** alpha:theta ratios became more frequent during
-  cognitive tasks and predicted better performance. Rodriguez-Larios et al.
-  (2020, *NeuroImage*) found mindfulness training reduced harmonic
-  alpha:theta relations during meditation, and that mind-wandering episodes
-  showed more harmonic coupling. Grade B (well-designed, one main group).
-- **Buzsáki and Draguhn (2004)** described cortical bands as a linear
-  progression on a natural-log scale (ratio near e, about 2.72), which is a
+  cognitive tasks and predicted better performance. Their "non-harmonic"
+  comparison category was ratios of 1.1–1.6, so phi itself was not tested.
+- **Rodriguez-Larios et al. (2020, *Scientific Reports*)**: in 43 experienced
+  meditators, 2:1 harmonic relations rose from meditation to rest to mental
+  arithmetic. **Rodriguez-Larios et al. (2020, *Mindfulness*)**: in 36 novices
+  on an 8-week course (no control group), better course compliance correlated
+  with less 3:1 harmonicity during meditation. **Rodriguez-Larios and Alaerts
+  (2021, *European Journal of Neuroscience*)**: mind-wandering episodes showed
+  more harmonic alpha:theta relations. Grade B–C (consistent direction, one
+  research group).
+- **Penttonen and Buzsáki (2003)** and **Buzsáki and Draguhn (2004)**
+  described cortical bands as a linear progression on a natural-log scale
+  (commonly read as a ratio near e, about 2.72), which is a
   related but distinct proposal. The exact constant is debated; the robust
   finding is that **bands are spaced by non-integer ratios that discourage
   locking**.
@@ -426,21 +463,22 @@ this section supplies the scientific grounding and the training implications.
 2. On Muse this is feasible for **alpha:theta**, since both peaks can be found
    at TP9/TP10 with eyes closed. Beta:alpha is possible but weaker. Anything
    involving gamma is not reliable on Muse because of muscle contamination.
-3. The early evidence suggests **phi-like (non-harmonic) alpha:theta relations
-   go with restful, non-task, meditative states, and harmonic 2:1 with active
-   cognition**. A "golden ratio alignment" practice is therefore scientifically
-   coherent as a meditative-state marker. This is a hypothesis that our own
-   data can test across users, and it should be described to users as
-   emerging research, not established fact.
+3. The early evidence suggests **non-harmonic alpha:theta relations (away from
+   2:1) go with meditation, and harmonic 2:1 with active cognition and mind
+   wandering**. That a ratio near phi specifically marks the meditative end is
+   **our hypothesis** (supported by Pletzer and Klimesch's theory, not yet
+   tested directly). A "golden ratio alignment" practice is therefore
+   scientifically coherent and testable with our own data across users, and it
+   should be described to users as emerging research, not established fact.
 4. Peak-frequency estimation needs care: theta often has no clear peak in
    waking EEG, and the 1/f background (6.3) biases naive peak picking.
    Use a periodic/aperiodic decomposition before computing ratios.
 
 ### 6.2 Cross-frequency coupling and frequency cascades
 - **Phase-amplitude coupling (PAC):** the phase of a slow rhythm modulates the
-  amplitude of a faster one. Theta-gamma PAC in hippocampus and cortex is
-  linked to memory sequencing (Canolty et al. 2006, *Science*; Lisman and Jensen
-  2013). Alpha imposes "pulsed inhibition" on gamma (Jensen and Mazaheri 2010).
+  amplitude of a faster one. Canolty et al. (2006, *Science*) showed high
+  gamma (80–150 Hz) locked to theta phase in human neocortex; Lisman and Jensen
+  (2013) proposed theta-gamma coupling as a code for memory sequences. Alpha imposes "pulsed inhibition" on gamma (Jensen and Mazaheri 2010).
   Grade A in invasive recordings, B in scalp EEG.
 - **Nested cascades:** delta phase modulates theta amplitude, which modulates
   gamma (Lakatos et al. 2005), giving a hierarchy of nested rhythms. Sleep
@@ -458,8 +496,8 @@ this section supplies the scientific grounding and the training implications.
 
 ### 6.3 Nonlinear and scale-free dynamics
 - **Aperiodic (1/f) component:** EEG power falls with frequency as 1/f^χ.
-  The exponent χ steepens with sleep, anaesthesia and lower arousal and has
-  been proposed as an index of excitation/inhibition balance (Gao et al.
+  The exponent χ steepens with sleep and anaesthesia (Lendner et al. 2020) and
+  has been proposed as an index of excitation/inhibition balance (Gao et al.
   2017). Tools like FOOOF/specparam (Donoghue et al. 2020) separate it from
   true oscillatory peaks. **This matters for every protocol:** a change in
   "theta power" may be a tilt in the 1/f background, not more theta rhythm.
@@ -473,8 +511,9 @@ this section supplies the scientific grounding and the training implications.
   2018). Grade B. Feasible on Muse for alpha at TP9/TP10, needs several
   minutes of clean data.
 - **Complexity and entropy:** Lempel-Ziv complexity, multiscale entropy and
-  fractal dimension fall in sleep and anaesthesia and rise with psychedelics
-  (Schartner et al. 2017). They are candidate global "state" measures that do
+  fractal dimension fall in sleep and anaesthesia (Schartner et al. 2015, 2017
+  *Neuroscience of Consciousness*) and rise with psychedelics (Schartner et al.
+  2017 *Scientific Reports*). They are candidate global "state" measures that do
   not depend on band definitions. Grade B. Feasible on Muse with careful
   artifact rejection.
 - **Metastability:** the brain moves between transient states rather than
@@ -487,12 +526,12 @@ this section supplies the scientific grounding and the training implications.
 | Relaxed wakefulness | Posterior alpha up | Yes | A |
 | Hypnagogia / sleep onset | Alpha dropout, theta ripples, vertex waves | Mostly | A |
 | Deep meditation (various) | Alpha and theta up; frontal-midline theta in concentration | Partly (no Fz) | B |
-| Long-term meditators | High-amplitude gamma (Lutz 2004; Braboszcz et al. 2017, 60–110 Hz) | No (EMG) | B |
-| Jhana / absorption states | Case studies of altered alpha/theta and reduced complexity (Hagerty et al. 2013) | Unknown | C |
+| Long-term meditators | High-amplitude gamma (Lutz 2004, 25–42 Hz; Braboszcz et al. 2017, 60–110 Hz) | No (EMG) | B |
+| Jhana / absorption states | Single-meditator case study: frontal gamma up, 6–8 Hz up relative to faster bands, reward-area activation on fMRI (Hagerty et al. 2013) | Unknown | C |
 | Hypnosis (high hypnotisables) | Theta up, connectivity changes | Partly | B |
 | Flow | Mixed; frontal theta and alpha changes, transient hypofrontality hypothesis | Partly | C |
-| Psychedelic states | Broadband alpha drop, complexity up (Carhart-Harris et al. 2016) | Yes, partly | B (not a product target) |
-| Lucid dreaming | Raised frontal ~40 Hz during REM (Voss et al. 2009) | Overnight, uncertain | B–C |
+| Psychedelic states | Broadband power drop, mostly alpha (Carhart-Harris et al. 2016, MEG); complexity up (Schartner et al. 2017) | Yes, partly | B (not a product target) |
+| Lucid dreaming | Raised frontal ~40 Hz during REM (Voss et al. 2009, 3 lucid episodes; disputed since) | Overnight, uncertain | C |
 | Deep NREM sleep | Delta slow waves, spindles | Yes (Muse S overnight) | A |
 
 ### 6.5 Frontier observations: octave and golden ratio cascades, trance states
@@ -511,8 +550,8 @@ phenomenon; the underlying ratios have Grade B grounding).**
 - Mainstream anchors for both: Klimesch's binary-hierarchy model has band
   centres doubling from band to band (octaves), with harmonic 2:1 relations
   proposed to **couple** rhythms and golden-mean relations to **decouple**
-  them (6.1). Rodriguez-Larios and Alaerts measured transient 2:1 alpha:theta
-  relations directly. So each pairwise ratio is a published idea; what has not
+  them (6.1). Rodriguez-Larios and colleagues measured transient 2:1 and 3:1
+  alpha:theta relations directly. So each pairwise ratio is a published idea; what has not
   been published, to our knowledge, is a **multi-band cascade** (three or more
   bands locked in one series at the same moment) as a trainable state.
 - **On Muse:** a cascade across delta–theta–alpha–beta is measurable at
@@ -551,7 +590,8 @@ brain side should leave room for it:
   alpha or theta phase or peak frequency, rather than a fixed rate. This is
   more principled than open-loop beats and is an active research area
   (for example closed-loop auditory stimulation of sleep slow waves, Ngo et al.
-  2013, Grade A–B for deep sleep).
+  2013; Grade A–B for boosting slow waves, B for the memory benefit, which
+  has replicated less consistently).
 - **Entrainment as a tested variable:** the profiling engine (design doc)
   already treats entrainment audio as one strategy among many, so EarthSync
   stimuli can plug in as additional strategy arms.
@@ -573,16 +613,18 @@ design is in the design doc.
 
 ### 7.1 Can people reliably produce an emotion on purpose?
 - **Yes, moderately.** A meta-analysis of emotion-induction methods (Lench,
-  Flores and Bench 2011) found autobiographical recall, imagery, music and
-  film all reliably shift self-reported emotion; recall and imagery are the
-  self-generated methods, which is what an app needs. Grade A.
-- Effects are stronger for **arousal** (how activated) than for fine
-  distinctions of **valence** (pleasant vs unpleasant) or specific emotions.
+  Flores and Bench 2011) found most methods work, including recall, imagery,
+  music and film, with pictures strongest. Recall and imagery are the
+  self-generated methods, which is what an app needs. Grade A that induction
+  works; B for self-generated methods specifically.
+- In physiology, **arousal** (how activated) is easier to detect than
+  **valence** (pleasant vs unpleasant) or specific emotions (see 7.2).
 - Practised methods:
   - **Loving-kindness and compassion meditation** increase positive emotion
     over weeks (Fredrickson et al. 2008). Grade B. A reported link to rising
-    vagal tone (Kok et al. 2013) did not hold up cleanly in a later
-    preregistered replication, so treat the HRV claim as Grade C.
+    vagal tone (Kok et al. 2013) was challenged by reanalyses of its own data
+    (Heathers et al. 2015; Nickerson 2018), and no direct replication has been
+    published, so treat the HRV claim as Grade C.
   - **Gratitude and appreciation** recall: reliable short-term mood lift.
     Grade B.
   - **Awe** imagery and recall: reliable self-report change. Grade B.
@@ -592,14 +634,16 @@ design is in the design doc.
     (Lehrer and Gevirtz 2014, Grade A). Claims that the emotion adds a
     distinct heart-brain effect come mainly from HeartMath-affiliated work
     (McCraty et al. 2009). Grade C for the emotion-specific part.
-  - **Emotional granularity / labelling:** naming a feeling precisely reduces
-    reactivity (affect labelling, Lieberman et al. 2007). Grade B.
+  - **Affect labelling:** putting a feeling into words reduces amygdala
+    reactivity to emotional images (Lieberman et al. 2007). Grade B.
+    (Emotional granularity, the habit of making fine distinctions between
+    feelings, is a related but separate idea.)
 
 ### 7.2 What the EEG can and cannot show about emotion
 - **Arousal:** visible. Low arousal goes with more alpha, less muscle and
   less beta; high arousal the reverse. Grade A–B. Muse sees this.
 - **Valence and approach/withdrawal:** frontal alpha asymmetry (more left
-  frontal activity with approach and positive affect, Davidson; Coan and
+  frontal activity with approach and positive affect, Davidson 1992; Coan and
   Allen 2004). Real but small and noisy at the individual level. Grade B in
   labs, C on Muse (AF7/AF8).
 - **Specific emotions from EEG:** public-dataset classifiers (for example
@@ -633,8 +677,8 @@ design is in the design doc.
 ### 7.4 Conditioning a state to a sound: the evidence
 - **Cue-controlled relaxation:** pairing a cue word or sound with deep
   relaxation over repeated sessions lets the cue alone later produce partial
-  relaxation (Russell and Sipich 1973 and later anxiety-treatment
-  work). Grade B. Effects are real but usually **smaller than the original
+  relaxation (Russell and Sipich 1973, a brief report; later anxiety-treatment
+  work). Grade B–C. Effects are real but usually **smaller than the original
   state** and fade without practice.
 - **Classical conditioning of physiological responses** (heart rate, skin
   conductance, salivation) is well established (Grade A). Conditioning of
@@ -644,10 +688,11 @@ design is in the design doc.
 - **Music and memory:** music evokes emotion partly through evaluative
   conditioning and episodic memory (Juslin and Västfjäll 2008). A personal
   sound that has been present during many good sessions becomes emotionally
-  meaningful. Grade B.
-- **Targeted memory reactivation:** sounds paired with learning can reactivate
-  that memory when replayed in sleep (Rasch et al. 2007; Oudiette and Paller
-  2013). Grade A–B. A later option: replay a user's anchor in light sleep.
+  meaningful. Grade B–C (a theory paper, well grounded in conditioning work).
+- **Targeted memory reactivation:** cues paired with learning can reactivate
+  that memory when replayed in NREM sleep: an odour in Rasch et al. (2007),
+  sounds in Rudoy et al. (2009); review in Oudiette and Paller (2013).
+  Grade A–B. A later option: replay a user's anchor in NREM sleep.
 - **Rules from learning theory that the design must respect (Grade A):**
   - **Contingency matters**: the cue must predict the state. Playing it at
     random times, or as a notification, weakens it (extinction, latent
@@ -694,7 +739,7 @@ Traits that plausibly predict which strategies work, and are cheap to measure:
 | Meditation experience | Simple history items | Open monitoring, mantra, brow-point focus |
 | Trait anxiety | GAD-2 or STAI short form | Whether breath focus calms or agitates |
 | Chronotype and sleep | Short MEQ, sleep hours | Best time of day; alpha-theta sleep risk |
-| Tech locus of control | Short scale (Witte et al. 2013) | Overall responder likelihood |
+| Tech locus of control | Short scale (Witte et al. 2013) | Responder likelihood; note the small study found *higher* tech control beliefs predicted *poorer* learning (Grade C) |
 
 ---
 
@@ -707,7 +752,8 @@ these can be added without rework:
   a coupling metric can ask whether alpha power or alpha envelope oscillates at
   the same 0.1 Hz.
 - **Respiration phase and EEG:** oscillatory power is modulated by breathing
-  phase (Zelano 2016; Heck 2017). ECG-derived respiration from the Polar H10
+  phase (Zelano 2016 for limbic delta/theta; Kluger and Gross 2021 for scalp
+  alpha; Heck 2017 review). ECG-derived respiration from the Polar H10
   lets us compute breath-locked alpha.
 - **Heartbeat-evoked potential (HEP):** EEG response time-locked to the R-peak;
   linked to interoceptive attention. Feasible with H10 R-peaks (1 ms
@@ -742,7 +788,7 @@ these can be added without rework:
 ## 11. Key references (to verify before external use)
 
 - Alkoby O, Abu-Rmileh A, Shriki O, Todder D (2018). Can we predict who will respond to neurofeedback? A review of the inefficacy problem and existing predictors for successful EEG neurofeedback learning. *Neuroscience*.
-- Allen JJB, Harmon-Jones E, Cavender JH (2001). Manipulation of frontal EEG asymmetry through biofeedback alters self-reported emotional responses. *Psychophysiology*.
+- Allen JJB, Harmon-Jones E, Cavender JH (2001). Manipulation of frontal EEG asymmetry through biofeedback alters self-reported emotional responses and facial EMG. *Psychophysiology* 38(4):685–693.
 - Balban MY et al. (2023). Brief structured respiration practices enhance mood and reduce physiological arousal. *Cell Reports Medicine*.
 - Barry RJ et al. (2007). EEG differences between eyes-closed and eyes-open resting conditions. *Clinical Neurophysiology*.
 - Benedek M et al. (2014). Alpha power increases in right parietal cortex reflects focused internal attention. *Neuropsychologia*.
@@ -751,15 +797,15 @@ these can be added without rework:
 - Egner T, Gruzelier JH (2003). Ecological validity of neurofeedback: modulation of slow wave EEG enhances musical performance. *NeuroReport*.
 - Garcia-Argibay M, Santed MA, Reales JM (2019). Efficacy of binaural auditory beats in cognition, anxiety, and pain perception: a meta-analysis. *Psychological Research*.
 - Green E, Green A (1977). *Beyond Biofeedback*.
-- Gruzelier JH (2014). EEG-neurofeedback for optimising performance I–III. *Neuroscience and Biobehavioral Reviews*.
+- Gruzelier JH (2014). EEG-neurofeedback for optimising performance. I: A review of cognitive and affective outcome in healthy participants. II: Creativity, the performing arts and ecological validity. III: A review of methodological and theoretical considerations. *Neuroscience and Biobehavioral Reviews* 44 (three separate papers).
 - Haar Horowitz A et al. (2020). Dormio: a targeted dream incubation device. *Consciousness and Cognition*.
-- Hardt JV, Kamiya J (1978). Anxiety change through electroencephalographic alpha feedback seen only in high anxiety subjects. *Science*.
+- Hardt JV, Kamiya J (1978). Anxiety change through electroencephalographic alpha feedback seen only in high anxiety subjects. *Science* 201:79–81. doi:10.1126/science.663641
 - Heck DH et al. (2017). Breathing as a fundamental rhythm of brain function. *Frontiers in Neural Circuits*.
-- Hori T, Hayashi M, Morikawa T (1994). Topographical EEG changes and the hypnagogic experience. In *Sleep Onset* (APA).
-- Hove MJ et al. (2016). Brain network reconfiguration and perceptual decoupling during an absorptive state of consciousness. *Cerebral Cortex*.
-- Ingendoh RM, Posny ES, Heine A (2023). Binaural beats to entrain the brain? A systematic review. *PLOS ONE*.
+- Hori T, Hayashi M, Morikawa T (1994). Topographical EEG changes and the hypnagogic experience. In Ogilvie RD, Harsh JR (eds.), *Sleep Onset: Normal and Abnormal Processes*, pp. 237–253. APA.
+- Hove MJ et al. (2016). Brain network reconfiguration and perceptual decoupling during an absorptive state of consciousness. *Cerebral Cortex* 26(7):3116–3124. doi:10.1093/cercor/bhv137
+- Ingendoh RM, Posny ES, Heine A (2023). Binaural beats to entrain the brain? A systematic review of the effects of binaural beat stimulation on brain oscillatory activity, and the implications for psychological research and intervention. *PLOS ONE* 18(5):e0286023.
 - Jensen MP, Adachi T, Hakimian S (2015). Brain oscillations, hypnosis, and hypnotizability. *American Journal of Clinical Hypnosis*.
-- Kadosh KC, Staunton G (2019). A systematic review of the psychological factors that influence neurofeedback learning outcomes. *NeuroImage*.
+- Cohen Kadosh K, Staunton G (2019). A systematic review of the psychological factors that influence neurofeedback learning outcomes. *NeuroImage*.
 - Klimesch W (1999). EEG alpha and theta oscillations reflect cognitive and memory performance. *Brain Research Reviews*.
 - Kober SE et al. (2013). Learning to modulate one's own brain activity: the effect of spontaneous mental strategies. *Frontiers in Human Neuroscience*.
 - Krigolson OE et al. (2017). Choosing MUSE: validation of a low-cost, portable EEG system for ERP research. *Frontiers in Neuroscience*.
@@ -772,7 +818,8 @@ these can be added without rework:
 - Mulholland T, Peper E (1971). Occipital alpha and accommodative vergence, pursuit tracking, and fast eye movements. *Psychophysiology*.
 - Nan W et al. (2012). Individual alpha neurofeedback training effect on short term memory. *International Journal of Psychophysiology*.
 - Pashler H, McDaniel M, Rohrer D, Bjork R (2008). Learning styles: concepts and evidence. *Psychological Science in the Public Interest*.
-- Peniston EG, Kulkosky PJ (1989, 1991). Alpha-theta brainwave training for alcoholism and for combat-related PTSD. *Alcoholism: Clinical and Experimental Research*; *Medical Psychotherapy*.
+- Peniston EG, Kulkosky PJ (1989). Alpha-theta brainwave training and beta-endorphin levels in alcoholics. *Alcoholism: Clinical and Experimental Research* 13(2):271–279.
+- Peniston EG, Kulkosky PJ (1991). Alpha-theta brainwave neurofeedback therapy for Vietnam veterans with combat-related post-traumatic stress disorder. *Medical Psychotherapy* 4:47–60.
 - Schabus M et al. (2017). Better than sham? A double-blind placebo-controlled neurofeedback study in primary insomnia. *Brain*.
 - Stetter F, Kupper S (2002). Autogenic training: a meta-analysis of clinical outcome studies. *Applied Psychophysiology and Biofeedback*.
 - Thibault RT, Raz A (2017). The psychology of neurofeedback: clinical intervention even if applied placebo. *American Psychologist*.
@@ -789,7 +836,7 @@ these can be added without rework:
 - Hagerty MR et al. (2013). Case study of ecstatic meditation: fMRI and EEG evidence of self-stimulating a reward system. *Neural Plasticity*.
 - Irrmischer M et al. (2018). Controlling the temporal structure of brain oscillations by focused attention meditation. *Human Brain Mapping*.
 - Jensen O, Mazaheri A (2010). Shaping functional architecture by oscillatory alpha activity: gating by inhibition. *Frontiers in Human Neuroscience*.
-- Klimesch W (2013). An algorithm for the EEG frequency architecture of consciousness and brain body coupling. *Frontiers in Human Neuroscience*.
+- Klimesch W (2013). An algorithm for the EEG frequency architecture of consciousness and brain body coupling. *Frontiers in Human Neuroscience* 7:766. doi:10.3389/fnhum.2013.00766
 - Klimesch W (2018). The frequency architecture of brain and brain body oscillations: an analysis. *European Journal of Neuroscience*.
 - Lakatos P et al. (2005). An oscillatory hierarchy controlling neuronal excitability and stimulus processing in the auditory cortex. *Journal of Neurophysiology*.
 - Linkenkaer-Hansen K et al. (2001). Long-range temporal correlations and scaling behavior in human brain oscillations. *Journal of Neuroscience*.
@@ -797,8 +844,10 @@ these can be added without rework:
 - Ngo HV et al. (2013). Auditory closed-loop stimulation of the sleep slow oscillation enhances memory. *Neuron*.
 - Pletzer B, Kerschbaum H, Klimesch W (2010). When frequencies never synchronize: the golden mean and the resting EEG. *Brain Research*.
 - Rodriguez-Larios J, Alaerts K (2019). Tracking transient changes in the neural frequency architecture: harmonic relationships between theta and alpha peaks facilitate cognitive performance. *Journal of Neuroscience*.
-- Rodriguez-Larios J et al. (2020). Mindfulness training is associated with changes in alpha-theta cross-frequency dynamics. *NeuroImage*.
-- Roopun AK et al. (2008). Temporal interactions between cortical rhythms. *Frontiers in Neuroscience*.
+- Rodriguez-Larios J, Wong KF, Lim J, Alaerts K (2020). Mindfulness training is associated with changes in alpha-theta cross-frequency dynamics during meditation. *Mindfulness* 11(12):2695–2704. doi:10.1007/s12671-020-01487-3
+- Rodriguez-Larios J et al. (2020). From thoughtless awareness to effortful cognition: alpha-theta cross-frequency dynamics in experienced meditators during meditation, rest and arithmetic. *Scientific Reports* 10:5419.
+- Rodriguez-Larios J, Alaerts K (2021). EEG alpha-theta dynamics during mind wandering in the context of breath focus meditation: an experience sampling approach with novice meditation practitioners. *European Journal of Neuroscience* 53(6):1855–1868. doi:10.1111/ejn.15073
+- Roopun AK et al. (2008). Temporal interactions between cortical rhythms. *Frontiers in Neuroscience* 2(2):145–154. (Review.)
 - Schartner MM et al. (2017). Increased spontaneous MEG signal diversity for psychoactive doses of ketamine, LSD and psilocybin. *Scientific Reports*.
 - Staresina BP et al. (2015). Hierarchical nesting of slow oscillations, spindles and ripples in the human hippocampus during sleep. *Nature Neuroscience*.
 - Voss U et al. (2009). Lucid dreaming: a state of consciousness with features of both waking and non-lucid dreaming. *Sleep*.
@@ -809,10 +858,33 @@ these can be added without rework:
 - Juslin PN, Västfjäll D (2008). Emotional responses to music: the need to consider underlying mechanisms. *Behavioral and Brain Sciences*.
 - Kok BE et al. (2013). How positive emotions build physical health: perceived positive social connections account for the upward spiral between positive emotions and vagal tone. *Psychological Science*.
 - Lench HC, Flores SA, Bench SW (2011). Discrete emotions predict changes in cognition, judgment, experience, behavior, and physiology: a meta-analysis of experimental emotion elicitations. *Psychological Bulletin*.
-- Lieberman MD et al. (2007). Putting feelings into words: affect labeling disrupts amygdala activity. *Psychological Science*.
+- Lieberman MD et al. (2007). Putting feelings into words: affect labeling disrupts amygdala activity in response to affective stimuli. *Psychological Science* 18(5):421–428.
 - McCraty R et al. (2009). The coherent heart: heart-brain interactions, psychophysiological coherence, and the emergence of system-wide order. *Integral Review*.
 - Oudiette D, Paller KA (2013). Upgrading the sleeping brain with targeted memory reactivation. *Trends in Cognitive Sciences*.
 - Grossman P (2023). Fundamental challenges and likely refutations of the five basic premises of the polyvagal theory. *Biological Psychology*.
 - Rasch B et al. (2007). Odor cues during slow-wave sleep prompt declarative memory consolidation. *Science*.
 - Russell RK, Sipich JF (1973). Cue-controlled relaxation in the treatment of test anxiety. *Journal of Behavior Therapy and Experimental Psychiatry*.
 - Shaffer F, Ginsberg JP (2017). An overview of heart rate variability metrics and norms. *Frontiers in Public Health*.
+- Dance CJ, Ipser A, Simner J (2022). The prevalence of aphantasia (imagery weakness) in the general population. *Consciousness and Cognition* 97:103243.
+- Davidson RJ (1992). Anterior cerebral asymmetry and the nature of emotion. *Brain and Cognition* 20(1):125–151.
+- Enriquez-Geppert S et al. (2014). Modulation of frontal-midline theta by neurofeedback. *Biological Psychology* 95:59–69.
+- Hanslmayr S et al. (2005). Increasing individual upper alpha power by neurofeedback improves cognitive performance in human subjects. *Applied Psychophysiology and Biofeedback* 30(1):1–10.
+- Heathers JAJ, Brown NJL, Coyne JC, Friedman HL (2015). The elusory upward spiral: a reanalysis of Kok et al. (2013). *Psychological Science* 26(7):1140–1143.
+- Kamiya J (1968). Conscious control of brain waves. *Psychology Today* 1:56–60.
+- Kamiya J (1969). Operant control of the EEG alpha rhythm and some of its reported effects on consciousness. In Tart CT (ed.), *Altered States of Consciousness*. Wiley.
+- Kluger DS, Gross J (2021). Respiration modulates oscillatory neural network activity at rest. *PLOS Biology*. (Details unverified.)
+- Koelstra S et al. (2012). DEAP: a database for emotion analysis using physiological signals. *IEEE Transactions on Affective Computing* 3(1):18–31.
+- Lendner JD et al. (2020). An electrophysiological marker of arousal level in humans. *eLife* 9:e55092.
+- McGowan et al. (2025). Strategies for neurofeedback success: exploring the relationship between alpha power and mental effort. Poster P194, CNS*2025 (Computational Neuroscience), Florence.
+- Mulholland TB (1972). Occipital alpha revisited. *Psychological Bulletin* 78(3):176–182.
+- Nickerson CA (2018). Overstating the effects of loving-kindness meditation: comment on Kok et al. (2013). *Psychological Science* 29(3):463–466. doi:10.1177/0956797616682946
+- Paskewitz DA, Orne MT (1973). Visual effects on alpha feedback training. *Science* 181:360–363. (Details unverified.)
+- Penttonen M, Buzsáki G (2003). Natural logarithmic relationship between brain oscillators. *Thalamus & Related Systems* 2(2):145–152. doi:10.1017/S1472928803000074
+- Rudoy JD, Voss JL, Westerberg CE, Paller KA (2009). Strengthening individual memories by reactivating them during sleep. *Science* 326:1079.
+- Schartner M et al. (2015). Complexity of multi-dimensional spontaneous EEG decreases during propofol induced general anaesthesia. *PLOS ONE* 10(8):e0133532.
+- Schartner MM et al. (2017). Global and local complexity of intracranial EEG decreases during NREM sleep. *Neuroscience of Consciousness* 2017(1):niw022.
+- Scott WC, Kaiser D, Othmer S, Sideroff SI (2005). Effects of an EEG biofeedback protocol on a mixed substance abusing population. *American Journal of Drug and Alcohol Abuse* 31(3):455–469.
+- Task Force of the European Society of Cardiology and the North American Society of Pacing and Electrophysiology (1996). Heart rate variability: standards of measurement, physiological interpretation and clinical use. *Circulation* 93(5):1043–1065.
+- Wan F, Nan W, Vai MI, Rosa A (2014). Resting alpha activity predicts learning ability in alpha neurofeedback. *Frontiers in Human Neuroscience* 8:500.
+- Witte M, Kober SE, Ninaus M, Neuper C, Wood G (2013). Control beliefs can predict the ability to up-regulate sensorimotor rhythm during neurofeedback training. *Frontiers in Human Neuroscience* 7:478.
+- Zeman A, Dewar M, Della Sala S (2015). Lives without imagery: congenital aphantasia. *Cortex* 73:378–380.
