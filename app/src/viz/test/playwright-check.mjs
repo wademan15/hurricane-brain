@@ -142,6 +142,25 @@ try {
   await shot('g-readout-arm');
   console.log(`  readout at (760,370): ${await page.locator('.hb-readout h3').textContent()}`);
 
+  // Context loss and restore: the storm comes back.
+  await page.evaluate(() => window.hb.setScenario('static-norot'));
+  await wait(1200);
+  const beforeLoss = await shot('i-before-context-loss');
+  await page.evaluate(() => {
+    const c = document.querySelector('.hb-hurricane-canvas');
+    window.__lose = c.getContext('webgl2').getExtension('WEBGL_lose_context');
+    window.__lose.loseContext();
+  });
+  await wait(300);
+  await page.evaluate(() => window.__lose.restoreContext());
+  await wait(800);
+  const afterRestore = await shot('i-after-context-restore');
+  const lr = await diff(beforeLoss, afterRestore);
+  check('WebGL context loss and restore: the same storm is drawn again', lr.mean < 0.5,
+    `mean |diff| ${lr.mean.toFixed(3)}/255`);
+  await page.evaluate(() => window.hb.setScenario('phi-heart'));
+  await wait(500);
+
   // Live view frame pacing while rotating (redraws every frame).
   const iv = await page.evaluate(() => window.hb.rafIntervals(180));
   iv.sort((x, y) => x - y);
@@ -154,6 +173,15 @@ try {
   console.log(`  shader at 1920x1080 (${bench.api}): mean ${bench.meanMs.toFixed(2)} ms, p95 ${bench.p95Ms.toFixed(2)} ms per frame incl. glFinish`);
   const bench720 = await page.evaluate(() => window.hb.bench(1280, 720, 60));
   console.log(`  shader at 1280x720  (${bench720.api}): mean ${bench720.meanMs.toFixed(2)} ms, p95 ${bench720.p95Ms.toFixed(2)} ms`);
+  const baseline = await page.evaluate(() => window.hb.benchBaseline(1920, 1080, 60));
+  console.log(`  trivial one-texture-read shader at 1920x1080: mean ${baseline.meanMs.toFixed(2)} ms` +
+    ` -> hurricane costs ${(bench.meanMs / baseline.meanMs).toFixed(1)}x the cheapest full-screen pass`);
+  const renderer = await page.evaluate(() => {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown';
+  });
+  console.log(`  GL renderer: ${renderer}`);
 
   // Spectrum view.
   await page.goto(`${base}?view=spectrum&site=temporal`);
@@ -165,7 +193,7 @@ try {
   await wait(700);
   await shot('h-spectrum-null');
 
-  writeFileSync(resolve(out, 'results.json'), JSON.stringify({ results, bench, bench720, raf: { med, p95 }, errors }, null, 2));
+  writeFileSync(resolve(out, 'results.json'), JSON.stringify({ results, bench, bench720, baseline, renderer, raf: { med, p95 }, errors }, null, 2));
 } finally {
   await browser.close();
   await server.close();

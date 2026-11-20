@@ -151,6 +151,8 @@ export interface BlockSpec {
 export interface BlockGroup {
   repeat: Num;
   blocks: BlockItem[];
+  /** Include the group only when this strategy slot is filled (profiling sessions). */
+  whenSlot?: number;
 }
 export type BlockItem = BlockSpec | BlockGroup;
 
@@ -572,6 +574,7 @@ export function instantiateProgram(p: Program, opts: InstantiateOptions = {}): S
   const expand = (items: BlockItem[]) => {
     for (const it of items) {
       if (isGroup(it)) {
+        if (it.whenSlot !== undefined && opts.strategySlots?.[it.whenSlot] === undefined) continue;
         const n = Math.max(0, Math.round(num(it.repeat)));
         for (let i = 0; i < n; i++) expand(it.blocks);
         continue;
@@ -649,7 +652,7 @@ export function instantiateProgram(p: Program, opts: InstantiateOptions = {}): S
     programId: p.id,
     programVersion: p.version,
     programName: p.name,
-    state: p.state,
+    state: p.state.includes('${') ? substitutePath(p.state, values) : p.state,
     level,
     variables: values,
     targets,

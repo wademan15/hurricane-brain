@@ -8,7 +8,7 @@
  */
 import { MAX_COMMAND_LEN } from './constants';
 
-export function encodeCommand(cmd: string): Uint8Array {
+export function encodeCommand(cmd: string): Uint8Array<ArrayBuffer> {
   if (cmd.length === 0 || cmd.length > MAX_COMMAND_LEN) throw new RangeError(`command length ${cmd.length}`);
   const out = new Uint8Array(cmd.length + 2);
   out[0] = cmd.length + 1;

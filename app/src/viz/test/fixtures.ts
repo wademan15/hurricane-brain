@@ -153,7 +153,7 @@ export interface SlowOpts {
 }
 
 export function slowFrame(o: SlowOpts): SlowFrame {
-  const base = allNullSlow(o.t, 'ok');
+  const base = allNullSlow(o.t, 'not_confirmed');
   const peaks = o.tracks.map((t) => ({ f: t.freq.v ?? 10, db: t.height_db.v ?? 0 }));
   return {
     ...base,
@@ -162,8 +162,8 @@ export function slowFrame(o: SlowOpts): SlowFrame {
     tracks: o.tracks,
     dominant: o.dominant,
     cascades: {
-      phi: o.phi ?? emptyCascade('phi', 'ok'),
-      octave: o.octave ?? emptyCascade('octave', 'ok'),
+      phi: o.phi ?? emptyCascade('phi', 'not_confirmed'),
+      octave: o.octave ?? emptyCascade('octave', 'not_confirmed'),
     },
     states: {
       phi: { target: 'phi', active: (o.phi?.steps ?? 0) > 0, for_s: o.phi?.held_s ?? 0, stat: m(1.2), enter_at: 2, exit_at: 1 },
@@ -198,7 +198,7 @@ export function phiCascadeFrame(t: number, dominant: number | null = 3, heldS = 
   return slowFrame({
     t, tracks, dominant,
     phi: cascade('phi', [1, 2, 3, 4], 0.8, heldS),
-    octave: { ...emptyCascade('octave', 'ok'), excess_a: m(0, 0.02) },
+    octave: { ...emptyCascade('octave', 'not_confirmed'), excess_a: m(0, 0.02) },
     match: 0.85,
   });
 }
@@ -208,7 +208,7 @@ export function octaveCascadeFrame(t: number, dominant: number | null = 2, heldS
   const tracks = [track(1, 5.0, 6, 'theta'), track(2, 10.0, 10), track(3, 20.0, 5, 'beta')];
   return slowFrame({
     t, tracks, dominant,
-    phi: { ...emptyCascade('phi', 'ok'), excess_a: m(0, 0.02) },
+    phi: { ...emptyCascade('phi', 'not_confirmed'), excess_a: m(0, 0.02) },
     octave: cascade('octave', [1, 2, 3], 0.85, heldS),
     match: 0.85,
   });

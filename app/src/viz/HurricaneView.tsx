@@ -55,6 +55,7 @@ export function HurricaneView({ source, quality = 'medium', className, style, on
   const stateRef = useRef<VisualState | null>(null);
   const readoutRef = useRef<Readout | null>(null);
   const onReadoutRef = useRef(onReadout);
+  const qualityRef = useRef(quality);
   const [message, setMessage] = useState<string | null>('No data');
   const [glProblem, setGlProblem] = useState<string | null>(null);
   const [readout, setReadoutState] = useState<Readout | null>(null);
@@ -79,7 +80,7 @@ export function HurricaneView({ source, quality = 'medium', className, style, on
 
     let renderer: HurricaneRenderer | null = null;
     try {
-      renderer = new HurricaneRenderer(canvas, quality);
+      renderer = new HurricaneRenderer(canvas, qualityRef.current);
       if (!renderer.ok) setGlProblem('This device cannot draw the storm (WebGL is unavailable). The readouts still work.');
     } catch (e) {
       setGlProblem(`The storm could not be drawn: ${(e as Error).message}`);
@@ -140,10 +141,11 @@ export function HurricaneView({ source, quality = 'medium', className, style, on
       rendererRef.current = null;
       stateRef.current = null;
     };
-    // The initial quality is read once; later changes are applied below without rebuilding the context.
+    // Quality changes are applied below without rebuilding the context.
   }, [source]);
 
   useEffect(() => {
+    qualityRef.current = quality;
     rendererRef.current?.setQuality(quality);
   }, [quality]);
 

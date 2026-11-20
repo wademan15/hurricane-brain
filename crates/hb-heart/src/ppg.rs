@@ -146,7 +146,11 @@ impl PpgDetector {
                 continue;
             }
             let y = filtfilt_bandpass(&x, fs, p.ppg_band_lo_hz, p.ppg_band_hi_hz, fs as usize);
-            self.quality[c] = Some(pulse_quality(&y, fs, p.ppg_refractory_s, p.ppg_max_period_s));
+            // Quality over the newest ppg_quality_window_s of the window, excluding the margin
+            // (short, so that a changing heart rate does not smear the autocorrelation).
+            let qe = n.saturating_sub((p.ppg_margin_s * fs * 0.5) as usize);
+            let qs = qe.saturating_sub((p.ppg_quality_window_s * fs) as usize);
+            self.quality[c] = Some(pulse_quality(&y[qs..qe], fs, p.ppg_refractory_s, p.ppg_max_period_s, p.ppg_regularity_tol));
             filtered.push(Some(y));
         }
         // Choose the channel.
@@ -201,6 +205,7 @@ impl PpgDetector {
                 self.recent_amps.clear();
             }
         }
+        if region_end_t > 46.0 && region_end_t < 48.8 { eprintln!("DBG step e_t {:.3} region {:.3}-{:.3} ch {:?} q {:?}", self.anchor_t + e as f64/fs, self.anchor_t + region_start as f64/fs, region_end_t, chosen, self.quality); }
         let reference = if self.recent_amps.len() >= 3 {
             median(&self.recent_amps.iter().copied().collect::<Vec<_>>())
         } else {
@@ -221,6 +226,7 @@ impl PpgDetector {
             let d = if den != 0.0 { (0.5 * (y0 - y2) / den).clamp(-0.5, 0.5) } else { 0.0 };
             let amp = y1 - 0.25 * (y0 - y2) * d;
             let cand = Candidate { t: self.anchor_t + (abs as f64 + d) / fs, amp };
+            if cand.t > 46.0 && cand.t < 48.5 { eprintln!("DBG cand {:.3} amp {:.3} thr {:.3} pending {:?}", cand.t, amp, thr, self.pending); }
             match self.pending.take() {
                 None => self.pending = Some(cand),
                 Some(pd) => {
@@ -259,9 +265,46 @@ impl PpgDetector {
     }
 }
 
-/// Peak normalized autocorrelation of y at lags between `min_period` and `max_period` seconds.
-/// Near 1 for a clean periodic pulse; low for noise.
-pub fn pulse_quality(y: &[f64], fs: f64, min_period: f64, max_period: f64) -> f64 {
+/// Channel quality, 0..1: the product of two measures over the analysis stretch.
+///
+/// - Periodicity: the peak normalized autocorrelation at lags between `min_period` and
+///   `max_period` seconds (near 1 for a clean pulse at a steady rate, lowered by a changing rate).
+/// - Regularity: the fraction of consecutive pulse-interval pairs that differ by less than
+///   `reg_tol` of their median, from a simple peak pick (local maxima above 40% of the stretch
+///   maximum, `min_period` apart). Band-limited noise passes the first sometimes, rarely both.
+pub fn pulse_quality(y: &[f64], fs: f64, min_period: f64, max_period: f64, reg_tol: f64) -> f64 {
+    autocorr_peak(y, fs, min_period, max_period) * regularity(y, fs, min_period, reg_tol)
+}
+
+fn regularity(y: &[f64], fs: f64, min_period: f64, tol: f64) -> f64 {
+    let mx = y.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    if !(mx > 0.0) {
+        return 0.0;
+    }
+    let refr = (min_period * fs).round() as usize;
+    let mut peaks: Vec<(usize, f64)> = Vec::new();
+    for i in 1..y.len().saturating_sub(1) {
+        if y[i] > y[i - 1] && y[i] >= y[i + 1] && y[i] > 0.4 * mx {
+            match peaks.last_mut() {
+                Some(last) if i - last.0 < refr => {
+                    if y[i] > last.1 {
+                        *last = (i, y[i]);
+                    }
+                }
+                _ => peaks.push((i, y[i])),
+            }
+        }
+    }
+    if peaks.len() < 4 {
+        return 0.0;
+    }
+    let iv: Vec<f64> = peaks.windows(2).map(|w| (w[1].0 - w[0].0) as f64).collect();
+    let med = median(&iv);
+    let good = iv.windows(2).filter(|w| (w[1] - w[0]).abs() < tol * med).count();
+    good as f64 / (iv.len() - 1) as f64
+}
+
+fn autocorr_peak(y: &[f64], fs: f64, min_period: f64, max_period: f64) -> f64 {
     let n = y.len();
     let l0 = (min_period * fs).floor().max(1.0) as usize;
     let l1 = ((max_period * fs).ceil() as usize).min(n / 2);

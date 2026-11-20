@@ -142,7 +142,7 @@ def s2_welch(stretches):
     return ChannelSpectrum(np.vstack(eigs), dof, group=grp)
 
 
-IRASA_H = np.round(np.arange(1.10, 1.901, 0.05), 2)
+IRASA_H = np.round(np.arange(1.10, 1.901, 0.10), 2)  # 9 factors (yasa uses 17 at 0.05 steps; 9 for run time)
 
 
 def _irasa_fractal(x):

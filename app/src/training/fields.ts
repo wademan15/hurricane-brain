@@ -16,6 +16,7 @@
  *   iaf_hz
  *   fast.track[alpha].height_db | fast.track[alpha].freq | fast.artifact
  *   heart.rmssd_ms | heart.resonance_strength | heart.high_hrv.active
+ *   heart.coupling[alpha.above_bg_db@temporal].correlation.value   (also .chance and .p)
  *   diff(spectra[temporal].bands.theta.above_bg_db, spectra[temporal].bands.alpha.above_bg_db)
  *
  * `diff(A, B)` is A minus B with standard errors combined in quadrature. It is the only
@@ -107,7 +108,7 @@ function parseSelector(raw: string, allowed: readonly string[] | null, what: str
 const TRACK_FIELDS = ['freq', 'freq_integrated', 'height_db', 'width_hz', 'age_s'] as const;
 const FAST_TRACK_FIELDS = ['freq', 'amp_uv', 'height_db'] as const;
 const COMPARISON_FIELDS = ['freq_diff', 'balance', 'locking_excess', 'match'] as const;
-const HEART_MEASURED = ['hr_bpm', 'rmssd_ms', 'sdnn_ms', 'lf_power', 'hf_power', 'resonance_hz', 'resonance_strength', 'breath_bpm', 'pacer_adherence'] as const;
+const HEART_MEASURED = ['hr_bpm', 'rmssd_ms', 'sdnn_ms', 'lf_power', 'hf_power', 'resonance_hz', 'resonance_strength', 'breath_bpm', 'breath_phase', 'pacer_adherence'] as const;
 const QUALITY_FIELDS = ['emg_db', 'sd_uv', 'mains_uv', 'railed', 'clean_fraction'] as const;
 
 const UNITS: Record<string, string> = {
@@ -339,6 +340,23 @@ function compileUncached(path: string): FieldRef {
         if (which === 'active') return fromBool(h.high_hrv.active);
         if (which === 'for_s') return ok(h.high_hrv.for_s);
         return copy(h.high_hrv.stat);
+      },
+    };
+  }
+  // heart.coupling[BRAIN].MEASURE.(value|chance|p), e.g. heart.coupling[alpha.above_bg_db@temporal].correlation.value
+  if ((m = path.match(/^heart\.coupling\[([^\]]+)\]\.(\w+)\.(value|chance|p)$/))) {
+    const brain = m[1];
+    const measure = m[2];
+    const which = m[3] as 'value' | 'chance' | 'p';
+    return {
+      path, kinds: ['heart'], clock: 'heart', unit: '', boolean: false,
+      resolve(ctx) {
+        const h = freshHeart(ctx);
+        if (isMeasured(h)) return h;
+        const c = h.coupling.find((x) => x.brain === brain && x.measure === measure);
+        if (!c) return nul('not_available');
+        if (c.suspect_artifact) return nul('artifact');
+        return copy(c[which]);
       },
     };
   }

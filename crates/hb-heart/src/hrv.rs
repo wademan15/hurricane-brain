@@ -222,12 +222,13 @@ pub fn freq_domain(p: &HeartParams, beats_all: &[BeatRec], first_t: Option<f64>,
         Err(why) => return FreqDomain::null(why),
     };
     let fs = r.fs;
-    let s = Spectrum::periodogram(&r.v, fs, p.spec_pad_factor);
+    let s = Spectrum::multitaper(&r.v, fs, p.spec_pad_factor, p.spec_tapers.max(1.0) as usize);
     let dof = |lo: f64, hi: f64| {
-        // Hann window: about one independent estimate per 1.5 frequency resolutions, each with
-        // 2 degrees of freedom; se of a chi-square band sum = P / sqrt(dof / 2).
-        let n_ind = ((hi - lo) * s.duration_s / 1.5).max(1.0);
-        2.0 * n_ind
+        // Sine multitaper: about one independent estimate per (tapers + 1) / duration of bandwidth,
+        // each with 2 x tapers degrees of freedom (at least that); se of a chi-square sum = P / sqrt(dof / 2).
+        let k = s.tapers as f64;
+        let n_ind = ((hi - lo) * s.duration_s / (k + 1.0)).max(1.0);
+        2.0 * k * n_ind
     };
     let band = |lo: f64, hi: f64| {
         let pw = s.band_power(lo, hi);
@@ -377,7 +378,7 @@ pub fn pacer_adherence(p: &HeartParams, beats_all: &[BeatRec], first_t: Option<f
     };
     let hw = p.resonance_halfwidth_hz;
     let share = |x: &[f64]| {
-        let s = Spectrum::periodogram(x, r.fs, p.spec_pad_factor);
+        let s = Spectrum::multitaper(x, r.fs, p.spec_pad_factor, p.spec_tapers.max(1.0) as usize);
         let tot = s.band_power(p.lf_lo_hz, p.hf_hi_hz);
         if tot > 0.0 {
             s.band_power(f - hw, f + hw) / tot

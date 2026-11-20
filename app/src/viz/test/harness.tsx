@@ -134,6 +134,43 @@ function bench(w: number, h: number, n: number): { meanMs: number; p95Ms: number
   return { meanMs: times.reduce((a, b) => a + b, 0) / n, p95Ms: times[Math.floor(n * 0.95)], api };
 }
 
+/**
+ * The same measurement for a trivial shader (one texture read per pixel), to express the
+ * hurricane's cost relative to the cheapest possible full-screen pass on this renderer.
+ */
+function benchBaseline(w: number, h: number, n: number): { meanMs: number } {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const gl = c.getContext('webgl2')!;
+  const sh = (t: number, src: string) => { const x = gl.createShader(t)!; gl.shaderSource(x, src); gl.compileShader(x); return x; };
+  const p = gl.createProgram()!;
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision highp float;uniform sampler2D t;uniform float k;void main(){gl_FragColor=texture2D(t,gl_FragCoord.xy/256.+k);}'));
+  gl.linkProgram(p);
+  gl.useProgram(p);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(256 * 256 * 4));
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.viewport(0, 0, w, h);
+  const px = new Uint8Array(4);
+  const kLoc = gl.getUniformLocation(p, 'k');
+  let total = 0;
+  for (let i = 0; i <= n; i++) {
+    const s = performance.now();
+    gl.uniform1f(kLoc, i * 0.001);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    if (i > 0) total += performance.now() - s;
+  }
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return { meanMs: total / n };
+}
+
 /** Intervals between animation frames of the live view, ms. */
 function rafIntervals(n: number): Promise<number[]> {
   return new Promise((resolve) => {
@@ -155,6 +192,7 @@ declare global {
     hb: {
       setScenario(s: Scenario): void;
       bench: typeof bench;
+      benchBaseline: typeof benchBaseline;
       rafIntervals: typeof rafIntervals;
     };
   }
@@ -168,5 +206,6 @@ window.hb = {
     tick();
   },
   bench,
+  benchBaseline,
   rafIntervals,
 };

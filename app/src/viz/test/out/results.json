@@ -13,7 +13,7 @@
     {
       "name": "(b) static frame with measured dominant frequency: image rotates",
       "ok": true,
-      "detail": "37.0% of pixels changed in 1 s"
+      "detail": "37.1% of pixels changed in 1 s"
     },
     {
       "name": "(b) static frame with dominant = null: pixel-identical across 1 s",
@@ -23,7 +23,7 @@
     {
       "name": "(c) vs (d): golden ratio and octave cascades look different",
       "ok": true,
-      "detail": "mean |diff| 10.14/255, 45.0% pixels differ"
+      "detail": "mean |diff| 9.93/255, 45.0% pixels differ"
     },
     {
       "name": "tap on the centre opens a readout for the eye",
@@ -34,21 +34,30 @@
       "name": "readout shows golden ratio, octave and chance side by side",
       "ok": true,
       "detail": ""
+    },
+    {
+      "name": "WebGL context loss and restore: the same storm is drawn again",
+      "ok": true,
+      "detail": "mean |diff| 0.000/255"
     }
   ],
   "bench": {
-    "meanMs": 206.3283333333287,
-    "p95Ms": 256.5,
+    "meanMs": 236.9299999999969,
+    "p95Ms": 332.29999999981374,
     "api": "webgl2"
   },
   "bench720": {
-    "meanMs": 81.92000000000698,
-    "p95Ms": 98.89999999990687,
+    "meanMs": 88.19666666666356,
+    "p95Ms": 118,
     "api": "webgl2"
   },
+  "baseline": {
+    "meanMs": 60.65333333333644
+  },
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "raf": {
-    "med": 104.70000000018626,
-    "p95": 132
+    "med": 102.5,
+    "p95": 162.70000000018626
   },
   "errors": []
 }

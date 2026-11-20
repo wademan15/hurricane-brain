@@ -162,7 +162,9 @@ function digits(x: number): number {
 }
 
 export function fmtNumber(v: number, se: number | null | undefined, unit: string): string {
-  const d = se != null && se > 0 ? Math.max(0, Math.min(4, 1 - Math.floor(Math.log10(se)))) : digits(v);
+  const d = se != null && se > 0
+    ? Math.max(0, Math.min(4, 1 - Math.floor(Math.log10(se))))
+    : Number.isInteger(v) ? 0 : digits(v);
   const val = v.toFixed(d);
   const pm = se != null && se > 0 ? ` ± ${se.toFixed(d)}` : '';
   const un = unit && unit !== '0..1' ? ` ${unit}` : '';
@@ -170,11 +172,11 @@ export function fmtNumber(v: number, se: number | null | undefined, unit: string
 }
 
 export function fmtMeasured(m: Measured, unit = ''): string {
-  if (m.v === null) return `not measured (${reasonText(m.why)})`;
+  if (m.v === null) return m.why === 'ok' ? 'not measured' : `not measured (${reasonText(m.why)})`;
   return fmtNumber(m.v, m.se, unit);
 }
 
 export function fmtBound(b: Bound): string {
-  if (b.measured === null) return `not measured (${reasonText(b.why)})`;
+  if (b.measured === null) return b.why === 'ok' ? 'not measured' : `not measured (${reasonText(b.why)})`;
   return fmtNumber(b.measured, b.se, b.unit);
 }

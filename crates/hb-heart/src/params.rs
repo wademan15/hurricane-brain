@@ -119,6 +119,8 @@ heart_params! {
     spec_window_s: 120.0,
     /// Spectral measures are null when two consecutive clean beats in the window are further apart than this, s.
     spec_max_bridge_s: 3.0,
+    /// Number of sine tapers in the spectral estimate (2 x this degrees of freedom per frequency).
+    spec_tapers: 3.0,
     /// Zero padding factor of the periodogram (frequency grid only, not resolution).
     spec_pad_factor: 4.0,
     lf_lo_hz: 0.04,
@@ -192,8 +194,12 @@ heart_params! {
     ppg_threshold_frac: 0.4,
     /// Recent-amplitude memory is cleared after this long without a beat, s.
     ppg_amp_reset_s: 2.5,
-    /// Channel quality (peak normalized autocorrelation at pulse lags) needed to detect beats.
-    ppg_min_quality: 0.5,
+    /// Length of the stretch the channel quality is computed over, s.
+    ppg_quality_window_s: 7.5,
+    /// Consecutive pulse intervals within this fraction of their median count as regular (quality).
+    ppg_regularity_tol: 0.15,
+    /// Channel quality (periodicity x regularity, see ppg::pulse_quality) needed to detect beats.
+    ppg_min_quality: 0.45,
     /// A channel replaces the current one only when better by this much.
     ppg_switch_margin: 0.1,
     /// Longest pulse period considered in the quality measure, s.

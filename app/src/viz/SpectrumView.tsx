@@ -111,7 +111,7 @@ export function SpectrumView({ source, site, className, style }: SpectrumViewPro
 
 const db = (x: number): number => 10 * Math.log10(x);
 
-export function drawSpectrum(
+function drawSpectrum(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
@@ -186,15 +186,15 @@ export function drawSpectrum(
     line(ctx, idx.map(([f], k) => [X(f), YT(bgDb[k])]), COL.fit, 1.2);
     ctx.setLineDash([]);
     ctx.fillStyle = COL.axis;
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'left';
     ctx.fillText(
-      `background 1/f^${fmtNumber(exp!, spec.bg_exponent.se, '')}`,
-      padL + plotW, topY + 8,
+      `spectrum, and fitted background (dashed) 1/f^${fmtNumber(exp!, spec.bg_exponent.se, '')}`,
+      padL + 6, topY + topH - 8,
     );
   } else {
     ctx.fillStyle = COL.axis;
-    ctx.textAlign = 'right';
-    ctx.fillText(`background: not measured (${reasonText(spec.bg_exponent.why)})`, padL + plotW, topY + 8);
+    ctx.textAlign = 'left';
+    ctx.fillText(`background: not measured (${reasonText(spec.bg_exponent.why)})`, padL + 6, topY + topH - 8);
   }
 
   // Bottom: flattened spectrum, dB above the fitted background.
@@ -246,7 +246,7 @@ export function drawSpectrum(
     ctx.fillText(`${f}`, X(f), botY + botH + 12);
   }
   ctx.textAlign = 'right';
-  ctx.fillText('Hz', padL + plotW, botY + botH + 12);
+  ctx.fillText('Hz', padL - 6, botY + botH + 12);
 
   // Legend.
   ctx.textAlign = 'left';
@@ -255,6 +255,8 @@ export function drawSpectrum(
   ctx.fillText('golden ratio partner', padL + 6, ly);
   ctx.fillStyle = COL.octave;
   ctx.fillText('octave partner', padL + 136, ly);
+  ctx.fillStyle = COL.axis;
+  ctx.fillText('flattened: spectrum ÷ background', padL + 236, ly);
 }
 
 function drawPeak(

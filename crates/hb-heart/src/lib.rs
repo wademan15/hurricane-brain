@@ -126,6 +126,11 @@ impl HeartEngine {
         self.rr_clock.lost_events
     }
 
+    /// PPG channel currently used for pulse detection (None when no channel passes quality).
+    pub fn ppg_active_channel(&self) -> Option<usize> {
+        self.ppg.active_channel()
+    }
+
     /// Latest quality per PPG channel (None before the first analysis or on a dropout).
     pub fn ppg_quality(&self) -> &[Option<f64>] {
         &self.ppg.quality

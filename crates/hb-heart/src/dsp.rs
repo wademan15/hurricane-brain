@@ -237,36 +237,38 @@ pub struct Spectrum {
     pub psd: Vec<f64>,
     /// Length of the data behind it, s.
     pub duration_s: f64,
+    /// Number of tapers averaged.
+    pub tapers: usize,
 }
 
 impl Spectrum {
-    /// Hann-windowed periodogram of the linearly detrended series (Welch with one segment).
-    pub fn periodogram(x: &[f64], fs: f64, pad_factor: f64) -> Spectrum {
+    /// Sine multitaper spectrum (Riedel and Sidorenko) of the linearly detrended series, averaged
+    /// over `tapers` tapers: about 2 x tapers degrees of freedom per frequency at a half resolution of
+    /// (tapers + 1) / (2 x duration). With tapers = 1 it is a single sine-windowed periodogram.
+    pub fn multitaper(x: &[f64], fs: f64, pad_factor: f64, tapers: usize) -> Spectrum {
         let n = x.len();
+        let k_max = tapers.max(1);
         let y = detrend(x, None);
         let nfft = next_pow2(((n as f64) * pad_factor.max(1.0)).ceil() as usize).max(2);
-        let mut re = vec![0.0; nfft];
-        let mut im = vec![0.0; nfft];
-        let mut wss = 0.0;
-        for i in 0..n {
-            let w = if n > 1 { 0.5 - 0.5 * cos(2.0 * PI * i as f64 / (n - 1) as f64) } else { 1.0 };
-            re[i] = y[i] * w;
-            wss += w * w;
-        }
-        fft(&mut re, &mut im, false);
         let nb = nfft / 2 + 1;
-        let scale = 1.0 / (fs * wss);
-        let psd = (0..nb)
-            .map(|k| {
-                let p = (re[k] * re[k] + im[k] * im[k]) * scale;
-                if k == 0 || k == nfft / 2 {
-                    p
-                } else {
-                    2.0 * p
-                }
-            })
-            .collect();
-        Spectrum { df: fs / nfft as f64, psd, duration_s: n as f64 / fs }
+        let mut psd = vec![0.0; nb];
+        for k in 1..=k_max {
+            let mut re = vec![0.0; nfft];
+            let mut im = vec![0.0; nfft];
+            let mut wss = 0.0;
+            for i in 0..n {
+                let w = sin(PI * k as f64 * (i + 1) as f64 / (n + 1) as f64);
+                re[i] = y[i] * w;
+                wss += w * w;
+            }
+            fft(&mut re, &mut im, false);
+            let scale = 1.0 / (fs * wss * k_max as f64);
+            for j in 0..nb {
+                let p = (re[j] * re[j] + im[j] * im[j]) * scale;
+                psd[j] += if j == 0 || j == nfft / 2 { p } else { 2.0 * p };
+            }
+        }
+        Spectrum { df: fs / nfft as f64, psd, duration_s: n as f64 / fs, tapers: k_max }
     }
 
     pub fn freq(&self, k: usize) -> f64 {
@@ -450,7 +452,7 @@ mod tests {
         // Amplitude 30 ms sinusoid at 0.1 Hz over 120 s at 4 Hz: power A^2/2 = 450 ms^2.
         let fs = 4.0;
         let x: Vec<f64> = (0..480).map(|i| 30.0 * sin(2.0 * PI * 0.1 * i as f64 / fs)).collect();
-        let s = Spectrum::periodogram(&x, fs, 4.0);
+        let s = Spectrum::multitaper(&x, fs, 4.0, 3);
         let p = s.band_power(0.04, 0.4);
         assert!((p - 450.0).abs() / 450.0 < 0.02, "band power {p}");
         let (f, _) = s.peak(0.04, 0.26).unwrap();
