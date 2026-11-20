@@ -31,7 +31,7 @@ engine spec; this doc states what it needs from that spec.
    including "this technique did not change your brain".
 7. **Built for later merging.** Timestamps, event markers and a strategy-arm
    interface leave room for HRV (Polar H10), breath pacing and EarthSync
-   entrainment (R6.5, R9).
+   entrainment (R6.6, R9).
 
 ---
 
@@ -365,6 +365,14 @@ a moving target.
   strategy, with feedback reflecting time spent with the alpha:theta peak ratio
   near phi.
 - Copy should present it as emerging science (R6.1).
+- **Two cascade detectors run side by side** (Jesus, 2026-11-20): an
+  **octave cascade** (successive band peaks near 2:1) and a **golden ratio
+  cascade** (successive band peaks near 1.618:1), across up to four bands on
+  Muse (delta, theta, alpha, beta; gamma excluded as muscle). Each has its own
+  gentle sound marker, a soft swell in a distinct timbre, never a beep, and
+  every event is logged with its bands, ratios and duration (R6.5, Grade F).
+  The user can choose which cascades give a sound marker (setting; default
+  both on).
 
 **P8 Balance** (`approach`) — experimental, behind a "labs" switch.
 - Frontal alpha asymmetry feedback with positive-emotion strategies.

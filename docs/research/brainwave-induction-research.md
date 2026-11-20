@@ -24,6 +24,7 @@ re-checked against the original paper first.
 | **B** | Several controlled studies point the same way, with some inconsistency or small samples. Build on it, but measure. |
 | **C** | Small, uncontrolled, or single-lab studies. Treat as a hypothesis to test with our own data. |
 | **D** | Tradition, practitioner reports, or marketing. Offer it as an option only, never as a claim. |
+| **F** | Frontier: first-hand observations (including Jesus's own EEG recordings) and practitioner work ahead of the peer-reviewed literature. Kept deliberately, labelled honestly, and treated as something our own data can test. |
 
 The single most important design consequence of this table: **because most
 techniques sit at B to D, the app must measure what works for each person
@@ -494,7 +495,55 @@ this section supplies the scientific grounding and the training implications.
 | Lucid dreaming | Raised frontal ~40 Hz during REM (Voss et al. 2009) | Overnight, uncertain | B–C |
 | Deep NREM sleep | Delta slow waves, spindles | Yes (Muse S overnight) | A |
 
-### 6.5 Where entrainment fits later (EarthSync merge)
+### 6.5 Frontier observations: octave and golden ratio cascades, trance states
+
+Some of what this app is built around sits ahead of the published literature.
+We keep it, label it Grade F, and design the app so it can gather good data on
+it.
+
+**Octave cascade and golden ratio cascade (Grade F for the cascade
+phenomenon; the underlying ratios have Grade B grounding).**
+- Jesus has recorded EEG in which a person's band peaks line up across several
+  bands at once, either in **octaves** (each peak about 2× the one below:
+  for example ~2.5, 5, 10, 20, 40 Hz) or in a **golden ratio series** (each
+  peak about 1.618× the one below). FlameInMind (Dan Winter and Patrick Botte)
+  shows marker lines for both and alerts when they occur.
+- Mainstream anchors for both: Klimesch's binary-hierarchy model has band
+  centres doubling from band to band (octaves), with harmonic 2:1 relations
+  proposed to **couple** rhythms and golden-mean relations to **decouple**
+  them (6.1). Rodriguez-Larios and Alaerts measured transient 2:1 alpha:theta
+  relations directly. So each pairwise ratio is a published idea; what has not
+  been published, to our knowledge, is a **multi-band cascade** (three or more
+  bands locked in one series at the same moment) as a trainable state.
+- **On Muse:** a cascade across delta–theta–alpha–beta is measurable at
+  TP9/TP10 when the signal is clean; the gamma rung is not trustworthy because
+  of muscle, so a Muse cascade should be defined on up to four bands and say so.
+- **Design:** the engine detects both cascade types side by side, with a gentle
+  sound marker (never a beep) for each, and logs every event so we build the
+  first good dataset on them.
+
+**Children's trance states and blindfold sight (Grade F, extraordinary
+claim).**
+- Jesus has observed his niece and nephews entering trance states and
+  reports seeing cascades in their EEG during them. Practitioner programmes
+  teach children "mind sight" or blindfolded reading.
+- The trance and EEG part is plausible and recordable: absorption and
+  hypnotic-like states are well documented in children, who are on average
+  more hypnotisable than adults.
+- The blindfold-sight part has, to our knowledge, no controlled
+  peer-reviewed support; informal tests usually cannot rule out seeing past
+  the blindfold. That does not prove it false; it means it has not been
+  tested well.
+- **How the app can help:** record EEG during these sessions with event
+  markers so the cascades can be analysed properly. If Jesus wants to test
+  the perception claim, a simple rigorous protocol is possible later
+  (opaque goggles that block downward gaze, targets chosen at random by
+  software, the tester not knowing the target).
+- **Product rule:** do not make blindfold-sight claims in marketing; do offer
+  the recording and analysis tools. Any work with children needs parental
+  consent and child-appropriate session lengths.
+
+### 6.6 Where entrainment fits later (EarthSync merge)
 Jesus has a separate entrainment app, EarthSync, that may later merge into one
 app with HRV, breath training and visual entrainment. Not in scope now, but the
 brain side should leave room for it:
