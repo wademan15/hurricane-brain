@@ -99,6 +99,38 @@ Left open, in order of weight (details in the review report):
 6. Rhythmic eye or eyelid activity below the step detector's threshold is a rhythm as far as this engine can tell. The delta low-confidence flag of spec 5.3 is still missing from the frame.
 7. `slow_update_timing` exceeds its 50 ms budget on a loaded machine (116 ms seen with other builds running).
 
+## Decisions on the bake-off and the fake test, November 2026 (signal architect)
+
+Spec sections 3, 5, 6.5, 6.6, 8, 9, 10, 11, 14 and 15 carry the reasoning; regression tests are the second half of `tests/review.rs`.
+
+- **State rule (ratios.rs, engine.rs).** Statistic is `chain_stat`: the largest total ln Λ along a chain of eligible pairs (one pair's ln Λ for two tracks). Entry threshold is the larger of `state_min_evidence` (2) and the chance threshold on the same statistic; exit 1 below. The chance threshold alone could be hundreds of nats below zero and let "less far off than chance" enter (near-miss files, artifacts); the single-pair statistic could not beat its own threshold among many tracks (phi5_15db).
+- **Excess (ratios.rs `NullDist::excess`).** Measured from the closeness only `excess_level` (5%) of surrogates reach, not from their mean. Zero unless p ≤ 5%. `excess_b` is null (warming up) while chance B's percentile floor is above that level.
+- **Targets.** `Target::Ratio3` (3:1), index 4 in `Target::ALL`, serialized `ratio_3`. `ratios::NT` = 5.
+- **Frame additions.** `states.both { active, for_s }` (types `States`, `BothState`); `spectra[].bands_fixed` (always present, fixed band edges; proposed here, optional in frames.ts). `SlowFrame.states` is now `States`, not `PhiOctave<AlignedState>`. Schema number unchanged (1), as in frames.ts.
+- **Harmonics (engine.rs `detect_harmonics`, compare.rs `locking_vector`).** Candidate band instead of the tolerance gate; mark from the mean locking vector over the integration time (`harmonic_alpha`, `harmonic_release_p`) or one decisive window; pending until `harmonic_pending_tests`; family pairs excluded. `PairScore.harmonic` is true for every pair kept out of scoring (marked, pending or family); `Track.harmonic_of` only for marked pairs.
+- **Tracks resume (engine.rs `link_tracks`, `dormant`).** `track_resume_s`. `TrackEvent::Resumed` added. `TrackInt::integrate` counts independent windows by time covered, so a pause does not inflate n_eff.
+- **Gaps (engine.rs `push_eeg`).** Rows with no finite value are missing samples, repaired like an index jump; `repaired_max_fraction` 0.02 to 0.04. `hb-run` needed no change.
+- **Gating.** Muscle band is `muscle_lo_hz`..`muscle_hi_hz` (65 to 95, was 30 to 45 fixed). Motion reference is a quantile (`motion_ref_quantile`, 0.25).
+- **Chance B history.** `chance_b_history_corr` correlation times (`Params::chance_b_need_s`); `chance_b_history_s` > 0 overrides.
+- **Presets.** `Params::preset("steady" | "quicker" | "slower" | "child")`, `Params::PRESETS`.
+
+Not adopted from the bake-off, and why:
+
+- **Smoothed eigenspectra (S1Q) and the threshold factor 1.28.** The factor answers a threshold that was anti-conservative in the lab's composite (1.19% against 1%). In this engine the analytic threshold is conservative: 0.3 to 0.45% of single-site windows and 0.4% of frames at any site on background, no confirmed track in 40 minutes of noise per background shape. Smoothing changes the degrees of freedom of the height test, the width limits and the jackknife, and needs that calibration redone; it was not done in this review. What S1Q buys (fewer duplicate peaks on broad rhythms, steadier centres) is real and is the next thing to do: see open item 2.
+- **Fixed thresholds alone for the state.** 2.2 false entries per 10 minutes on recordings with one unrelated peak per band (bake-off section 7, second column). Kept as the floor under the chance threshold.
+
+Still open after this round, most important first:
+
+1. No real recordings; channels in every synthetic file are independent.
+2. Broad rhythms (1 Hz and wider): several tracks on one rhythm, centre errors of 0.3 to 0.5 Hz at 18 to 25 Hz with a reported error about 1.6 times too small (octave3_10db top member: rms error 0.47 Hz, reported 0.30). Finding the peak's region and centre on a smoothed spectrum while testing its height on the raw one is the design to try.
+3. Sensitivity at 6 dB is far below the 80% mark (phi2_6db: 3% and 17% of frames). The per-site split of α_peak and the quadratic background both cost here.
+4. A first minute full of artifacts sets the blink and muscle references too high (a 150 µV blink train from the first second was tracked as rhythms at 1.7, 3.3 and 6.7 Hz, all marked harmonic, so no alignment was credited). A low quantile for those references, as now used for motion, is the likely fix; the thresholds would need rescaling.
+5. Rhythmic eye or eyelid activity below the step threshold is a rhythm as far as the engine can tell (a 3.3 Hz, 25 µV train is tracked). The delta low-confidence flag of spec 5.3 is still not in the frame.
+6. Muscle band 65 to 95 Hz is unverified on a real headset.
+7. Hemisphere `locking_excess` still includes the shared reference (unchanged from the review).
+8. Chance B goes back to null whenever a new track joins the scored set.
+9. Digests below are stale.
+
 ## Verified numbers (release, this machine)
 
 **Out of date after the review** for anything numeric below; kept for the record of what the first build measured.

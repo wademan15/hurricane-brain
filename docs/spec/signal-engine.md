@@ -105,17 +105,6 @@ Per channel, updated once a second, each with a measured value and a pass or fai
 
 A channel that fails is excluded from everything until it has passed for 3 seconds in a row (provisional).
 
-### 5.4 Children
-
-The owner measures children as well as adults. What differs, and what the engine does about each (all of it unverified against recordings of children, which we do not have yet):
-
-- **A slower alpha rhythm.** A young child's posterior rhythm sits near 6 to 8 Hz and reaches the adult 10 Hz around the age of ten (textbook values, recalled, not checked against a source in this review). With the fixed band labels such a rhythm is called theta. Nothing in peak confirmation, tracking, ratios or cascades uses band names, so the measurements are unaffected. Three things do use the bands: the labels on screen, the band summaries, and the placement of chance A surrogates. All three follow the individual alpha frequency when one is set (the bands become delta up to 0.4 of it, theta 0.4 to 0.8, alpha 0.8 to 1.2). So for a child the individual alpha frequency must be set, from the baseline minute, before band-based training or the chance level is read. Band summaries over the fixed edges are output as well (`bands_fixed`), so sessions can still be compared.
-- **Larger amplitudes.** Children's EEG is larger than adults'. The gating thresholds for blinks, steps, muscle and movement are all multiples of the person's own reference levels, so they scale by themselves. The one adult-only constant is the plausibility limit in 5.2 (standard deviation over 100 µV fails the channel). The "child" preset raises it to 200 µV (provisional).
-- **More movement.** Movement is gated against the person's own resting level, taken as the 25th percentile of the first minute so that a child who is moving from the start does not set a high reference. The cost is honest: more of the session is gated, and the display says so. The blink and muscle references are still medians of the first minute, and a first minute full of artifacts raises them (see 5.3); for a restless child the baseline minute should be repeated until it is calm.
-- **Shorter sessions.** The "quicker" response setting (section 15) suits short attention, with its stated cost in precision.
-
-No threshold is loosened for a child to make structure appear. A child's session with too little clean signal reads as null, with the reason.
-
 ### 5.3 Artifact gating
 
 Gating produces a validity mask per channel and a reason code. Candidate detectors, all to be tuned on recorded artifacts in the bake-off:
@@ -133,6 +122,17 @@ Rules:
 - The slow path computes its spectrum only from clean stretches inside its window, and needs a minimum clean fraction (provisional: 60%) and a minimum longest clean stretch (provisional: 2 s). Otherwise its output is null with the reason.
 - Thresholds scale to the person's own resting signal, measured in the baseline minute, and never loosen during a session to "find" signal.
 - Delta (1 to 4 Hz) results are flagged as low confidence whenever the frontal channels show eye activity in the window. On a Muse, waking delta is mostly eyes.
+
+### 5.4 Children
+
+The owner measures children as well as adults. What differs, and what the engine does about each (all of it unverified against recordings of children, which we do not have yet):
+
+- **A slower alpha rhythm.** A young child's posterior rhythm sits near 6 to 8 Hz and reaches the adult 10 Hz around the age of ten (textbook values, recalled, not checked against a source in this review). With the fixed band labels such a rhythm is called theta. Nothing in peak confirmation, tracking, ratios or cascades uses band names, so the measurements are unaffected. Three things do use the bands: the labels on screen, the band summaries, and the placement of chance A surrogates. All three follow the individual alpha frequency when one is set (the bands become delta up to 0.4 of it, theta 0.4 to 0.8, alpha 0.8 to 1.2). So for a child the individual alpha frequency must be set, from the baseline minute, before band-based training or the chance level is read. Band summaries over the fixed edges are output as well (`bands_fixed`), so sessions can still be compared.
+- **Larger amplitudes.** Children's EEG is larger than adults'. The gating thresholds for blinks, steps, muscle and movement are all multiples of the person's own reference levels, so they scale by themselves. The one adult-only constant is the plausibility limit in 5.2 (standard deviation over 100 µV fails the channel). The "child" preset raises it to 200 µV (provisional).
+- **More movement.** Movement is gated against the person's own resting level, taken as the 25th percentile of the first minute so that a child who is moving from the start does not set a high reference. The cost is honest: more of the session is gated, and the display says so. The blink and muscle references are still medians of the first minute, and a first minute full of artifacts raises them (see 5.3); for a restless child the baseline minute should be repeated until it is calm.
+- **Shorter sessions.** The "quicker" response setting (section 15) suits short attention, with its stated cost in precision.
+
+No threshold is loosened for a child to make structure appear. A child's session with too little clean signal reads as null, with the reason.
 
 ## 6. Slow path: spectrum and confirmed peaks
 
@@ -232,10 +232,10 @@ The integrated frequency is therefore the plain mean, and its variance pools two
 
 | Rhythm width | Actual error ÷ reported, before | After |
 | --- | --- | --- |
-| 0.25 Hz | 0.9 to 1.1 | 0.6 to 0.7 |
-| 0.5 Hz | 1.1 to 1.4 | 0.8 |
-| 1 Hz, 10 dB and above | 1.2 to 1.6 | 0.9 to 1.0 |
-| 1 Hz, 6 dB | 1.4 to 2.7 | 1.3 |
+| 0.25 Hz | 0.9 to 1.1 | 0.6 to 0.9 |
+| 0.5 Hz | 1.1 to 1.4 | 0.65 to 1.0 |
+| 1 Hz, 10 dB and above | 1.2 to 1.6 | 0.8 to 1.25 |
+| 1 Hz, 6 dB | 1.4 to 2.7 | 0.8 to 1.3 |
 
 Still open: for rhythms 1 Hz wide and wider the centre itself is biased, by about +0.1 Hz at 5 Hz in the integrated value and by up to −5% in single windows for rhythms 1.5 Hz wide. The reported error does not cover a bias. The centre estimator (the first candidate list in 10.1) has to be settled in the bake-off with this as a test. The reported peak width has the same cause and reads about 1.2 Hz for a rhythm whose true width at half height is 2.4 Hz.
 
@@ -243,7 +243,7 @@ Still open: for rhythms 1 Hz wide and wider the centre itself is biased, by abou
 
 Peaks are linked across windows into tracks so that "the alpha peak" has a stable identity. A new window's peak joins the track whose predicted frequency is nearest, if within 3 standard errors or 1 Hz, whichever is larger (provisional). Each track has an id, a birth time, its history of frequency, height and width, and its integrated frequency. Two tracks that converge are merged and the event is recorded. A track that splits, such as a double alpha peak, becomes two tracks.
 
-Decision: a track that ends resumes. Real rhythms wax and wane. A rhythm that fades fails persistence, and its track ends after the hold time; when it returned it used to be a new track with a new id, starting again from one window's uncertainty. On the lab's 120 s cascade recordings each planted rhythm went through 3 to 6 ids, pairs were unresolved most of the time, and the three-member cascade was in the aligned state in 14 of 480 frames. Now a peak confirmed within the joining distance of a track that ended less than 30 s ago (provisional, equal to the integration time) continues that track: same id, its window estimates of the last integration time (the pause simply contributes none) and its history. While the rhythm is away the track is not output: no confirmed peak, no track. With this change the same recording is in the state in 114 of 480 frames and the five-member one in 330.
+Decision: a track that ends resumes. Real rhythms wax and wane. A rhythm that fades fails persistence, and its track ends after the hold time; when it returned it used to be a new track with a new id, starting again from one window's uncertainty. On the lab's 120 s cascade recordings each planted rhythm went through 3 to 6 ids, pairs were unresolved most of the time, and the three-member cascade was in the aligned state in 14 of 480 frames. Now a peak confirmed within the joining distance of a track that ended less than 30 s ago (provisional, equal to the integration time) continues that track: same id, its window estimates of the last integration time (the pause simply contributes none) and its history. While the rhythm is away the track is not output: no confirmed peak, no track. With this change (and the state rule of 8.4) the same recording is in the state in 75 of 480 frames and the five-member one in 294.
 
 Tracks are named by frequency only. Band names (delta 1 to 4, theta 4 to 8, alpha 8 to 13, beta 13 to 30, gamma 30 to 45 Hz) are labels for display and training targets. They are never used to force one peak per band.
 
@@ -304,6 +304,8 @@ Targets: golden ratio, ln φ = 0.4812 (φ = 1.6180). Octave, ln 2 = 0.6931. They
 
 Control targets are scored the same way and reported with them: 1.5 and 1.8 (provisional). A method that lights up for the golden ratio and equally for 1.5 has found nothing special about the golden ratio.
 
+Decision: a fifth target, 3:1 (ln 3 = 1.0986), is scored and logged for every pair exactly like the controls, and like them never forms a cascade or a state. The reason is the published work this app's question comes from: the studies of alpha against theta frequency tested 2:1 and 3:1 relationships, not the golden ratio (recalled from the literature, not re-read in this review). Logging the distance of every pair to all three lets the app's own recordings test the golden ratio hypothesis against the two ratios the literature did test, with the same procedure and the same chance levels.
+
 Useful identity: φ² = φ + 1. In a golden ratio cascade each frequency is the sum of the two below it, for example 3.8, 6.2, 10.0, 16.2, 26.2 Hz. An octave cascade from the same start runs 3.8, 7.6, 15.2, 30.4 Hz.
 
 ### 8.2 Pair alignment
@@ -336,6 +338,28 @@ The app needs a yes or no ("in golden ratio alignment") as well as a continuous 
 
 My expectation, to be tested and not assumed, is that T3 with a T4 threshold wins.
 
+**Decision (bake-off, fake test and review): the rule the engine uses.** The expectation above was wrong in the form it was first built, and the bake-off was right to say so. This is what was found, and what the rule is now.
+
+What went wrong with the constant false alarm threshold on its own:
+
+- The threshold was a high percentile of the chance statistic. When chance can hardly reach the target at all (a theta track and a beta track three times apart, as far from the golden ratio as from anything), that percentile is hundreds of units below zero. A pair that was merely less far off than most random placements then crossed it. This is why the state came on at near-miss ratios of 1.7 and 1.8, on artifacts, and labelled octave files golden (the bake-off measured all three and did not find the cause). "Closer than chance" is not "aligned".
+- The statistic was the best single pair's evidence. One pair's evidence cannot exceed about 4.5 however good the match, and among seven tracks some unrelated pair reaches nearly that by chance. So a five-member cascade among seven tracks scored 3.66 against a threshold of 3.90 and never entered the state, while a weaker three-member cascade (threshold 1.9) did.
+
+The rule now, in plain words: **the state is entered when the evidence is at least 2, and also more than random peaks would give 19 times out of 20.**
+
+1. **Statistic.** For each pair, ln Λ as in T3 (amended). For a chain of tracks of rising frequency, the evidence of its steps is added, because independent steps multiply likelihood ratios. The statistic is the largest total over all chains. For two tracks it is that pair's ln Λ. A cascade of k good steps scores about k times one pair, so a longer cascade is easier to recognise than a shorter one, as it should be.
+2. **Fixed floor.** Entry needs the statistic to be at least 2 (provisional; the bake-off's value for T3). Whatever chance says, the state needs evidence for the target.
+3. **Adaptive part.** Entry also needs the statistic to be above the chance threshold of T4, computed from the surrogates by the same chain statistic. This is where the threshold adapts to the person and the moment: it rises with the number of confirmed peaks (more peaks, more accidental pairs), and it uses the person's own bands and, when a baseline exists, their own usual ratios through q. It can only raise the bar above the fixed floor, never lower it. The frame reports the threshold in force (`enter_at`), so the UI can show "evidence 7.3, needed 3.9".
+4. **Exit** one unit below entry; **dwell** 5 s; the same in the null, as below.
+
+With five tracks and a single aligned pair this means no state: one pair among ten is what chance produces, and the rule says so (the percentile shown beside it says the same). A second step changes that at once.
+
+Measured on the lab fixtures (frames in the golden ratio state, of 480 or 360): three-member cascade at 10 dB 75 of 480 (the fake test's build 161 of 320; the build with the review's more honest uncertainties but without this rule and without resuming tracks, 0 to 14; the bake-off's lab rule 71% of the time); five-member cascade at 15 dB 294 of 480 (0 of 320, and 3 of 480); phase-randomized copy 191; near misses at 1.5, 1.55, 1.7 and 1.8: 0 (first build entered on 1.7 and 1.8); background only 0; unrelated peaks in bands 0. On 48 synthetic files of unrelated theta, alpha and beta peaks: 8 entries in 7,200 s, 0.67 per 10 minutes, all in files whose planted peaks truly sat within 3% of the golden ratio. Tuning curve over 16 files per ratio: state on in 100% of frames at 1.618, in no file at 1.5, 1.55, 1.7, 1.8 or 2.0; octave state on in 98.5% at 2.0 and in no file elsewhere.
+
+What I did not adopt from the bake-off: the fixed threshold alone. Its own table shows 2.2 false entries per 10 minutes on recordings with one unrelated peak per band, which is the ordinary human case; the 0.98 it quotes is diluted by files with no peaks. With the chance threshold on top the rate cannot be higher than the fixed rule's on the same tracks.
+
+**The combined state.** `states.both` is active only while the golden ratio state and the octave state are both active. It has no statistic of its own. Octave cascades are first-class beside golden ratio cascades, and both at once is a state of its own with its own sound and picture (9.1).
+
 Whatever rule wins, state changes use:
 
 - **Dwell.** The statistic must stay above the entry threshold for a minimum time (provisional: 5 s) before the state is entered.
@@ -362,7 +386,7 @@ The engine computes two chance levels, live, by rule 5:
 - **Chance A, unrelated peaks.** "Would this many peaks, placed at random, score this well?" Surrogate peak sets have the same number of tracks with the same measured uncertainties, each placed at random in log frequency inside the band that holds the real track (delta, theta, alpha, beta or gamma, with the edges in force), and go through the same pairing, cascade search and thresholds. Available from the first confirmed peak.
 
   Review: the first build placed surrogates across the whole search range, 1 to 45 Hz. That is the wrong null for the commonest case. A theta peak and an alpha peak can only form ratios between 1 and 3.25, and land within 3% of the golden ratio 9.4% of the time (first row of the table above). Peaks spread over 1 to 45 Hz land there under 3% of the time. Measured on unrelated theta and alpha peaks, the chance A percentile was at or under 5% for 16% of pairs and the aligned-state threshold was exceeded by 10% of pairs. With placement by band those numbers are 5.4% and 3.3%.
-- **Chance B, your own wandering.** "Are these rhythms moving into alignment together, or is this just where each one usually sits?" Each track's frequency history is shifted in time by a random lag of at least 10 s, wrapping around, with every two tracks' lags differing by at least the correlation time of an integrated frequency (the integration time plus one slow window, 38 s), and scored the same way. This keeps each rhythm's own behaviour and removes only their relationship in time. Needs at least 120 s of track history (provisional), and enough for the lags to fit: 153 s for four tracks, 191 s for five. Until then it is null and the display says it is still measuring.
+- **Chance B, your own wandering.** "Are these rhythms moving into alignment together, or is this just where each one usually sits?" Each track's frequency history is shifted in time by a random lag of at least 10 s, wrapping around, with every two tracks' lags differing by at least the correlation time of an integrated frequency (the integration time plus one slow window, 38 s), and scored the same way. This keeps each rhythm's own behaviour and removes only their relationship in time. Needs track history of at least three correlation times (provisional; 114 s at the default speed, 69 s at the quicker one, 204 s at the slower one), counted from each track's first integrated frequency, and enough for the lags to fit: 153 s for four tracks, 191 s for five at the default speed. Until then it is null and the display says it is still measuring. Decision (fake test): the requirement was a fixed 120 s and chance B never appeared inside a two-minute recording. Tied to the integration time, it appears at about 130 s for up to three tracks (measured: 131 s) and so inside any session of three minutes. Still open: every scored track must have that history, so one stray track that appears for a few seconds sends chance B back to null until the set of tracks settles; and a track that paused and resumed counts its history without the pause.
 
   Review: two more rules for chance B. First, a surrogate takes only its frequencies from the shifted moments; its uncertainties are the tracks' present ones, as in chance A, so a surrogate is resolved exactly when the observed set is. With the uncertainties of the shifted moments, surrogates from a track's first seconds were unresolved, could never score, and were counted as "chance did worse": for unrelated rhythms the percentile was at or under 5% in 17% of files. Second, shifted copies of one history are not independent draws. A history of length H holds about H ÷ 38 s independent values of each track, so about that number squared independent pairings, however many surrogates are drawn. The chance B percentile is therefore never reported below 1 ÷ (1 + (H ÷ 38 s)²): 9% with 120 s of history, 1.6% with 300 s, 0.4% with 600 s. Measured on independent wandering tracks without the floor, a percentile at or under 1% occurred in 4 to 9% of cases with 120 s of history and in 1% with 300 s or more.
 
@@ -370,7 +394,9 @@ The engine computes two chance levels, live, by rule 5:
 
 For each, the engine reports the expected closeness under chance, and where the observed value falls in the chance distribution (a percentile). At least 200 surrogates (provisional), from the session's seed, refreshed every 5 s.
 
-**Excess alignment** is (observed closeness − chance closeness) ÷ (1 − chance closeness), floored at 0. This is the quantity the hurricane's winding is bound to.
+**Excess alignment.** Decision (fake test): the first definition, (observed closeness − mean chance closeness) ÷ (1 − mean chance closeness), was wrong for its purpose. Among five tracks the mean chance closeness is about 0.15, while a quarter of random spectra hold a pair within tolerance. One aligned pair then read "0.96 over chance" beside a percentile of 0.4, and rings were drawn for it.
+
+Excess alignment is now measured from the closeness that only 5% of the surrogates reach or beat (provisional level; a surrogate with a longer cascade counts as closeness 1, one with a shorter cascade as 0, which is the order the percentile uses). Excess = (observed − that reference) ÷ (1 − reference), and 0 at or below the reference. So excess is above zero only when the percentile is at or under 5%, and it cannot be large beside an unremarkable percentile. A cascade longer than chance produces 5% of the time has the whole of its closeness as excess. The mean chance closeness is still reported as "the chance level"; it is no longer what excess is measured from. Both excess values, against chance A and against chance B, are always output; the one against chance B is null with the reason "warming up" while chance B is missing or its history cannot support a 5% percentile (see the floor above: about 166 s of history at the default speed). This is the quantity the hurricane's winding is bound to.
 
 Open decision D1, for the owner, in section 15: which chance level the hurricane uses. They answer different questions. A person whose alpha and theta sit steadily at a golden ratio for a whole session scores high against chance A and near zero against chance B.
 
@@ -389,12 +415,12 @@ The engine emits two kinds of frames. Every field is a value, an uncertainty whe
 - Time, engine version, parameter set id.
 - Per channel: signal quality measures, artifact reason, clean fraction.
 - Per channel and composite: spectrum, background exponent and offset, flattened spectrum.
-- Band summaries per channel and composite: power above background, and total power, for each named band. Power above background is the one training uses, so that a change in overall signal level is not mistaken for a change in a rhythm.
+- Band summaries per channel and composite: power above background, and total power, for each named band, twice: over the band edges in force (scaled to the individual alpha frequency when one is set) and over the fixed edges (`bands_fixed`). Power above background is the one training uses, so that a change in overall signal level is not mistaken for a change in a rhythm.
 - Tracks: id, centre frequency and standard error, integrated frequency and standard error, height above background, width, age, state (new, confirmed, fading), harmonic-of.
-- Pairs: for every pair and target, resolved, miss, closeness, evidence.
+- Pairs: for every pair and each of the five targets (golden ratio, octave, 3:1, and the controls 1.5 and 1.8), resolved, miss, closeness, evidence. A pair's `harmonic` flag is true when the pair is kept out of scoring: marked harmonic, not yet tested, or two harmonics of one fundamental (6.6).
 - Cascades: golden ratio and octave, as in 8.3.
 - Chance: A and B, expected closeness and percentile, for pairs and cascades.
-- States: aligned state per target, with time in state.
+- States: aligned state per target, with time in state, the statistic and the entry and exit thresholds in force; and the combined state, active only while both are (8.4).
 - Hemispheres: for each track present on both sides, the frequency difference between TP9 and TP10, the amplitude balance, and phase locking between the sides. Caveat to carry into the UI text: all channels share one reference electrode, which inflates measured locking between them. The engine reports locking in excess of a time-shifted surrogate, not the raw value.
 
   Review: the time shift does not remove the shared reference. It removes only the locking that two narrow-band signals show by accident. Activity at the reference electrode appears in both channels at the same instant, and a time shift destroys it in the surrogate while leaving it in the measurement, so it is counted as excess. Measured with two independent sources: excess 0.09 with a silent reference (it should be 0; the floor at zero biases it upward), 0.12 when the reference carries the rhythm at half the sources' amplitude, 0.27 at equal amplitude. A truly shared source gives 0.65. On a Muse the number therefore cannot be read as synchrony between hemispheres, and "left and right symmetry" in 9.1 must not be bound to it as it stands. The field to add (schema change, not yet made) is locking that excludes zero lag, such as the imaginary part of coherency, reported beside this one, with the UI saying that zero-lag locking cannot be told from the reference.
@@ -420,6 +446,7 @@ Sound:
 | Warmth and steadiness of the alpha tone | Alpha power above background relative to the person's baseline, and how long it has held |
 | Bloom into a soft chord | Golden ratio aligned state and excess alignment. The chord is built from the measured tracks' own tones |
 | The different bloom for octaves | Octave aligned state and excess alignment |
+| A third, distinct bloom when both hold at once | Combined state (`states.both`), and both excess alignments. It must be recognisably neither of the other two |
 | Thinning of the sound | Artifact flag, lost lock, or null |
 
 Hurricane, from the plan's table:
@@ -430,6 +457,7 @@ Hurricane, from the plan's table:
 | Number of spiral arms | Number of tracks in the golden ratio cascade |
 | How tightly the arms wind | Golden ratio excess alignment |
 | Ring structure | Octave excess alignment |
+| Arms and rings together, in a form of their own | Combined state (`states.both`). Distinct from arms alone and from rings alone, so that "both at once" can be seen without reading the numbers |
 | Brightness of each arm | That track's height above background |
 | Clarity of the eye | Time the cascade has held |
 | Left and right symmetry | Hemisphere match |
@@ -462,7 +490,9 @@ The skeptic builds and owns the battery. The implementer of a candidate never se
 
 **B. Planted octaves and near misses.** The same with octave cascades, and with steps of 1.5, 1.55, 1.7 and 1.8. This gives the tuning curve: detection rate as a function of the true ratio. A good method has a narrow curve centred on 1.618 and a separate one on 2.0.
 
-**C. Nothing there.** Background noise only. Random peaks at unrelated frequencies. Real recordings with the samples shuffled, shuffled in blocks, phase-randomized, and with channels shifted against each other in time. White noise, and a recording of a headset sitting on a table.
+**C. Nothing there.** Background noise only. Random peaks at unrelated frequencies. Real recordings with the samples shuffled, or shuffled in blocks shorter than one cycle of the slowest rhythm of interest (under 0.2 s). White noise, and a recording of a headset sitting on a table.
+
+**C2. Spectrum-preserving surrogates (not "nothing there").** Decision (bake-off and fake test): recordings shuffled in blocks much longer than a cycle, phase-randomized, or with channels shifted against each other keep each channel's spectrum. A 2 s block holds 9 to 24 cycles of the rhythms in question; only the phase continuity across block edges is broken, and a spectrum does not see phase. So a correct engine **must still find** the source's peaks, ratios and cascades in them, and the pass rule is "same as the source", not "nothing". A whole-app test that found a golden ratio cascade surviving a 2 s block shuffle saw correct behaviour, and the same file shuffled sample by sample was calm, also correctly. These surrogates say nothing about whether spectral peaks are real. What they test is timing: chance B, and any measure that claims rhythms move together. The first version of this battery listed them under C; that was my error.
 
 **D. Harmonic trap.** Non-sinusoidal rhythms that produce true harmonics at 2 and 3 times the base.
 
@@ -480,13 +510,14 @@ The skeptic builds and owns the battery. The implementer of a candidate never se
 
 | Test | Requirement |
 | --- | --- |
-| A at 10 dB and above | Every planted peak confirmed in at least 95% of files. Integrated frequency within 1% of truth. Correct cascade length in at least 90% |
-| A at 6 dB | At least 80% of planted peaks confirmed. No false cascade members |
+| A at 10 dB and above | Every planted peak confirmed in at least 95% of files. Integrated frequency within 2 reported standard errors of truth for 95% of tracks, with a median signed error under 0.3% (decision: "within 1%" is out of reach for rhythms 0.8 Hz wide or more in 30 s whatever the estimator; the mark is now that the reported error is honest and the bias small). Correct cascade length in at least 90% |
+| A at 6 dB | At least 80% of planted peaks confirmed: kept as the goal. No candidate that holds α_peak reaches it (best in the bake-off 73%; the engine as reviewed is well below, see the notes). No false cascade members |
 | A at 3 dB | Reported for information. Silence is acceptable. A wrong answer is not |
-| B | Octave cascades labelled golden ratio in under 1% of files, and the reverse. Aligned-state rate for a 1.5 or 1.8 step under 10% of the rate at 1.618 |
-| C | Confirmed peaks in background-only noise at or under the stated α_peak. Aligned state entered at or under the stated false alarm rate. Cascades of 3 or more steps: none in the whole set. Hurricane structure: none |
+| B | Octave cascades labelled golden ratio in under 1% of files, and the reverse, shown on at least 300 files per arm (0 errors in 20 files only bounds the rate under 16%). Aligned-state rate for a 1.5 or 1.8 step under 10% of the rate at 1.618 |
+| C | Confirmed peaks in background-only noise at or under the stated α_peak. Aligned state entered at or under the stated false alarm rate, given with a confidence interval and measured on at least 10 hours of nothing-there data. Cascades of 3 or more steps: no more often than chance A's own rate for the same number of tracks (unrelated peaks do form them at a known small rate, 8.5). Hurricane structure: none on files with no peaks |
+| C2 | Same peaks, ratios and cascades as the source recording |
 | D | At least 95% of harmonics marked as harmonic. No octave alignment credited |
-| E | No confirmed peak, no aligned state and no cascade attributable to an artifact. Recovery within 3 s of the artifact ending |
+| E | No confirmed peak, no aligned state and no cascade attributable to an artifact. Recovery within 3 s of the first slow window that no longer holds the artifact (decision: "within 3 s of the artifact ending" contradicts persistence over 8 s windows; with a track that resumes, 6.5, the returning rhythm also keeps its identity) |
 | F | Detection delay and identity errors reported per candidate. The cascade schedule recovered with a median delay under 20 s |
 | G | Up to 1% loss: results within the uncertainty of the clean run. At 5% loss: null, with the reason, and never a wrong value |
 | H | Bit-identical on repeat. Offset changes results by no more than the reported uncertainty |
@@ -495,7 +526,8 @@ The skeptic builds and owns the battery. The implementer of a candidate never se
 
 ### 10.4 Decision rule
 
-1. A candidate that fails any requirement in C, D or E is out. Staying quiet when nothing is there matters more than sensitivity.
+0. Decision (bake-off): a candidate must first confirm at least 95% of planted peaks at 10 dB and above. Without this step a detector that never fires wins step 1.
+1. Among those, candidates are ranked by their failure rates in C, D and E, with confidence limits; a candidate clearly worse than another there is out. Staying quiet when nothing is there matters more than sensitivity. (The first wording, "fails any requirement", ruled out every candidate.)
 2. Among the rest, prefer the best detection at 6 dB on test A, then the narrowest tuning curve on test B, then the lowest delay, then the lowest cost.
 3. If two candidates are within noise of each other, pick the one that is simpler to explain to a user.
 4. The signal architect writes the result up with the numbers, the skeptic signs it off against the blind files, and this specification is updated before any Rust is written for that stage.
@@ -506,6 +538,8 @@ The skeptic builds and owns the battery. The implementer of a candidate never se
 - **Memory.** Bounded. No growth over a two-hour session beyond the stored track histories, which are capped.
 - **Determinism.** Rule 6. Floating point operations are ordered so that the browser build and the native test build agree. Replay of a recorded session reproduces the live frames exactly, and a test asserts it.
 - **Reference lab.** Python, using established libraries, implements every stage independently. On the recorded test set, Rust and Python must agree: peak frequencies within 0.05 Hz, heights within 0.5 dB, the same confirmed tracks, the same aligned-state intervals within one slow frame. Disagreement blocks a release until explained.
+
+  Decision (bake-off section 13): measured on the 21 fixtures, the two agreed on window peak frequencies to a median of 0.031 Hz, with 64% of matched peaks within 0.05 Hz, and on the confirmed set in 54% of windows. The sine and the empty files agreed fully. The rest of the difference is method, not error: the lab scores one composite of the channels with smoothed spectra, a power-law background and a tuned threshold; the engine scores each site with plain multitaper spectra, a curved background (6.2) and the analytic threshold split across sites. A centroid moves by a few hundredths of a hertz between those, which is a fraction of its own standard error (0.05 to 0.3 Hz). Until one method is implemented on both sides, the requirement that can be met and is worth holding is: frequencies of matched peaks agree within 1 reported standard error in 90% of cases; neither side confirms a peak in the empty files; the sine reads the same within 0.01 Hz; and every difference in the aligned state is explained by a named difference in method. The 0.05 Hz mark returns when the lab implements the adopted engine methods of this document (per-site spectra, curved background, the state rule of 8.4, the harmonic rule of 6.6), which is the next lab task.
 - **Versioning.** The output schema, the parameter set and the engine each carry a version, stored in every session.
 
 ## 12. Support for personalized training
@@ -564,7 +598,7 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Parameter | Start value | Section |
 | --- | --- | --- |
 | Repairable gap | 12 samples | 3 |
-| Repaired samples allowed in a window | 2% | 3 |
+| Repaired samples allowed in a window | 4% | 3 |
 | High-pass corner | 0.5 Hz | 5.1 |
 | Mains exclusion | ±2 Hz | 5.1 |
 | Channel recovery time | 3 s | 5.2 |
@@ -586,6 +620,13 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Weight of window errors in the integrated error | 0.5 degrees of freedom | 6.4 |
 | Window error factor before two windows of history | 2 | 6.4 |
 | Track joining distance | 3 standard errors or 1 Hz | 6.5 |
+| A track resumes if its rhythm returns within | 30 s (the integration time) | 6.5 |
+| Harmonic test: mark at, release above | probability 1%, 20% | 6.6 |
+| Harmonic test: tests before a pair may be scored | 12 (3 s) | 6.6 |
+| Harmonic test: one-window limits | locking 0.7, excess over shifted copies 0.3 | 6.6 |
+| Muscle band | 65 to 95 Hz, 6 dB over the resting median | 5.3 |
+| Motion resting level | 25th percentile of the first minute | 5.3 |
+| Plausible amplitude (standard deviation) | 1 to 100 µV; 200 µV in the child preset | 5.2, 5.4 |
 | Fast update | 32 per second | 7 |
 | Fast path delay limit | 300 ms | 7 |
 | Lost lock time | 1 s | 7 |
@@ -594,14 +635,17 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Resolved limit on s_x | 0.03 | 8.2 |
 | Tolerance ε | 0.03 | 8.2 |
 | Intrinsic tolerance τ | 0.01 | 8.4 |
-| Control ratios | 1.5 and 1.8 | 8.1 |
+| Control ratios | 1.5 and 1.8; 3:1 is logged as a fifth target | 8.1 |
 | Dwell before entering a state | 5 s | 8.4 |
+| Lowest entry threshold of a state (evidence) | 2; exit 1 below entry | 8.4 |
+| Excess alignment level | 5% of surrogates | 8.5 |
 | False entries allowed | 1 per 10 minutes | 8.4 |
 | Surrogates per chance estimate | 200 | 8.5 |
 | Minimum lag for chance B | 10 s | 8.5 |
 | Minimum difference between two tracks' lags, chance B | integration time + slow window (38 s) | 8.5 |
 | Chance A placement | within the track's own band | 8.5 |
-| History needed for chance B | 120 s | 8.5 |
+| History needed for chance B | 3 correlation times (114 s at 30 s integration) | 8.5 |
+| Response speed presets | steady 30 s, quicker 15 s, slower 60 s integration | 15 |
 | Slow update time budget | 50 ms | 11 |
 
 ## 15. User settings and things to verify
@@ -610,6 +654,17 @@ The owner's standing rule: where a design choice is a matter of the user's prefe
 
 - **Which chance level the hurricane uses.** Default: chance A, "more aligned than random peaks would be", so a steady, lasting alignment still forms a storm. Option: chance B, "moving into alignment together, beyond where each rhythm usually sits". Both are always shown in the readout whichever drives the storm.
 - **Response speed of alignment.** Default: steady, 30 s integration (section 6.4). Options: quicker (shorter integration) and slower. The setting is labelled with what it costs: a quicker reading has a wider uncertainty, more pairs come back "unresolved", and the chance level is recomputed for the chosen speed, so a quicker setting cannot manufacture alignment.
+
+  Decision: the presets, by name, as the engine provides them (`Params::preset`), each a per-session parameter set recorded with the session:
+
+  | Preset | Integration time | Track resumes within | Chance B needs | What it costs or buys |
+  | --- | --- | --- | --- | --- |
+  | steady (default) | 30 s | 30 s | 114 s of history | The reference behaviour |
+  | quicker | 15 s | 15 s | 69 s | Follows a change in about half the time. The integrated frequency's error is about 1.4 times larger, so more pairs are unresolved and a ratio must hold more exactly to count |
+  | slower | 60 s | 60 s | 204 s | Error about 0.7 times. Slow to form and slow to dissolve |
+
+  What follows the integration time without further settings, checked in the code: the standard error of every integrated frequency (so the resolved rule), the chance A threshold's allowed fraction (integration time ÷ 10 minutes), the correlation time and the percentile floor of chance B, the history chance B needs, and the memory of the harmonic test. The resolved limit itself (0.03) and the tolerance do not change with speed: a quicker setting does not get an easier target.
+- **Child.** A preset that combines with any speed: plausibility limit 200 µV (section 5.4). The individual alpha frequency is set separately, from the baseline.
 - **Whether harmonics count toward octave alignment.** Default: no (section 6.6). Option: yes, in which case harmonic pairs are still marked as harmonic on screen.
 
 To verify before or during implementation:
