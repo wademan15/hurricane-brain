@@ -1,4 +1,5 @@
 import type { KeyRow } from '../../storage';
+import { reasonPlain } from '../measured';
 
 /**
  * One key measure over the session, drawn from the stored per-second rows. A second with no
@@ -10,10 +11,11 @@ export function KeyChart({ rows, col, label, unit }: { rows: KeyRow[]; col: stri
   const pts = rows.map((r) => ({ t: r.t, v: r.cells[col]?.v ?? null, block: r.block }));
   const vals = pts.filter((p) => p.v !== null).map((p) => p.v as number);
   if (!pts.length || !vals.length) {
-    const why = pts.find((p) => p)?.t === undefined ? 'no data' : [...new Set(rows.map((r) => r.cells[col]?.why).filter((w) => w && w !== 'ok'))].slice(0, 2).join(', ');
+    const codes = [...new Set(rows.map((r) => r.cells[col]?.why).filter((w): w is NonNullable<typeof w> => !!w && w !== 'ok'))].slice(0, 2);
+    const why = codes.length ? codes.map((c) => reasonPlain(c)).join(', ') : 'nothing was recorded for it';
     return (
       <div className="small dim" style={{ margin: '6px 0' }}>
-        <strong>{label}</strong>: not measured in this session{why ? ` (${why})` : ''}.
+        <strong>{label}</strong>: not measured in this session ({why}).
       </div>
     );
   }

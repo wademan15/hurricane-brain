@@ -91,12 +91,13 @@ impl<T: Copy + Default> Ring<T> {
 }
 
 /// The harmonic mark of one pair of tracks (spec 6.6): the multiple, whether the upper track
-/// is currently marked a harmonic of the lower, and the recent tests (time, passed).
+/// is currently marked a harmonic of the lower, and the recent tests (time, locking vector,
+/// surrogate level or None if the upper track was outside the harmonic's band).
 #[derive(Clone, Debug)]
 struct HarmonicMark {
     n: u32,
     marked: bool,
-    tests: VecDeque<(f64, bool)>,
+    tests: VecDeque<(f64, C, Option<f64>)>,
 }
 
 /// Track merge and split events (spec 6.5 says they are recorded; the frame schema has no
@@ -1607,8 +1608,10 @@ impl Engine {
         let n = self.tracks.len();
         let trim = m::round(0.5 * self.rate) as usize;
         let min_shift = m::round(p.compare_min_shift_s * self.rate) as usize;
-        // Every pair tested this update: (lower id, upper id), n, passed.
-        let mut tests: Vec<((u32, u32), u32, bool)> = Vec::new();
+        // Every pair tested this update: (lower id, upper id), n, the locking vector, the
+        // surrogate level (None when the upper track is outside the harmonic's band), and
+        // whether this one window is decisive.
+        let mut tests: Vec<((u32, u32), u32, C, Option<f64>, bool)> = Vec::new();
         for i in 0..n {
             for j in 0..n {
                 if i == j {
@@ -1634,7 +1637,7 @@ impl Engine {
                 let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df).max(0.5 * nf * pl.width);
                 if (ph.f - nf * pl.f).abs() > tol {
                     // Out of the harmonic's band: evidence against an existing mark.
-                    tests.push(((lo.id, hi.id), nn, false));
+                    tests.push(((lo.id, hi.id), nn, C::default(), None, false));
                     continue;
                 }
                 // Channel: where the lower rhythm is strongest among channel sites.
@@ -1658,43 +1661,64 @@ impl Engine {
                 let sd = (pl.width / 2.3548).max(0.3);
                 let a_lo = self.analytic.band(&x, self.rate, pl.f, sd);
                 let a_hi = self.analytic.band(&x, self.rate, nf * pl.f, nf * sd);
-                if let Some((plv, sur)) = compare::locking(&a_lo, &a_hi, nn, trim, p.compare_shifts, min_shift) {
+                if let Some((z, sur)) = compare::locking_vector(&a_lo, &a_hi, nn, trim, p.compare_shifts, min_shift) {
+                    let plv = z.abs();
                     // Review: a pair whose locking survives the time shifts too is steady at
                     // exactly n:1 for the whole window. A shift cannot tell that from a harmonic
                     // (a strictly periodic waveform is its own shifted copy), so it is flagged.
                     let steady = sur >= p.harmonic_plv_min;
-                    let pass = plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady);
-                    tests.push(((lo.id, hi.id), nn, pass));
+                    let strong = plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady);
+                    tests.push(((lo.id, hi.id), nn, z, Some(sur), strong));
                 }
             }
         }
-        // Review: the mark is kept from the pair's history, not from the last two seconds. One
-        // pass sets it (erring toward "harmonic", spec 10.4). It is taken off only by evidence:
-        // when, over the last integration time and at least two slow windows of tests, fewer
-        // than `harmonic_release_fraction` of the tests passed. A window in which the test
-        // could not be made says nothing and changes nothing. Before, the mark lapsed 2 s
-        // after the last pass and the harmonic was then credited as an octave pair.
+        // Review: the mark is decided from the pair's history, not from one window (spec 6.6).
+        // A harmonic keeps the same phase against its fundamental from window to window, so
+        // the locking vectors of successive windows add; for two rhythms that are not locked
+        // they point anywhere and cancel. The mean vector over the last integration time is
+        // tested against the surrogate level: with m independent windows and unlocked phases
+        // its squared length is exponential with mean (4 / pi) sur^2 / m.
+        //   mark:    one decisive window (the old rule), or p <= harmonic_alpha;
+        //   release: p > harmonic_release_p with at least two slow windows of tests.
+        // A window in which the test could not be made says nothing and changes nothing.
+        // Before, a mark lapsed 2 s after the last decisive window, and a harmonic whose
+        // windows locked at 0.4 to 0.6 (under the 0.7 limit, far over the surrogates' 0.2)
+        // was credited as an octave pair for most of a recording.
         let keep_s = p.integration_s.max(2.0 * p.slow_window_s);
-        for (k, nn, pass) in tests {
-            if !pass && !self.harmonics.contains_key(&k) {
+        for (k, nn, z, sur, strong) in tests {
+            if sur.is_none() && !self.harmonics.contains_key(&k) {
                 continue;
             }
             let e = self.harmonics.entry(k).or_insert_with(|| HarmonicMark { n: nn, marked: false, tests: VecDeque::new() });
             if e.n != nn {
                 *e = HarmonicMark { n: nn, marked: false, tests: VecDeque::new() };
             }
-            e.tests.push_back((t, pass));
-            while e.tests.front().is_some_and(|(t0, _)| t - *t0 > keep_s) {
+            e.tests.push_back((t, z, sur));
+            while e.tests.front().is_some_and(|(t0, _, _)| t - *t0 > keep_s) {
                 e.tests.pop_front();
             }
-            if pass {
-                e.marked = true;
-            } else if e.marked {
-                let span = e.tests.front().map(|(t0, _)| t - *t0).unwrap_or(0.0);
-                let passed = e.tests.iter().filter(|(_, ok)| *ok).count() as f64;
-                if span >= 2.0 * p.slow_window_s && passed < p.harmonic_release_fraction * e.tests.len() as f64 {
-                    e.marked = false;
+            let span = e.tests.front().map(|(t0, _, _)| t - *t0).unwrap_or(0.0);
+            let cnt = e.tests.len() as f64;
+            let mut zsum = C::default();
+            let (mut ssum, mut sn) = (0.0, 0.0);
+            for (_, zz, ss) in e.tests.iter() {
+                zsum = zsum + *zz;
+                if let Some(v) = ss {
+                    ssum += *v;
+                    sn += 1.0;
                 }
+            }
+            let p_lock = if sn > 0.0 && ssum > 0.0 {
+                let sbar = ssum / sn;
+                let m_ind = 1.0 + span / p.slow_window_s;
+                m::exp(-m::PI * m_ind * zsum.scale(1.0 / cnt).norm_sqr() / (4.0 * sbar * sbar))
+            } else {
+                1.0
+            };
+            if strong || p_lock <= p.harmonic_alpha {
+                e.marked = true;
+            } else if e.marked && span >= 2.0 * p.slow_window_s && p_lock > p.harmonic_release_p {
+                e.marked = false;
             }
         }
         let ids: BTreeSet<u32> = self.tracks.iter().map(|t| t.id).collect();

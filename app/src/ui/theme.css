@@ -1,0 +1,93 @@
+/* Hurricane Brain theme. Every colour, radius, spacing step, font and shadow the app uses is a
+   custom property here. A new look is a change to this file only (see ui/THEMING.md): layout
+   components and behaviour never name a colour or a pixel size of their own. */
+:root {
+  color-scheme: dark;
+
+  /* colour: surfaces and text */
+  --bg: #070b12;
+  --surface: #0d1420;
+  --surface-2: #131c2d;
+  --surface-3: #1a2538;
+  --border: #243049;
+  --text: #dbe4f1;
+  --dim: #98a6bd;
+  --faint: #6f7d93;
+  /* colour: accent and meaning */
+  --accent: #6ab7cc;
+  --accent-ink: #04141a;
+  --gold: #e2b86b;      /* golden ratio */
+  --octave: #6fc7c0;    /* octave */
+  --ok: #7bc89a;
+  --warn: #e6b366;
+  --bad: #e58a78;
+  --scrim: rgba(0, 0, 0, 0.6);
+  /* colour: the live session screen (always dark, it is used with eyes closed or in a dim room) */
+  --live-bg: #03060c;
+  --live-text: #d4deec;
+  --live-dim: #aab7cb;
+  --live-subtle: #8ea0bb;
+  --live-dock-bg: #080d16;
+  --live-border: #1c2740;
+  --live-control-border: #243049;
+  --live-control-text: #a8b6cc;
+  --live-control-on-bg: #1a2538;
+  --live-control-on-text: #ffffff;
+  --live-control-on-border: #35476b;
+  --live-chip-bg: #121b2b;
+  --live-rate-bg: #131c2d;
+  --live-rate-text: #e6eef9;
+  --live-shade: #03060cdd;
+  --live-shade-clear: #03060c00;
+  --eyes-closed-text: #2a3140;
+  /* colour: drawn diagrams */
+  --diagram-unknown: #6f7d93;
+  --diagram-ok: #7bc89a;
+  --diagram-bad: #e58a78;
+
+  /* shape */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  --border-w: 1px;
+
+  /* spacing (a 4 px step) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 32px;
+  --gutter: 16px;
+
+  /* size */
+  --tap: 52px;
+  --tap-small: 40px;
+  --tap-big: 68px;
+  --nav-h: 64px;
+  --sidebar-w: 232px;
+  --content-w: 880px;
+
+  /* type */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size: 17px;
+  --line: 1.5;
+
+  /* depth */
+  --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 10px 36px rgba(0, 0, 0, 0.55);
+
+  /* motion: short responses to a tap only; nothing here runs on its own */
+  --transition: 0.12s;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f5f9; --surface: #ffffff; --surface-2: #eef1f7; --surface-3: #e3e8f1; --border: #c8d1e0;
+  --text: #16202f; --dim: #4a586f; --faint: #6b788d; --accent: #1b6f86; --accent-ink: #ffffff;
+  --gold: #8a6112; --octave: #1c7a72; --ok: #1f7a46; --warn: #8a5a0b; --bad: #a53a28;
+}
+/* reduced motion: set on the root by the app from the person's setting (or the system) */
+:root[data-motion='reduced'] * { transition: none !important; scroll-behavior: auto !important; }

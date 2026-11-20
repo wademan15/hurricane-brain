@@ -39,7 +39,7 @@ function RatingSheet({ keys, onDone }: { keys: RatingKey[]; onDone: (r: Partial<
               </button>
             ))}
           </div>
-          <div className="row split small" style={{ color: '#8ea0bb' }}>
+          <div className="row split small" style={{ color: 'var(--live-subtle)' }}>
             <span>1 {RATING_TEXT[k].lo}</span>
             <span>5 {RATING_TEXT[k].hi}</span>
           </div>
@@ -276,7 +276,7 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
           ) : null}
         </div>
         {out && out.feedback && s.kind === 'program' ? (
-          <p className="small" style={{ color: '#8ea0bb' }}>
+          <p className="small" style={{ color: 'var(--live-subtle)' }}>
             Reward level {Math.round(out.reward.level * 100)}%{out.reward.gated ? `, withheld (${out.reward.why ?? 'gated'})` : ''} (from your measurements, smoothed over {out.reward.tauS} s).
           </p>
         ) : null}

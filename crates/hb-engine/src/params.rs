@@ -261,9 +261,11 @@ params! {
     harmonic_max_n: usize = 3,
     harmonic_plv_min: f64 = 0.7,
     harmonic_plv_excess: f64 = 0.3,
-    /// Harmonics: a mark is taken off when fewer than this fraction of the tests over the last
-    /// integration time passed (spec 6.6).
-    harmonic_release_fraction: f64 = 0.1,
+    /// Harmonics: the mean locking vector over the last integration time marks a pair when
+    /// unlocked rhythms would reach its length with at most probability `harmonic_alpha`, and
+    /// the mark is taken off when that probability is above `harmonic_release_p` (spec 6.6).
+    harmonic_alpha: f64 = 0.01,
+    harmonic_release_p: f64 = 0.2,
     /// Phase comparisons: number of time-shifted surrogates and their minimum shift, s.
     compare_shifts: usize = 8,
     compare_min_shift_s: f64 = 1.0,

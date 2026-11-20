@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { Cascade, ChanceLevel, HeartFrame, Measured, SlowFrame } from '../../engine/frames';
 import { useServices } from '../state/app';
-import { measuredLine, showMeasured, summarizeSignal } from '../measured';
+import { measuredLine, notMeasuredText, showMeasured, summarizeSignal } from '../measured';
 import { Val } from './kit';
 
 const SLOW_STALE_MS = 1500;
@@ -79,9 +79,9 @@ export function AlignmentTrio({ live, chanceDriver }: { live: Live; chanceDriver
           A: <Val m={phi ? chanceText(phi.chance.a) : live.slowStale ? miss : undefined} /> / <Val m={oct ? chanceText(oct.chance.a) : live.slowStale ? miss : undefined} />
         </div>
         <div className="s">
-          golden / octave. B: {phi ? measuredLine(phi.chance.b.closeness) : 'not measured'} / {oct ? measuredLine(oct.chance.b.closeness) : 'not measured'}
+          golden / octave. B: {phi ? measuredLine(phi.chance.b.closeness) : notMeasuredText('no_frame')} / {oct ? measuredLine(oct.chance.b.closeness) : notMeasuredText('no_frame')}
         </div>
-        <div className="s">p (A): {phi ? measuredLine(phi.chance.a.p) : 'not measured'}</div>
+        <div className="s">p (A): {phi ? measuredLine(phi.chance.a.p) : notMeasuredText('no_frame')}</div>
       </div>
     </div>
   );

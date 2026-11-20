@@ -7,7 +7,7 @@ import {
 import { neutralControlFor } from '../../audio/anchors';
 import { Badge, Button, Card, Field, Note, PageHeader } from '../components/kit';
 import { StartButton } from '../components/StartButton';
-import { fmtDateTime, showNumber } from '../measured';
+import { fmtDateTime, notMeasuredText, numberLine } from '../measured';
 import { relearnSignature } from '../state/stores';
 import { useController, useProfile, useServices } from '../state/app';
 
@@ -59,20 +59,20 @@ function SignatureCard({ profile, state, sig, navigate }: { profile: UserProfile
             </ul>
             {v ? (
               <dl className="kv">
-                <dt>Held-out separation (1 = perfect, 0.5 = chance)</dt><dd>{showNumber(v.heldOutAuc).text}</dd>
-                <dt>Shuffled-label 95th percentile</dt><dd>{showNumber(v.nullAuc95).text}</dd>
-                <dt>p against shuffled labels</dt><dd>{showNumber(v.p).text}</dd>
+                <dt>Held-out separation (1 = perfect, 0.5 = chance)</dt><dd>{numberLine(v.heldOutAuc)}</dd>
+                <dt>Shuffled-label 95th percentile</dt><dd>{numberLine(v.nullAuc95)}</dd>
+                <dt>p against shuffled labels</dt><dd>{numberLine(v.p)}</dd>
                 <dt>Sessions, days</dt><dd>{v.nSessions}, {v.nDays}</dd>
               </dl>
             ) : null}
-            <p className="small dim">To be called reliable the signature must separate feeling from comparison on sessions it was not built from, better than shuffled labels, over at least three different days. False entries when you are not in the state: about {showNumber(sig.detection.falseEntriesPer10Min, 'per 10 min').text}.</p>
+            <p className="small dim">To be called reliable the signature must separate feeling from comparison on sessions it was not built from, better than shuffled labels, over at least three different days. False entries when you are not in the state: about {numberLine(sig.detection.falseEntriesPer10Min, 'per 10 min')}.</p>
             {sig.history.length ? (
               <div className="table-wrap">
                 <table>
                   <thead><tr><th>Checked</th><th>Status</th><th>Held-out</th><th>p</th><th>Sessions</th><th>Days</th></tr></thead>
                   <tbody>
                     {sig.history.slice().reverse().map((h) => (
-                      <tr key={h.at}><td>{fmtDateTime(h.at)}</td><td>{h.status === 'reliable' ? 'reliable' : 'still learning'}</td><td>{showNumber(h.heldOutAuc).text}</td><td>{showNumber(h.p).text}</td><td>{h.nSessions}</td><td>{h.nDays}</td></tr>
+                      <tr key={h.at}><td>{fmtDateTime(h.at)}</td><td>{h.status === 'reliable' ? 'reliable' : 'still learning'}</td><td>{numberLine(h.heldOutAuc)}</td><td>{numberLine(h.p)}</td><td>{h.nSessions}</td><td>{h.nDays}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -119,7 +119,7 @@ function AnchorCard({ a, profile, navigate }: { a: AnchorRecord; profile: UserPr
   const probeReady = readyForProbe(a);
   const row = (label: string, x: typeof ev.anchor) => (
     <tr>
-      <td>{label}</td><td>{x.n}</td><td>{showNumber(x.meanDelta).text}</td><td>{x.hitRate === null ? 'not measured' : `${Math.round(x.hitRate * 100)}%`}</td><td>{showNumber(x.medianLatencyS, 's').text}</td>
+      <td>{label}</td><td>{x.n}</td><td>{numberLine(x.meanDelta)}</td><td>{x.hitRate === null ? notMeasuredText('no_data') : `${Math.round(x.hitRate * 100)}%`}</td><td>{numberLine(x.medianLatencyS, 's')}</td>
     </tr>
   );
   return (

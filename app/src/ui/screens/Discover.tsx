@@ -6,7 +6,7 @@ import {
 import { Badge, Button, Card, Field, Note, PageHeader } from '../components/kit';
 import { IntervalBar } from '../components/IntervalBar';
 import { StartButton } from '../components/StartButton';
-import { fmtDateTime, showNumber } from '../measured';
+import { fmtDateTime, numberLine } from '../measured';
 import { useProfile, useServices } from '../state/app';
 
 const LABEL_TEXT: Record<StrategyLabel, { text: string; tone: 'ok' | 'accent' | 'default' | 'warn' }> = {
@@ -144,11 +144,11 @@ export function Discover({ navigate }: { navigate: (to: string) => void }) {
           <>
             <dl className="kv">
               <dt>Individual alpha frequency</dt>
-              <dd>{showNumber(cal.iafHz, 'Hz', cal.iafSe).text}</dd>
+              <dd>{numberLine(cal.iafHz, 'Hz', cal.iafSe)}</dd>
               <dt>Eyes-closed alpha rise</dt>
-              <dd>{showNumber(cal.alphaReactivityDb, 'dB').text}</dd>
+              <dd>{numberLine(cal.alphaReactivityDb, 'dB')}</dd>
               <dt>Theta peak</dt>
-              <dd>{showNumber(cal.thetaPeakHz, 'Hz').text}</dd>
+              <dd>{numberLine(cal.thetaPeakHz, 'Hz')}</dd>
               <dt>Last run</dt>
               <dd>{fmtDateTime(cal.at)}</dd>
             </dl>
@@ -206,9 +206,9 @@ export function Discover({ navigate }: { navigate: (to: string) => void }) {
                   {res.candidates.map((c) => (
                     <tr key={c.bpm} style={!c.usable ? { opacity: 0.6 } : undefined}>
                       <td>{c.bpm}{res.withinNoise.includes(c.bpm) ? ' (within noise)' : ''}{!c.usable ? ' (not usable)' : ''}</td>
-                      <td>{showNumber(c.lfPower).text}</td>
-                      <td>{showNumber(c.resonanceStrength).text}</td>
-                      <td>{showNumber(c.adherence).text}</td>
+                      <td>{numberLine(c.lfPower)}</td>
+                      <td>{numberLine(c.resonanceStrength)}</td>
+                      <td>{numberLine(c.adherence)}</td>
                     </tr>
                   ))}
                 </tbody>

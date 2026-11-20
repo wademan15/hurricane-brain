@@ -22,7 +22,12 @@ There are no real Muse recordings here yet.
   The committed set was written with `--expected lab/out/bakeoff_results_pass2.json --config S1Q-P1-excess-band-a033-t3min`
   (the bake-off's recommended configuration, see docs/spec/bakeoff-report.md: S1Q spectrum, P1 with the tuned
   factor 1.280, excess centroid, chance A placed by band, CFAR thresholds at the 3.3% exceedance of the amended
-  spec 8.4). The lab hops 1 s, so compare at the engine frames whose end time is a whole second.
+  spec 8.4, T3 as amended with fixed thresholds ln L >= 2 / >= 1; T3 is the recommended state rule, T4 is the
+  engine's kind of rule). The lab hops 1 s, so compare at the engine frames whose end time is a whole second.
+  `python3 lab/compare_rust.py <dir of hb-run .jsonl>` does the comparison (results in docs/spec/bakeoff-report.md 13).
+  Surrogate pass rule: `phi3_10db_phase_randomized` (and any block shuffle with blocks much longer than a cycle)
+  keeps the spectrum, so it SHOULD show the same peaks, ratios and cascade as `phi3_10db`; only sample shuffling
+  or sub-cycle blocks remove them.
   Per window: `peaks` = `[frequency Hz, window SE Hz (-1 if none), height dB over background, width Hz]`,
   `tracks` = `[track id, integrated frequency Hz, integrated SE Hz]`, `null` = reason or null.
   `states[target][rule]` = window end times at which that state was entered.

@@ -8,6 +8,9 @@
  *       rotation bound to a measured frequency -> the image rotates (screenshots differ)
  *       dominant = null                        -> pixel-identical across time
  * (c) a 3-step golden ratio cascade vs (d) an octave cascade -> look different
+ * (e) the combined state (both at once) looks different from spiral-only, rings-only and from both
+ *     cascades overlaid without the combined state; it is pixel-stable when nothing changes
+ * (f) reduced motion (prefers-reduced-motion) rotates far less in the same second
  * Also: frame time of the shader at 1920x1080, and animation-frame intervals of the live view.
  * Screenshots are written to app/src/viz/test/out/.
  */
@@ -124,6 +127,53 @@ try {
   const cd = await diff(c, d);
   check('(c) vs (d): golden ratio and octave cascades look different', cd.mean > 2 && cd.changed > 0.2,
     `mean |diff| ${cd.mean.toFixed(2)}/255, ${(cd.changed * 100).toFixed(1)}% pixels differ`);
+
+  // (e) Combined state, static, dominant null so it must be pixel-stable.
+  await page.evaluate(() => window.hb.setScenario('both-cascades-no-state'));
+  await wait(1500);
+  const ov = await shot('e-both-cascades-no-combined-state');
+  await page.evaluate(() => window.hb.setScenario('combined'));
+  await wait(1500);
+  const e1 = await shot('e-combined-state-1');
+  await wait(1000);
+  const e2 = await shot('e-combined-state-2');
+  check('(e) combined state with nothing changing: pixel-identical across 1 s', e1.equals(e2));
+  const ec = await diff(e1, c);
+  const ed = await diff(e1, d);
+  const eo = await diff(e1, ov);
+  check('(e) combined state looks different from spiral-only, rings-only and the plain overlay',
+    ec.mean > 2 && ed.mean > 2 && eo.mean > 0.5 && eo.changed > 0.01,
+    `vs spiral ${ec.mean.toFixed(2)}, vs rings ${ed.mean.toFixed(2)}, vs overlay ${eo.mean.toFixed(2)}/255 over ${(eo.changed * 100).toFixed(1)}% px`);
+  await page.mouse.click(640, 400 - Math.round(0.15 * 0.46 * 800));
+  await wait(400);
+  await shot('e-combined-readout');
+  console.log(`  readout on the eye wall in the combined state: ${await page.locator('.hb-readout h3').textContent()}`);
+  await page.keyboard.press('Escape');
+  await page.mouse.click(5, 5);
+  await page.keyboard.press('Escape');
+
+  // (f) Reduced motion: the same measured 9.95 Hz rotates much less in 1 s.
+  await page.evaluate(() => window.hb.setScenario('static-rot'));
+  await wait(1200);
+  const fr1 = await shot('f-full-motion-1');
+  await wait(1000);
+  const fr2 = await shot('f-full-motion-2');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await wait(1200);
+  const rm1 = await shot('f-reduced-motion-1');
+  await wait(1000);
+  const rm2 = await shot('f-reduced-motion-2');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const dFull = await diff(fr1, fr2);
+  const dRed = await diff(rm1, rm2);
+  check('(f) reduced motion: rotation is a slower drift (still moving, driven by the measurement)',
+    dRed.mean > 0 && dRed.mean < dFull.mean / 2,
+    `mean |diff| in 1 s: full ${dFull.mean.toFixed(2)}, reduced ${dRed.mean.toFixed(2)}/255`);
+
+  // Worst case for flicker: 8 arms on a 45 Hz track.
+  await page.evaluate(() => window.hb.setScenario('static-rot-8arms-45hz'));
+  await wait(1500);
+  await shot('g-8-arms-45hz');
 
   // Heart: pulse and swell, and tap-to-inspect readout.
   await page.evaluate(() => window.hb.setScenario('phi-heart'));

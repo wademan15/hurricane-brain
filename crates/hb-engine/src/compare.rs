@@ -45,6 +45,14 @@ impl Analytic {
 /// stretch with `trim` samples dropped at each end, and the mean over `nshift` circular
 /// time shifts of `hi` of at least `min_shift` samples. None if too short.
 pub fn locking(lo: &[C], hi: &[C], n: u32, trim: usize, nshift: usize, min_shift: usize) -> Option<(f64, f64)> {
+    locking_vector(lo, hi, n, trim, nshift, min_shift).map(|(z, sur)| (z.abs(), sur))
+}
+
+/// As `locking`, but the mean vector itself: its length is the locking and its angle is the
+/// phase at which `hi` sits against n times the phase of `lo`. A waveform's harmonic keeps
+/// that angle from one window to the next; two rhythms that only happen to lock for a while
+/// do not, which is what lets the harmonic test add windows up (spec 6.6).
+pub fn locking_vector(lo: &[C], hi: &[C], n: u32, trim: usize, nshift: usize, min_shift: usize) -> Option<(C, f64)> {
     let len = lo.len().min(hi.len());
     if len <= 2 * trim {
         return None;
@@ -55,19 +63,19 @@ pub fn locking(lo: &[C], hi: &[C], n: u32, trim: usize, nshift: usize, min_shift
     }
     let ua: Vec<C> = lo[trim..trim + l].iter().map(|z| C::cis(n as f64 * z.arg())).collect();
     let ub: Vec<C> = hi[trim..trim + l].iter().map(|z| C::cis(z.arg())).collect();
-    let plv = |shift: usize| {
+    let vec_at = |shift: usize| {
         let mut acc = C::default();
         for i in 0..l {
             acc = acc + ub[(i + shift) % l] * ua[i].conj();
         }
-        acc.abs() / l as f64
+        acc.scale(1.0 / l as f64)
     };
-    let obs = plv(0);
+    let obs = vec_at(0);
     let span = l - 2 * min_shift;
     let mut sur = 0.0;
     for j in 0..nshift {
         let s = min_shift + if nshift > 1 { j * span / (nshift - 1) } else { span / 2 };
-        sur += plv(s);
+        sur += vec_at(s).abs();
     }
     Some((obs, sur / nshift as f64))
 }

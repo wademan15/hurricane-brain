@@ -590,7 +590,7 @@ python3 lab/compare_rust.py OUT                    # writes lab/out/rust_vs_lab.
 
 **What was run.**
 
-- `hb-run` was built from commit 840deda (`git status` clean for `crates/`) at 22:15 UTC on 20 November 2026, with `CARGO_TARGET_DIR=/home/user/targets/lab cargo build -p hb-engine --release`. The build succeeded on the first try.
+- `hb-run` was built from commit 840deda (`git status` clean for `crates/`) at 22:15 UTC on 20 November 2026, with `CARGO_TARGET_DIR=/home/user/targets/lab cargo build -p hb-engine --release`. The build succeeded on the first try. Note: by 22:21 UTC, later commits (39035b3, 3b6ed36) had changed 4 files in `crates/hb-engine` (215 lines added, 47 removed). Everything below describes 840deda. Rerun the commands in section 12 on the current engine before acting on it.
 - It ran on all 21 fixtures in `lab/fixtures/`, with default parameters.
 - The lab ran the recommended configuration (section 9) on the same files.
 - Each lab window (hop 1 s) was paired with the engine slow frame (hop 250 ms) nearest in time, within 0.26 s.

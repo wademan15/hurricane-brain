@@ -43,9 +43,20 @@ export function showMeasured(m: Measured | null | undefined, unit = '', scale = 
   return { measured: true, text: fmtNumber(m.v * scale, se, unit), reason: null };
 }
 
+/** "not measured (reason)" for a reason known by code. The one phrase for a null with no value to look at. */
+export function notMeasuredText(why: UiReason): string {
+  return `${NOT_MEASURED} (${reasonPlain(why)})`;
+}
+
 /** Single line, for places with no room for a second line. */
 export function measuredLine(m: Measured | null | undefined, unit = '', scale = 1): string {
   const s = showMeasured(m, unit, scale);
+  return s.measured ? s.text : `${NOT_MEASURED} (${s.reason})`;
+}
+
+/** A stored number as one line: the value, or "not measured (reason)". */
+export function numberLine(v: number | null | undefined, unit = '', se?: number | null): string {
+  const s = showNumber(v, unit, se);
   return s.measured ? s.text : `${NOT_MEASURED} (${s.reason})`;
 }
 
@@ -104,7 +115,7 @@ export function summarizeSignal(slow: SlowFrame | null | undefined): SignalSumma
 }
 
 export function fmtDuration(s: number | null | undefined): string {
-  if (s === null || s === undefined || !Number.isFinite(s)) return NOT_MEASURED;
+  if (s === null || s === undefined || !Number.isFinite(s)) return `${NOT_MEASURED} (no duration was recorded)`;
   const t = Math.max(0, Math.round(s));
   const h = Math.floor(t / 3600);
   const m = Math.floor((t % 3600) / 60);

@@ -19,7 +19,7 @@ function useLatestSlow() {
 function HeadDiagram({ usable }: { usable: Record<string, boolean | undefined> }) {
   const dot = (name: string, x: number, y: number) => {
     const u = usable[name];
-    const fill = u === undefined ? '#6f7d93' : u ? '#7bc89a' : '#e58a78';
+    const fill = u === undefined ? 'var(--diagram-unknown)' : u ? 'var(--diagram-ok)' : 'var(--diagram-bad)';
     return (
       <g key={name}>
         <circle cx={x} cy={y} r="11" fill={fill} />

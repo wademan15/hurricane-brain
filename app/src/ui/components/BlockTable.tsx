@@ -1,5 +1,5 @@
 import { getStrategy, STATE_METRICS, type SessionRecord } from '../../training';
-import { fmtDuration, showNumber } from '../measured';
+import { fmtDuration, numberLine } from '../measured';
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? null : x * 100);
 
@@ -36,14 +36,14 @@ export function BlockTable({ record }: { record: SessionRecord }) {
               </td>
               <td>{fmtDuration(b.tEnd - b.tStart)}</td>
               <td>{b.strategy && b.strategy !== 'none' ? (getStrategy(b.strategy)?.name ?? b.strategy) : b.strategy === 'none' ? 'just resting' : ''}</td>
-              <td>{showNumber(pct(b.cleanFraction), '%').text}</td>
-              <td>{showNumber(pct(b.successCombined), '%').text}</td>
+              <td>{numberLine(pct(b.cleanFraction), '%')}</td>
+              <td>{numberLine(pct(b.successCombined), '%')}</td>
               {fields.map((f) => {
                 const s = b.stats[f];
                 const n = showNumber(s?.mean, '', s && s.sd !== null && s.ess ? s.sd / Math.sqrt(s.ess) : null);
                 return (
                   <td key={f}>
-                    {n.measured ? n.text : <span className="nm">not measured</span>}
+                    {numberLine(s?.mean, '', s && s.sd !== null && s.ess ? s.sd / Math.sqrt(s.ess) : null)}
                   </td>
                 );
               })}
