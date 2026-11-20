@@ -426,9 +426,12 @@ signature sound unique to them, so that the sound alone later helps bring the
 state back. This is classical conditioning (R7.4). The design follows the
 learning-theory rules so it actually works and so we can prove whether it does.
 
-**Phase 0: earn it.** A state becomes eligible for an anchor when the user
-has reached it (personal signature distance under threshold and rating ≥4) in
-at least 4 of their last 6 sessions.
+**Phase 0: recommended readiness.** Anchors are available to every user at
+any time (user setting). The app recommends waiting until the state is
+reliable, defined as reaching it (personal signature distance under threshold
+and rating ≥4) in at least 4 of the last 6 sessions, and explains why:
+pairing a sound with a state you only half reach teaches a weaker link.
+Before that point the anchor screen shows "early anchor" with that note.
 
 **Phase 1: create the sound.** The user picks from 3–4 procedurally generated
 candidates, each a short (4–8 s) warm, slow-onset motif. Candidates are built
@@ -551,12 +554,18 @@ For the signal-engine spec thread and the build team:
 
 ---
 
-## 10. Open questions for Jesus
+## 10. Decisions and user settings
 
-1. ~~Discovery length.~~ Decided 2026-11-20: 10-minute sessions, as many as
-   needed (typically 5–8, cap 10), stopping early once confident.
-2. ~~Twilight wake tether default.~~ Decided 2026-11-20: a per-session user option, remembered.
-3. Should anchors be available to every user, or unlocked as an achievement
-   after the eligibility criterion?
-4. Are you comfortable with an optional, consented population model (pooled
-   effect sizes only) to make everyone's priors better?
+Standing rule (Jesus, 2026-11-20): choices about user preference become user
+settings with a sensible default, not questions for the product owner.
+
+| Item | Decision / setting | Default |
+|---|---|---|
+| Discovery length | 10-minute sessions, as many as needed (typically 5–8, cap 10), stops early once confident | as described |
+| Twilight sleep nudge | Per-session choice: "Keep me on the edge" or "Let me drift off" | Keep me on the edge; last choice remembered |
+| Personal anchors | Available any time | Recommended once a state is reliable (§7.2 Phase 0) |
+| Population model | Per-user opt-in: "Help improve everyone's starting guesses" (shares only anonymous effect sizes) | Off until the user opts in |
+| Session length (training) | 10, 15, 20 or 30 minutes | 10 minutes |
+| Voice guidance | Full, sparse, none | Set by program level; user can override |
+| Soundscape, entrainment layer | User choice; entrainment off unless chosen or being tested in Discovery | User's top-rated soundscape |
+| Experimental programs (Balance, CFC metrics) | "Labs" switch | Off |
