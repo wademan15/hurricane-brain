@@ -215,7 +215,7 @@ export interface LadderLevel {
 }
 
 export const LADDER: LadderLevel[] = [
-  { level: 1, name: 'Guided', guidance: 'full', successCenter: 0.72, advance: { minFractionInTarget: 0.6 } },
+  { level: 1, name: 'Guided', guidance: 'full', successCenter: 0.7, advance: { minFractionInTarget: 0.6 } },
   { level: 2, name: 'Sparse', guidance: 'sparse', successCenter: 0.68, advance: { minFractionInTarget: 0.6, maxLatencyS: 90 } },
   { level: 3, name: 'Silent', guidance: 'none', successCenter: 0.65, advance: { minFractionInTarget: 0.65, maxLatencyS: 60 } },
   { level: 4, name: 'Transfer', guidance: 'none', successCenter: 0.65, advance: { transferRatio: 0.75 } },

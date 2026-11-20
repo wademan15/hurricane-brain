@@ -525,12 +525,15 @@ export function createSessionRunner(plan: SessionPlan, opts: RunnerOptions): Ses
       const thr = thresholds[t.id];
       if (b.kind === 'train' && b.feedback && t.adapt.enabled && thr !== null && xs.length >= P.adaptMinSamples) {
         const s = success[t.id] as number;
-        if (s < t.adapt.lo || s > t.adapt.hi) {
+        // Inside the success band the threshold moves gently toward the band centre; outside it,
+        // with the full gain. Either way the step is capped in baseline SDs.
+        {
+          const gain = s < t.adapt.lo || s > t.adapt.hi ? t.adapt.gain : t.adapt.gain / 2;
           const vals = xs.map((x) => x.v);
           const ideal = t.direction === 'up' ? quantile(vals, 1 - t.adapt.center) : quantile(vals, t.adapt.center);
           const sd = baselineFor(t.field ?? SIGNATURE_FIELD)?.sd ?? Math.abs(ideal - thr);
           const maxStep = t.adapt.maxStepSd * Math.max(sd, P.minBaselineSd);
-          const step = clamp(t.adapt.gain * (ideal - thr), -maxStep, maxStep);
+          const step = clamp(gain * (ideal - thr), -maxStep, maxStep);
           const next = limit(t, thr + step);
           if (next !== thr) {
             thresholds[t.id] = next;

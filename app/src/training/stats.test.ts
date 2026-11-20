@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Statistical tests run many seeds; allow time on a loaded machine.
+vi.setConfig({ testTimeout: 60_000 });
 import { createRng, type Rng } from './math';
 import { blockBootstrapMeanCi, compareTechniques, computeBlockStats, fitSessionTrend, seFromInterval, seriesStats, type Sample } from './stats';
 

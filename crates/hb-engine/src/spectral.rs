@@ -199,11 +199,24 @@ pub struct BgFit {
     pub offset_se: f64,
     /// Inlier RMS residual over the expected log-SD.
     pub fit_ratio: f64,
+    /// For the prediction uncertainty of the fitted line (log10 units): mean of log10 f
+    /// over the inliers, their sum of squares about it, the inflated residual variance, n.
+    pub xbar: f64,
+    pub sxx: f64,
+    pub s2: f64,
+    pub n: f64,
 }
 
 impl BgFit {
+    /// The underlying power law 10^offset / f^exponent (the frames.ts formula).
     pub fn at(&self, f: f64) -> f64 {
         m::pow(10.0, self.offset - self.exponent * m::log10(f.max(1e-6)))
+    }
+
+    /// Standard deviation of the fitted background's log10 at `f` (OLS prediction error).
+    pub fn pred_sd_log10(&self, f: f64) -> f64 {
+        let x = m::log10(f.max(1e-6));
+        m::sqrt(self.s2 * (1.0 / self.n + (x - self.xbar) * (x - self.xbar) / self.sxx))
     }
 }
 
@@ -221,100 +234,151 @@ pub fn in_mains_zone(f: f64, mains: &[f64], half: f64) -> bool {
     })
 }
 
-/// Robust background fit (spec 6.2). Fit log10 power on log10 frequency, drop bins sitting
-/// above the line, refit; then set the level so that the flattened spectrum's median equals
-/// the chi-squared median, which makes the flattened spectrum follow chi2_2K / 2K under
-/// pure background. That calibration is what the height test in 6.3 assumes.
-pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64]) -> Result<BgFit, Reason> {
+/// The estimator's expected value under a power law: f^b times the conditioning filters'
+/// power response, averaged over the multitaper's +-W smoothing window (a box to good
+/// approximation). On a steep 1/f spectrum the smoothing alone lifts 1 Hz by 10 to 30 %,
+/// which a plain power law would read as a peak.
+fn smoothed_shape(b: f64, n: usize, df: f64, w_hz: f64, response: &[f64]) -> Vec<f64> {
+    let hw = (m::round(w_hz / df) as usize).max(1);
+    let g: Vec<f64> = (0..n)
+        .map(|i| {
+            let f = (i as f64 * df).max(df * 0.5);
+            m::pow(f, b) * response.get(i).copied().unwrap_or(1.0)
+        })
+        .collect();
+    // Prefix sums for the moving average.
+    let mut cs = vec![0.0; n + 1];
+    for i in 0..n {
+        cs[i + 1] = cs[i] + g[i];
+    }
+    (0..n)
+        .map(|i| {
+            let lo = i.saturating_sub(hw).max(1);
+            let hi = (i + hw).min(n - 1);
+            if hi < lo {
+                g[i]
+            } else {
+                (cs[hi + 1] - cs[lo]) / (hi + 1 - lo) as f64
+            }
+        })
+        .collect()
+}
+
+/// Robust background fit (spec 6.2).
+///
+/// Fit log10 power on log10 frequency over the fit range, dropping bins that sit above the
+/// line and refitting, with the model's shape corrected for the estimator's smoothing and the
+/// conditioning filters (`response`, squared magnitude per bin; empty for none). Then set
+/// the level so that the flattened spectrum's median over the fit bins equals the median of
+/// chi2_2K / 2K: under pure background the flattened spectrum then follows chi2_2K / 2K,
+/// which is what the height test in 6.3 assumes. Returns the fit and the background on the
+/// full grid.
+pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], response: &[f64]) -> Result<(BgFit, Vec<f64>), Reason> {
     if k == 0 {
         return Err(Reason::InsufficientClean);
     }
+    let nb = s.len();
     let dec = (m::round(0.25 / df) as usize).max(1);
     let lo = m::ceil(p.bg_fit_lo_hz / df) as usize;
-    let hi = (m::floor(p.bg_fit_hi_hz / df) as usize).min(s.len() - 1);
-    let mut xs = Vec::new();
-    let mut ys = Vec::new();
-    let mut raw = Vec::new();
+    let hi = (m::floor(p.bg_fit_hi_hz / df) as usize).min(nb - 1);
+    let mut idx = Vec::new();
     let mut i = lo.max(1);
     while i <= hi {
         let f = i as f64 * df;
         if !in_mains_zone(f, mains, p.mains_exclusion_hz) && s[i] > 0.0 {
-            xs.push(m::log10(f));
-            ys.push(m::log10(s[i]));
-            raw.push(s[i]);
+            idx.push(i);
         }
         i += dec;
     }
-    if xs.len() < 12 {
+    if idx.len() < 12 {
         return Err(Reason::BadFit);
     }
+    let xs: Vec<f64> = idx.iter().map(|&i| m::log10(i as f64 * df)).collect();
     let sigma = m::sqrt(trigamma(k as f64)) / m::LN10;
-    let mut inl = vec![true; xs.len()];
-    let mut fit = (0.0, 0.0, 0.0, 0.0, 0.0); // a, b, se_a, se_b, rms
-    for _ in 0..25 {
-        let n = inl.iter().filter(|v| **v).count();
-        if n < 10 {
-            return Err(Reason::BadFit);
-        }
-        let (mut sx, mut sy) = (0.0, 0.0);
-        for j in 0..xs.len() {
-            if inl[j] {
-                sx += xs[j];
-                sy += ys[j];
+    let mut corr = vec![0.0f64; idx.len()]; // log10 of shape correction
+    let mut fit = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0); // a, b, se_a, se_b, rms, mx, sxx, s2
+    let mut n_in = 0.0;
+    for outer in 0..3 {
+        let ys: Vec<f64> = idx.iter().zip(corr.iter()).map(|(&i, c)| m::log10(s[i]) - c).collect();
+        let mut inl = vec![true; xs.len()];
+        for _ in 0..25 {
+            let n = inl.iter().filter(|v| **v).count();
+            if n < 10 {
+                return Err(Reason::BadFit);
             }
-        }
-        let (mx, my) = (sx / n as f64, sy / n as f64);
-        let (mut sxx, mut sxy) = (0.0, 0.0);
-        for j in 0..xs.len() {
-            if inl[j] {
-                sxx += (xs[j] - mx) * (xs[j] - mx);
-                sxy += (xs[j] - mx) * (ys[j] - my);
+            let (mut sx, mut sy) = (0.0, 0.0);
+            for j in 0..xs.len() {
+                if inl[j] {
+                    sx += xs[j];
+                    sy += ys[j];
+                }
             }
-        }
-        if sxx <= 0.0 {
-            return Err(Reason::BadFit);
-        }
-        let b = sxy / sxx;
-        let a = my - b * mx;
-        let mut ss = 0.0;
-        for j in 0..xs.len() {
-            if inl[j] {
+            let (mx, my) = (sx / n as f64, sy / n as f64);
+            let (mut sxx, mut sxy) = (0.0, 0.0);
+            for j in 0..xs.len() {
+                if inl[j] {
+                    sxx += (xs[j] - mx) * (xs[j] - mx);
+                    sxy += (xs[j] - mx) * (ys[j] - my);
+                }
+            }
+            if sxx <= 0.0 {
+                return Err(Reason::BadFit);
+            }
+            let b = sxy / sxx;
+            let a = my - b * mx;
+            let mut ss = 0.0;
+            for j in 0..xs.len() {
+                if inl[j] {
+                    let r = ys[j] - (a + b * xs[j]);
+                    ss += r * r;
+                }
+            }
+            let rms = m::sqrt(ss / n as f64);
+            let s2 = ss / (n as f64 - 2.0).max(1.0);
+            fit = (a, b, m::sqrt(s2 * (1.0 / n as f64 + mx * mx / sxx)), m::sqrt(s2 / sxx), rms, mx, sxx, s2);
+            n_in = n as f64;
+            let mut changed = false;
+            for j in 0..xs.len() {
                 let r = ys[j] - (a + b * xs[j]);
-                ss += r * r;
+                let keep = r <= p.bg_drop_sigma * sigma;
+                if keep != inl[j] {
+                    changed = true;
+                    inl[j] = keep;
+                }
+            }
+            if !changed {
+                break;
             }
         }
-        let rms = m::sqrt(ss / n as f64);
-        let s2 = ss / (n as f64 - 2.0).max(1.0);
-        let se_b = m::sqrt(s2 / sxx);
-        let se_a = m::sqrt(s2 * (1.0 / n as f64 + mx * mx / sxx));
-        fit = (a, b, se_a, se_b, rms);
-        let mut changed = false;
-        for j in 0..xs.len() {
-            let r = ys[j] - (a + b * xs[j]);
-            let keep = r <= p.bg_drop_sigma * sigma;
-            if keep != inl[j] {
-                changed = true;
-                inl[j] = keep;
+        if outer < 2 {
+            let shape = smoothed_shape(fit.1, nb, df, p.mt_half_bandwidth_hz, response);
+            for (j, &i) in idx.iter().enumerate() {
+                let f = (i as f64 * df).max(df * 0.5);
+                corr[j] = m::log10(shape[i] / m::pow(f, fit.1));
             }
-        }
-        if !changed {
-            break;
         }
     }
-    let (a, b, se_a, se_b, rms) = fit;
+    let (_a, b, se_a, se_b, rms, mx, sxx, s2) = fit;
     let fit_ratio = rms / sigma;
     if !(fit_ratio <= p.bg_fit_max_ratio) {
         return Err(Reason::BadFit);
     }
-    // Level calibration by the median of all fit bins (robust to the few peak bins).
-    let ratios: Vec<f64> = xs.iter().zip(raw.iter()).map(|(x, sv)| sv / m::pow(10.0, a + b * x)).collect();
+    // Level by the median of all fit bins (robust to the few peak bins).
+    let shape = smoothed_shape(b, nb, df, p.mt_half_bandwidth_hz, response);
+    let ratios: Vec<f64> = idx.iter().map(|&i| s[i] / shape[i]).collect();
     let med = m::median(&ratios).ok_or(Reason::BadFit)?;
     let dof = 2.0 * k as f64;
     let chi_med = chi2_isf(0.5, dof) / dof;
-    let offset = a + m::log10(med / chi_med);
-    // Bins on the 0.25 Hz grid are correlated over the 2W resolution; inflate the OLS SE.
-    let infl = m::sqrt((2.0 * p.mt_half_bandwidth_hz / (dec as f64 * df)).max(1.0));
-    Ok(BgFit { exponent: -b, exponent_se: se_b * infl, offset, offset_se: se_a * infl, fit_ratio })
+    let level = med / chi_med;
+    let offset = m::log10(level);
+    // Fit bins on the 0.25 Hz grid are correlated over the 2W resolution: inflate.
+    let infl2 = (2.0 * p.mt_half_bandwidth_hz / (dec as f64 * df)).max(1.0);
+    let infl = m::sqrt(infl2);
+    let bg: Vec<f64> = shape.iter().map(|v| v * level).collect();
+    Ok((
+        BgFit { exponent: -b, exponent_se: se_b * infl, offset, offset_se: se_a * infl, fit_ratio, xbar: mx, sxx, s2: s2 * infl2, n: n_in },
+        bg,
+    ))
 }
 
 /// A peak that passed the height and width tests in one window at one site.
@@ -338,12 +402,14 @@ impl Peak {
 }
 
 /// The height threshold for a window: flattened height at which pure background produces a
-/// maximum anywhere in the search range with probability `alpha` (spec 6.3, item 1).
-/// `m_bins` independent bins of width 2W are searched; the per-bin level is Sidak-corrected.
-pub fn height_threshold(k: usize, alpha: f64, m_bins: f64) -> f64 {
+/// maximum anywhere in the search range with probability `alpha` (spec 6.3, item 1), from
+/// the chi-squared law with 2K degrees of freedom. `m_bins` is the effective number of
+/// independent tries in the search range; the per-try level is Sidak-corrected. Returns the
+/// threshold and the per-try tail probability.
+pub fn height_threshold(k: usize, alpha: f64, m_bins: f64) -> (f64, f64) {
     let dof = 2.0 * k as f64;
     let p_bin = -m::expm1(m::ln1p(-alpha) / m_bins.max(1.0));
-    chi2_isf(p_bin, dof) / dof
+    (chi2_isf(p_bin, dof) / dof, p_bin)
 }
 
 pub struct PeakSearch<'a> {
@@ -352,6 +418,9 @@ pub struct PeakSearch<'a> {
     pub mains: &'a [f64],
     /// False-peak probability for this site and window (alpha_peak split across sites).
     pub alpha_site: f64,
+    pub fit: &'a BgFit,
+    /// Window length T, s.
+    pub window_s: f64,
 }
 
 pub struct PeakResult {
@@ -423,11 +492,27 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
             searched += 1;
         }
     }
-    let m_bins = searched as f64 * df / w2;
-    let thr = height_threshold(spec.k, ps.alpha_site, m_bins);
+    // Effective independent tries. The maximum of a finely sampled multitaper spectrum
+    // behaves like a search over one try per Rayleigh bin (1/T), not one per 2W: simulation
+    // on background-only noise (tests/engine.rs) shows the per-2W count understates false
+    // peaks about eightfold at T = 8 s. Spec 6.3: "then verified by simulation".
+    let m_bins = searched as f64 * df * ps.window_s * p.peak_tries_per_rayleigh;
+    let (thr, p_bin) = height_threshold(spec.k, ps.alpha_site, m_bins);
+    // The fitted background is itself uncertain (most at the ends of the fit range). A
+    // lognormal error of SD sigma on the background makes the flattened tail heavier by
+    // exp(lambda^2 sigma^2 / 2), lambda = K h - (K - 1) the local log-slope of the chi2_2K/2K
+    // tail at h; holding the per-try probability fixed moves the threshold up by
+    // exp(lambda sigma^2 / 2). First-order, per bin.
+    let kf = spec.k as f64;
+    let lam = (kf * thr - (kf - 1.0)).max(0.0);
+    let thr_at = |i: usize| {
+        let sg = m::LN10 * ps.fit.pred_sd_log10(i as f64 * df);
+        thr * m::exp(0.5 * lam * sg * sg)
+    };
+    let _ = p_bin;
     let mut cands: Vec<usize> = Vec::new();
     for i in lo..=hi {
-        if flat[i] > thr && flat[i] > flat[i - 1] && flat[i] >= flat[i + 1] && !in_mains_zone(i as f64 * df, ps.mains, p.mains_exclusion_hz) {
+        if flat[i] > thr_at(i) && flat[i] > flat[i - 1] && flat[i] >= flat[i + 1] && !in_mains_zone(i as f64 * df, ps.mains, p.mains_exclusion_hz) {
             cands.push(i);
         }
     }
@@ -569,17 +654,17 @@ pub struct SiteAnalysis {
     pub threshold: f64,
 }
 
-pub fn analyse_site(spec: SiteSpec, df: f64, p: &Params, mains: &[f64], alpha_site: f64) -> SiteAnalysis {
-    let bg_fit = fit_background(&spec.s, df, spec.k, p, mains);
-    match bg_fit {
-        Ok(fit) => {
-            let bg: Vec<f64> = (0..spec.s.len()).map(|i| fit.at((i as f64 * df).max(df * 0.5))).collect();
+/// `response`: squared magnitude of the conditioning filters per grid bin (empty for none).
+pub fn analyse_site(spec: SiteSpec, df: f64, p: &Params, mains: &[f64], alpha_site: f64, response: &[f64]) -> SiteAnalysis {
+    let window_s = p.slow_window_s;
+    match fit_background(&spec.s, df, spec.k, p, mains, response) {
+        Ok((fit, bg)) => {
             let flat: Vec<f64> = spec.s.iter().zip(bg.iter()).map(|(s, b)| s / b).collect();
-            let ps = PeakSearch { p, df, mains, alpha_site };
+            let ps = PeakSearch { p, df, mains, alpha_site, fit: &fit, window_s };
             let pr = find_peaks(&spec, &bg, &flat, &ps);
-            SiteAnalysis { spec, bg_fit, bg, flat, peaks: pr.peaks, height_passes: pr.height_passes, threshold: pr.threshold }
+            SiteAnalysis { spec, bg_fit: Ok(fit), bg, flat, peaks: pr.peaks, height_passes: pr.height_passes, threshold: pr.threshold }
         }
-        Err(_) => SiteAnalysis { spec, bg_fit, bg: Vec::new(), flat: Vec::new(), peaks: Vec::new(), height_passes: 0, threshold: f64::NAN },
+        Err(w) => SiteAnalysis { spec, bg_fit: Err(w), bg: Vec::new(), flat: Vec::new(), peaks: Vec::new(), height_passes: 0, threshold: f64::NAN },
     }
 }
 
@@ -609,6 +694,6 @@ impl WindowAnalyzer {
         let mut eig = Vec::new();
         self.mt.eigenspectra(&xs, &mut eig);
         let spec = SiteSpec::from_members(vec![Member::new(eig)]);
-        analyse_site(spec, self.mt.df, &self.p, mains, self.p.alpha_peak)
+        analyse_site(spec, self.mt.df, &self.p, mains, self.p.alpha_peak, &[])
     }
 }

@@ -80,6 +80,24 @@ impl Biquad {
         self.a2 = o.a2;
     }
 
+    /// Squared magnitude response at normalized angular frequency `w`.
+    pub fn power_response(&self, w: f64) -> f64 {
+        let mag2 = |c: [f64; 3]| {
+            let (mut re, mut im) = (0.0, 0.0);
+            for (k, ck) in c.iter().enumerate() {
+                re += ck * m::cos(k as f64 * w);
+                im -= ck * m::sin(k as f64 * w);
+            }
+            re * re + im * im
+        };
+        let den = mag2([1.0, self.a1, self.a2]);
+        if den < 1e-300 {
+            0.0
+        } else {
+            mag2([self.b0, self.b1, self.b2]) / den
+        }
+    }
+
     /// Group delay in samples at normalized angular frequency `w` (radians per sample).
     pub fn group_delay_samples(&self, w: f64) -> f64 {
         fn poly_gd(c: [f64; 3], w: f64) -> f64 {

@@ -214,6 +214,8 @@ pub struct Engine {
     step_lag: usize,
     pad: u64,
     mt: Multitaper,
+    /// Squared magnitude of the conditioning filters on the spectral grid.
+    response: Vec<f64>,
     mains: Option<u32>,
     mains_fixed: bool,
     mains_next_check: u64,
@@ -339,7 +341,7 @@ impl Engine {
         let nonoverlap = ((wlen / quantum) as u64).max(1);
         let pad = m::round(p.artifact_pad_s * rate) as u64;
         let step_lag = (m::round(p.step_lag_s * rate) as usize).max(1);
-        Ok(Engine {
+        let mut e = Engine {
             rate,
             nch,
             chans,
@@ -359,6 +361,7 @@ impl Engine {
             min_len,
             step_lag,
             pad,
+            response: Vec::new(),
             mt,
             mains,
             mains_fixed: mains.is_some(),
@@ -390,7 +393,19 @@ impl Engine {
             out: Vec::new(),
             diag: Diagnostics::default(),
             p,
-        })
+        };
+        e.update_response();
+        Ok(e)
+    }
+
+    /// The high-pass filter's power response on the spectral grid, for the background model.
+    /// (The notch is left out: its zone is excluded from the fit and the peak search, and
+    /// dividing by it would only blow up the flattened display at the mains line.)
+    fn update_response(&mut self) {
+        let ch = &self.chans[0];
+        self.response = (0..self.mt.nstore)
+            .map(|i| ch.hp.power_response(m::TAU * i as f64 * self.mt.df / self.rate))
+            .collect();
     }
 
     pub fn version(&self) -> &'static str {
@@ -731,7 +746,7 @@ impl Engine {
             // Muscle: 30-45 Hz power of the last 128 samples (Hann), against the reference.
             let n = 128u64;
             let s0 = (idx + 1).saturating_sub(n);
-            if rate < 96.0 || s0 < ch.x.start || (s0..=idx).any(|i| ch.flags.get(i) & flag::INVALID != 0) {
+            if rate < 96.0 || idx + 1 < n || s0 < ch.x.start || (s0..=idx).any(|i| ch.flags.get(i) & flag::INVALID != 0) {
                 continue;
             }
             let mut buf = vec![C::default(); n as usize];
@@ -945,6 +960,7 @@ impl Engine {
                 ch.notch = Some(nb);
                 ch.settle_until = ch.settle_until.max(next + settle);
             }
+            self.update_response();
         }
     }
 
@@ -1267,7 +1283,7 @@ impl Engine {
                     Ok(SiteSpec::from_members(mbs))
                 }
             };
-            analyses.push(res.map(|spec| analyse_site(spec, df, &p, &mains, alpha_site)));
+            analyses.push(res.map(|spec| analyse_site(spec, df, &p, &mains, alpha_site, &self.response)));
         }
         // Background fits for EMG and the fast path.
         let mut any_analysed = false;

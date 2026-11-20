@@ -188,6 +188,10 @@ params! {
     spectrum_out_df_hz: f64 = 0.25,
     spectrum_out_lo_hz: f64 = 1.0,
     spectrum_out_hi_hz: f64 = 60.0,
+    /// Effective independent tries per Rayleigh bin (1/T Hz, T the window length) searched,
+    /// for the height test's multiple-comparison correction. Verified by simulation on
+    /// background-only noise (see NOTES.md); 1 means one try per 1/T.
+    peak_tries_per_rayleigh: f64 = 1.0,
     /// Narrowest accepted peak as a fraction of the estimator resolution 2W (a pure sine reads about 2W).
     peak_width_min_factor: f64 = 0.8,
     /// Background fit: drop bins above the line by more than this many expected log-SDs.

@@ -28,7 +28,7 @@ export const TRAINING_PARAMS = {
   successBandLo: 0.6,
   successBandHi: 0.8,
   /** Fraction of the way the threshold moves toward the block's ideal threshold per adaptation. */
-  adaptGain: 0.6,
+  adaptGain: 0.8,
   /** Largest threshold step per adaptation, in baseline standard deviations. */
   adaptMaxStepSd: 1.0,
   /** Minimum clean samples in a block for it to drive an adaptation. */
