@@ -164,24 +164,41 @@ Outputs:
 - **Baseline EMG** level (tension profile).
 - **Personal artifact signatures.**
 
-### 5.4 Stage D: strategy sampler (sessions 1–5, about 20 minutes each)
+### 5.4 Stage D: strategy sampler (10-minute sessions, stops when confident)
 This is the heart of the profiling. It is a small within-person experiment.
+Sessions are kept to **10 minutes** because 20 minutes intimidates beginners
+(Jesus's decision, 2026-11-20). Accuracy comes from running more short
+sessions, and the sampler **stops as soon as the profile is confident**.
 
-**Block design (per session):**
+**Block design (per session, about 10 minutes):**
 ```
-[settle 2 min] then repeat 5–6 times:
-  [neutral rest 60 s] [strategy X 90 s] [rating 5 s]
-[closing rest 60 s]
+[settle 1 min] then repeat 4 times:
+  [neutral rest 45 s] [strategy X 75 s] [rating 5 s]
+[closing rest 30 s]
 ```
 - **Neutral rest** is eyes closed, "simply rest", same constant soundscape.
   It is the within-session baseline for the following strategy block.
 - **During sampler blocks the soundscape does not respond to the EEG.** This
   measures the strategy's own effect, separate from feedback learning.
-- Each session tests 5–6 strategies; across five sessions every core strategy
-  is tested at least twice, in a **counterbalanced order** (Latin square), so
-  drowsiness creeping up across a session does not favour whatever comes last.
-- The first session always includes `none`, `breath_slow`, `body_scan`,
-  `visual_calm` and `mantra_silent` so everyone gets broad coverage on day one.
+- Each session tests 4 strategies, in a **counterbalanced order** (Latin
+  square), so drowsiness creeping up across a session does not favour whatever
+  comes last. Shorter blocks mean each block is noisier, so each core strategy
+  needs about 3 clean blocks rather than 2.
+- **Adaptive stopping:** after every session the model (§5.6) checks each
+  target state. Discovery ends for a state when the top strategy's interval
+  clears the runner-up's, or when every remaining strategy is confidently
+  "not your path". Typical expectation: 5–8 sessions; hard cap 10, after which
+  the profile is shown with honest "unclear" labels and learning continues in
+  normal practice through the bandit (§5.6).
+- Later Discovery sessions only sample strategies that are still uncertain,
+  so they get faster to a result.
+- The first session always includes `none`, `breath_slow`, `body_scan` and
+  `visual_calm` so everyone gets broad coverage on day one; `mantra_silent`
+  leads session 2.
+- A user can do two sessions back to back if they want to finish sooner, with
+  a 2-minute break between.
+- Every Discovery session also shows a small early result ("so far, breath is
+  looking promising for you") so the short sessions feel rewarding.
 - After each block, a single tap: "How easy was that?" (1–5).
 
 **Per-block metrics (computed by the engine on clean epochs only):**
@@ -196,7 +213,7 @@ This is the heart of the profiling. It is a small within-person experiment.
   below 60% clean are excluded and re-queued.
 - `ease` and later `pleasantness` ratings.
 
-### 5.5 Stage E: variables sampler (woven into sessions 3–10)
+### 5.5 Stage E: variables sampler (woven into later Discovery and early training sessions)
 Once the top strategies are known, later sessions vary one other factor at a
 time using the user's best strategy: posture (upright vs reclined), sound
 environment (silence, nature, soundscape, binaural), and time of day (logged
@@ -351,7 +368,7 @@ a moving target.
   the largest 0.1 Hz heart-rate oscillation, per Lehrer's protocol).
 
 ### 6.3 Non-responder pathway
-If after five sessions a user's best strategy for a state is still "Unclear"
+If after Discovery and five training sessions a user's best strategy for a state is still "Unclear"
 and their ladder progress is flat (R5.7):
 1. Re-check fit and artifact rate; poor signal is the most common hidden cause.
 2. Switch target to one that works for almost everyone (`stillness`, breath
@@ -526,9 +543,8 @@ For the signal-engine spec thread and the build team:
 
 ## 10. Open questions for Jesus
 
-1. Discovery takes about five 20-minute sessions. Is that acceptable, or
-   should we offer a "quick profile" in one 15-minute session with lower
-   confidence?
+1. ~~Discovery length.~~ Decided 2026-11-20: 10-minute sessions, as many as
+   needed (typically 5–8, cap 10), stopping early once confident.
 2. Should the twilight program's wake tether be on by default?
 3. Should anchors be available to every user, or unlocked as an achievement
    after the eligibility criterion?
