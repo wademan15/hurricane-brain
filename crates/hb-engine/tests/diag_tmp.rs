@@ -1,27 +1,21 @@
 mod common;
 use common::*;
-use hb_engine::prng::Rng;
-use hb_engine::spectral::WindowAnalyzer;
-use hb_engine::Params;
 
 #[test]
 fn diag() {
-    for win in [8.0f64, 4.0] {
-        let mut p = Params::default();
-        p.slow_window_s = win;
-        let wa = WindowAnalyzer::new(p.clone(), RATE);
-        let n = wa.window_len();
-        let mut rng = Rng::new(7);
-        let trials = 5000;
-        let (mut hp, mut pk) = (0, 0);
-        for i in 0..trials {
-            let chi = [0.0, 1.0, 1.5, 2.0, 2.5][i % 5];
-            let x = synth(n, chi, &[], 10.0, &mut rng);
-            let xf: Vec<f32> = x.iter().map(|v| *v as f32).collect();
-            let a = wa.analyse(&xf, &[50.0]);
-            if a.height_passes > 0 { hp += 1; }
-            if !a.peaks.is_empty() { pk += 1; }
+    for &f in &[5.0f64, 10.0, 20.0] {
+        let mut errs = Vec::new(); let mut zs = Vec::new();
+        for seed in 0..6u64 {
+            let ch = four((70.0 * RATE) as usize, 1.5, &[Rhythm { f, bw: 0.3, snr_db: 10.0 }], 12.0, 500 + seed);
+            let (frames, _) = run(&ch, 1, &[]);
+            let s = slow(&frames);
+            let last = s.last().unwrap();
+            if let Some(tr) = track_near(last, f, 0.1 * f) {
+                let fi = tr.freq_integrated.v.unwrap(); let se = tr.freq_integrated.se.unwrap();
+                errs.push(100.0 * (fi - f) / f); zs.push((fi - f) / se);
+            }
         }
-        println!("window {win}: height {:.4} peaks {:.4}", hp as f64/trials as f64, pk as f64/trials as f64);
+        let me = errs.iter().sum::<f64>() / errs.len() as f64;
+        println!("f {f}: errors % {:?} mean {me:.2}; z {:?}", errs.iter().map(|v| (v*100.0).round()/100.0).collect::<Vec<_>>(), zs.iter().map(|v| (v*10.0).round()/10.0).collect::<Vec<_>>());
     }
 }
