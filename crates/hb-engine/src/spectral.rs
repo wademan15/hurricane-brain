@@ -190,34 +190,146 @@ impl SiteSpec {
     }
 }
 
-/// Fitted background psd_bg(f) = 10^offset / f^exponent.
+/// Most coefficients the background curve may have (a quartic in log frequency).
+pub const BG_MAX_TERMS: usize = 5;
+
+/// Fitted background (spec 6.2).
+///
+/// `exponent` and `offset` describe the best single power law, 10^offset / f^exponent, and
+/// are what the frames report. The background that the spectrum is actually flattened by is
+/// the curve: log10 power as a polynomial in log10 frequency with `terms` coefficients
+/// (2 is the plain power law), continued as a straight line (its tangent) outside the fitted
+/// range. A real spectrum is rarely one power law from 2 to 45 Hz: it has a knee, an
+/// amplifier noise floor, filter edges. Where a straight line misfits by 10 % the height
+/// test's false-positive rate rises about fourfold, so the curve has to follow the shape.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BgFit {
     pub exponent: f64,
     pub exponent_se: f64,
     pub offset: f64,
     pub offset_se: f64,
-    /// Inlier RMS residual over the expected log-SD.
+    /// Inlier RMS residual of the curve over the expected log-SD.
     pub fit_ratio: f64,
-    /// For the prediction uncertainty of the fitted line (log10 units): mean of log10 f
-    /// over the inliers, their sum of squares about it, the inflated residual variance, n.
+    /// Lack of fit of the curve: RMS of the residuals averaged over blocks about 2 Hz wide,
+    /// over what estimator noise alone gives (1 = no misfit).
+    pub lack_of_fit: f64,
+    /// Power-law stage, kept for reference: mean of log10 f over its inliers, their sum of
+    /// squares about it, the inflated residual variance, and their number.
     pub xbar: f64,
     pub sxx: f64,
     pub s2: f64,
     pub n: f64,
+    /// The curve: number of coefficients, coefficients on powers of u = (log10 f - x_mid) / x_half,
+    /// the fitted range in log10 f, and the coefficient covariance (inflated for correlated bins).
+    pub terms: usize,
+    pub coef: [f64; BG_MAX_TERMS],
+    pub x_mid: f64,
+    pub x_half: f64,
+    pub x_lo: f64,
+    pub x_hi: f64,
+    pub cov: [[f64; BG_MAX_TERMS]; BG_MAX_TERMS],
 }
 
 impl BgFit {
-    /// The underlying power law 10^offset / f^exponent (the frames.ts formula).
+    /// Basis vector g with curve(x) = g . coef, tangent-continued outside [x_lo, x_hi].
+    fn basis(&self, x: f64) -> [f64; BG_MAX_TERMS] {
+        let xc = x.clamp(self.x_lo, self.x_hi);
+        let uc = (xc - self.x_mid) / self.x_half;
+        let du = (x - xc) / self.x_half;
+        let mut g = [0.0; BG_MAX_TERMS];
+        let mut pw = 1.0; // uc^k
+        let mut pw_prev = 0.0; // uc^(k-1)
+        for (k, gk) in g.iter_mut().enumerate().take(self.terms) {
+            *gk = pw + k as f64 * pw_prev * du;
+            pw_prev = pw;
+            pw *= uc;
+        }
+        g
+    }
+
+    /// log10 of the fitted background at log10 frequency `x`.
+    pub fn log10_at_x(&self, x: f64) -> f64 {
+        let g = self.basis(x);
+        let mut acc = 0.0;
+        for k in 0..self.terms {
+            acc += g[k] * self.coef[k];
+        }
+        acc
+    }
+
+    /// The fitted background at `f` Hz, uV^2/Hz: the underlying spectrum, before the
+    /// estimator's smoothing and the conditioning filters.
     pub fn at(&self, f: f64) -> f64 {
+        m::pow(10.0, self.log10_at_x(m::log10(f.max(1e-6))))
+    }
+
+    /// The best single power law, 10^offset / f^exponent (what the frames report).
+    pub fn power_law_at(&self, f: f64) -> f64 {
         m::pow(10.0, self.offset - self.exponent * m::log10(f.max(1e-6)))
     }
 
-    /// Standard deviation of the fitted background's log10 at `f` (OLS prediction error).
+    /// Standard deviation of the fitted background's log10 at `f` (prediction error of the
+    /// curve; it grows quickly outside the fitted range).
     pub fn pred_sd_log10(&self, f: f64) -> f64 {
-        let x = m::log10(f.max(1e-6));
-        m::sqrt(self.s2 * (1.0 / self.n + (x - self.xbar) * (x - self.xbar) / self.sxx))
+        let g = self.basis(m::log10(f.max(1e-6)));
+        let mut v = 0.0;
+        for a in 0..self.terms {
+            for b in 0..self.terms {
+                v += g[a] * self.cov[a][b] * g[b];
+            }
+        }
+        m::sqrt(v.max(0.0))
     }
+}
+
+/// Solve the symmetric system A z = b in place (Gaussian elimination with partial pivoting)
+/// and return A^-1. None if singular.
+fn solve_sym(a: &[[f64; BG_MAX_TERMS]; BG_MAX_TERMS], b: &[f64; BG_MAX_TERMS], mm: usize) -> Option<([f64; BG_MAX_TERMS], [[f64; BG_MAX_TERMS]; BG_MAX_TERMS])> {
+    // Augmented [A | I | b].
+    let w = 2 * mm + 1;
+    let mut t = [[0.0f64; 2 * BG_MAX_TERMS + 1]; BG_MAX_TERMS];
+    for i in 0..mm {
+        for j in 0..mm {
+            t[i][j] = a[i][j];
+        }
+        t[i][mm + i] = 1.0;
+        t[i][2 * mm] = b[i];
+    }
+    for c in 0..mm {
+        let mut piv = c;
+        for r in (c + 1)..mm {
+            if t[r][c].abs() > t[piv][c].abs() {
+                piv = r;
+            }
+        }
+        if !(t[piv][c].abs() > 1e-12) {
+            return None;
+        }
+        t.swap(c, piv);
+        let d = t[c][c];
+        for j in 0..w {
+            t[c][j] /= d;
+        }
+        for r in 0..mm {
+            if r != c {
+                let f = t[r][c];
+                if f != 0.0 {
+                    for j in 0..w {
+                        t[r][j] -= f * t[c][j];
+                    }
+                }
+            }
+        }
+    }
+    let mut z = [0.0; BG_MAX_TERMS];
+    let mut inv = [[0.0; BG_MAX_TERMS]; BG_MAX_TERMS];
+    for i in 0..mm {
+        z[i] = t[i][2 * mm];
+        for j in 0..mm {
+            inv[i][j] = t[i][mm + j];
+        }
+    }
+    Some((z, inv))
 }
 
 /// True if `f` lies within the exclusion zone of any mains line or harmonic.
@@ -234,18 +346,14 @@ pub fn in_mains_zone(f: f64, mains: &[f64], half: f64) -> bool {
     })
 }
 
-/// The estimator's expected value under a power law: f^b times the conditioning filters'
-/// power response, averaged over the multitaper's +-W smoothing window (a box to good
-/// approximation). On a steep 1/f spectrum the smoothing alone lifts 1 Hz by 10 to 30 %,
-/// which a plain power law would read as a peak.
-fn smoothed_shape(b: f64, n: usize, df: f64, w_hz: f64, response: &[f64]) -> Vec<f64> {
+/// The estimator's expected value for an underlying spectrum `under` (per grid bin): times
+/// the conditioning filters' power response, averaged over the multitaper's +-W smoothing
+/// window (a box to good approximation). On a steep 1/f spectrum the smoothing alone lifts
+/// 1 Hz by 10 to 30 %, which an unsmoothed model would read as a peak.
+fn smoothed(under: &[f64], df: f64, w_hz: f64, response: &[f64]) -> Vec<f64> {
+    let n = under.len();
     let hw = (m::round(w_hz / df) as usize).max(1);
-    let g: Vec<f64> = (0..n)
-        .map(|i| {
-            let f = (i as f64 * df).max(df * 0.5);
-            m::pow(f, b) * response.get(i).copied().unwrap_or(1.0)
-        })
-        .collect();
+    let g: Vec<f64> = (0..n).map(|i| under[i] * response.get(i).copied().unwrap_or(1.0)).collect();
     // Prefix sums for the moving average.
     let mut cs = vec![0.0; n + 1];
     for i in 0..n {
@@ -262,6 +370,15 @@ fn smoothed_shape(b: f64, n: usize, df: f64, w_hz: f64, response: &[f64]) -> Vec
             }
         })
         .collect()
+}
+
+/// f^b on the grid (bin 0 takes half a bin's frequency).
+fn power_law_grid(b: f64, n: usize, df: f64) -> Vec<f64> {
+    (0..n).map(|i| m::pow((i as f64 * df).max(df * 0.5), b)).collect()
+}
+
+fn smoothed_shape(b: f64, n: usize, df: f64, w_hz: f64, response: &[f64]) -> Vec<f64> {
+    smoothed(&power_law_grid(b, n, df), df, w_hz, response)
 }
 
 /// Robust background fit (spec 6.2).
@@ -374,11 +491,197 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
     // Fit bins on the 0.25 Hz grid are correlated over the 2W resolution: inflate.
     let infl2 = (2.0 * p.mt_half_bandwidth_hz / (dec as f64 * df)).max(1.0);
     let infl = m::sqrt(infl2);
-    let bg: Vec<f64> = shape.iter().map(|v| v * level).collect();
-    Ok((
-        BgFit { exponent: -b, exponent_se: se_b * infl, offset, offset_se: se_a * infl, fit_ratio, xbar: mx, sxx, s2: s2 * infl2, n: n_in },
-        bg,
-    ))
+    let (x_lo, x_hi) = (xs[0], xs[xs.len() - 1]);
+    let x_mid = 0.5 * (x_lo + x_hi);
+    let x_half = (0.5 * (x_hi - x_lo)).max(1e-9);
+    let mut out = BgFit {
+        exponent: -b,
+        exponent_se: se_b * infl,
+        offset,
+        offset_se: se_a * infl,
+        fit_ratio,
+        lack_of_fit: 1.0,
+        xbar: mx,
+        sxx,
+        s2: s2 * infl2,
+        n: n_in,
+        terms: 2,
+        coef: [0.0; BG_MAX_TERMS],
+        x_mid,
+        x_half,
+        x_lo,
+        x_hi,
+        cov: [[0.0; BG_MAX_TERMS]; BG_MAX_TERMS],
+    };
+    // The power law written as a curve with two coefficients on u = (x - x_mid) / x_half.
+    out.coef[0] = offset + b * x_mid;
+    out.coef[1] = b * x_half;
+    {
+        // Covariance of (value at x_mid, slope per u) from the straight-line fit.
+        let s2i = s2 * infl2;
+        let d = x_mid - mx;
+        let var_b = s2i / sxx;
+        out.cov[0][0] = s2i / n_in + d * d * var_b;
+        out.cov[0][1] = d * var_b * x_half;
+        out.cov[1][0] = out.cov[0][1];
+        out.cov[1][1] = var_b * x_half * x_half;
+    }
+    let terms = p.bg_curve_terms.clamp(2, BG_MAX_TERMS);
+    let mut bg = shape.iter().map(|v| v * level).collect::<Vec<f64>>();
+    let mut inl_final: Vec<bool> = Vec::new();
+    let mut corr_final = corr.clone();
+    if terms > 2 {
+        // Curve stage: the same robust fit with a polynomial in u, starting from the power
+        // law's smoothing correction. The underlying curve is tangent-continued outside the
+        // fitted range, so nothing is extrapolated as a polynomial.
+        let us: Vec<f64> = xs.iter().map(|x| (x - x_mid) / x_half).collect();
+        let grid_x: Vec<f64> = (0..nb).map(|i| m::log10((i as f64 * df).max(df * 0.5))).collect();
+        let mut cv = out;
+        cv.terms = terms;
+        let mut corr2 = corr.clone();
+        let mut ok = true;
+        let mut inl = vec![true; xs.len()];
+        let mut last_s2 = 0.0;
+        let mut last_inv = [[0.0; BG_MAX_TERMS]; BG_MAX_TERMS];
+        let mut last_rms = 0.0;
+        'outer: for outer in 0..3 {
+            let ys: Vec<f64> = idx.iter().zip(corr2.iter()).map(|(&i, c)| m::log10(s[i]) - c).collect();
+            inl = vec![true; xs.len()];
+            for _ in 0..25 {
+                let n = inl.iter().filter(|v| **v).count();
+                if n < 10 + terms {
+                    ok = false;
+                    break 'outer;
+                }
+                let mut a = [[0.0; BG_MAX_TERMS]; BG_MAX_TERMS];
+                let mut rhs = [0.0; BG_MAX_TERMS];
+                for j in 0..xs.len() {
+                    if !inl[j] {
+                        continue;
+                    }
+                    let mut pw = [0.0; BG_MAX_TERMS];
+                    let mut v = 1.0;
+                    for slot in pw.iter_mut().take(terms) {
+                        *slot = v;
+                        v *= us[j];
+                    }
+                    for r in 0..terms {
+                        rhs[r] += pw[r] * ys[j];
+                        for c in 0..terms {
+                            a[r][c] += pw[r] * pw[c];
+                        }
+                    }
+                }
+                let Some((z, inv)) = solve_sym(&a, &rhs, terms) else {
+                    ok = false;
+                    break 'outer;
+                };
+                cv.coef = z;
+                let mut ss = 0.0;
+                let mut changed = false;
+                let mut keepv = vec![true; xs.len()];
+                for j in 0..xs.len() {
+                    let r = ys[j] - cv.log10_at_x(xs[j]);
+                    if inl[j] {
+                        ss += r * r;
+                    }
+                    keepv[j] = r <= p.bg_drop_sigma * sigma;
+                    if keepv[j] != inl[j] {
+                        changed = true;
+                    }
+                }
+                last_rms = m::sqrt(ss / n as f64);
+                last_s2 = ss / (n as f64 - terms as f64).max(1.0);
+                last_inv = inv;
+                if !changed {
+                    break;
+                }
+                inl = keepv;
+            }
+            if outer < 2 {
+                let under: Vec<f64> = grid_x.iter().map(|x| m::pow(10.0, cv.log10_at_x(*x))).collect();
+                let sm = smoothed(&under, df, p.mt_half_bandwidth_hz, response);
+                for (j, &i) in idx.iter().enumerate() {
+                    corr2[j] = m::log10(sm[i] / under[i]);
+                }
+            }
+        }
+        if !ok {
+            return Err(Reason::BadFit);
+        }
+        let under: Vec<f64> = grid_x.iter().map(|x| m::pow(10.0, cv.log10_at_x(*x))).collect();
+        let sm = smoothed(&under, df, p.mt_half_bandwidth_hz, response);
+        let ratios: Vec<f64> = idx.iter().map(|&i| s[i] / sm[i]).collect();
+        let med = m::median(&ratios).ok_or(Reason::BadFit)?;
+        let lv = med / chi_med;
+        cv.coef[0] += m::log10(lv);
+        for r in 0..terms {
+            for c in 0..terms {
+                cv.cov[r][c] = last_inv[r][c] * last_s2 * infl2;
+            }
+        }
+        cv.fit_ratio = last_rms / sigma;
+        if !(cv.fit_ratio <= p.bg_fit_max_ratio) {
+            return Err(Reason::BadFit);
+        }
+        bg = sm.iter().map(|v| v * lv).collect();
+        for (j, &i) in idx.iter().enumerate() {
+            corr_final[j] = m::log10(sm[i] / under[i]);
+        }
+        inl_final = inl;
+        out = cv;
+    }
+    let _ = (&inl_final, &corr_final);
+    // Lack of fit. The robust fit drops what sits above the line, so its inlier residual
+    // cannot see a background the model does not follow. Average the flattened spectrum's
+    // log over blocks about 2 Hz wide (peaks excluded by a median within the block) and
+    // compare the spread of the block values with what estimator noise alone gives.
+    out.lack_of_fit = lack_of_fit(s, &bg, &idx, df, k, p);
+    if !(out.lack_of_fit <= p.bg_lack_of_fit_max) {
+        return Err(Reason::BadFit);
+    }
+    Ok((out, bg))
+}
+
+/// Lack-of-fit statistic for a fitted background: the fit bins are grouped into blocks
+/// `bg_lof_block_hz` wide; each block's value is the median of ln(S / bg) over its bins
+/// minus the median expected under chi2_2K / 2K. The statistic is the RMS of the block
+/// values that lie below +`bg_drop_sigma` block SDs (real peaks lift blocks, and must not
+/// fail the fit) over the block SD under noise. About 1 for a background the model follows.
+fn lack_of_fit(s: &[f64], bg: &[f64], idx: &[usize], df: f64, k: usize, p: &Params) -> f64 {
+    let dof = 2.0 * k as f64;
+    let ln_med = m::ln(chi2_isf(0.5, dof) / dof);
+    let sd1 = m::sqrt(trigamma(k as f64));
+    // Independent cells per block: block width over the 2W resolution; the median of c
+    // independent values has SD about 1.25 sd1 / sqrt(c).
+    let cells = (p.bg_lof_block_hz / (2.0 * p.mt_half_bandwidth_hz)).max(1.0);
+    let sd_block = 1.2533 * sd1 / m::sqrt(cells);
+    let mut vals: Vec<f64> = Vec::new();
+    let mut cur: Vec<f64> = Vec::new();
+    let mut block_start = idx[0] as f64 * df;
+    for &i in idx {
+        let f = i as f64 * df;
+        if f - block_start >= p.bg_lof_block_hz {
+            if cur.len() >= 3 {
+                if let Some(md) = m::median(&cur) {
+                    vals.push(md - ln_med);
+                }
+            }
+            cur.clear();
+            block_start = f;
+        }
+        cur.push(m::ln(s[i] / bg[i]));
+    }
+    if cur.len() >= 3 {
+        if let Some(md) = m::median(&cur) {
+            vals.push(md - ln_med);
+        }
+    }
+    let kept: Vec<f64> = vals.iter().copied().filter(|v| *v <= p.bg_drop_sigma * sd_block).collect();
+    if kept.len() < 4 {
+        return 1.0;
+    }
+    m::sqrt(kept.iter().map(|v| v * v).sum::<f64>() / kept.len() as f64) / sd_block
 }
 
 /// A peak that passed the height and width tests in one window at one site.

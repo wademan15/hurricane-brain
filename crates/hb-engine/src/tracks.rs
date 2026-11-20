@@ -69,10 +69,29 @@ impl TrackInt {
         self.last_pass_t = t;
     }
 
-    /// Update the integrated frequency: precision-weighted mean of the window estimates over
-    /// the integration time. The 8 s windows overlap, so the naive standard error is inflated
-    /// by sqrt(n / n_eff), n_eff the number of non-overlapping windows spanned; and it is never
-    /// smaller than the scatter of the estimates allows (a wandering rhythm is less certain).
+    /// Update the integrated frequency (spec 6.4): the plain mean of the window estimates over
+    /// the integration time, with a standard error that pools two variance estimates.
+    ///
+    /// - v1, from the windows' own jackknife errors: mean(se^2) / n_eff, where n_eff is the
+    ///   number of non-overlapping windows spanned (the 8 s windows overlap, so the n estimates
+    ///   are worth far fewer).
+    /// - v2, from the scatter of the estimates themselves: mean((f - mean)^2) / (n_eff - 1),
+    ///   the variance of a mean of n_eff independent values, with n_eff - 1 degrees of freedom.
+    ///
+    /// The result is (nu1 v1 + (n_eff - 1) v2) / (nu1 + n_eff - 1), nu1 = `integration_prior_dof`.
+    /// Measured against planted rhythms (review, November 2026): the jackknife error of one
+    /// window is about 1.7 times too large for rhythms 0.25 Hz wide and 1.6 to 1.8 times too
+    /// small for rhythms 1 Hz wide, so v1 alone is wrong in both directions; the scatter is
+    /// right on average but rests on four or five independent windows. Pooled, the reported
+    /// error is within a factor 1.5 of the actual error across widths of 0.25 to 1 Hz.
+    ///
+    /// The mean is not precision-weighted. Weights of 1/se^2 from seven-taper jackknife errors
+    /// are noisy and favour windows whose error happens to come out small; that made the
+    /// actual error 20 to 30 % larger and the reported one smaller.
+    ///
+    /// While the estimates span less than two windows there is no scatter to pool, and the
+    /// jackknife error is inflated by `integration_young_se_factor`, which covers its worst
+    /// measured shortfall.
     pub fn integrate(&mut self, t: f64, window_s: f64, p: &Params) {
         if let Some(pk) = &self.cur {
             self.win.push_back((t, pk.f, pk.se));
@@ -88,20 +107,21 @@ impl TrackInt {
             self.f_int = None;
             return;
         }
-        let (mut sw, mut swf) = (0.0, 0.0);
-        for &(_, f, se) in &self.win {
-            let w = 1.0 / (se * se);
-            sw += w;
-            swf += w * f;
-        }
-        let fm = swf / sw;
         let n = self.win.len() as f64;
+        let fm = self.win.iter().map(|w| w.1).sum::<f64>() / n;
         let span = self.win.back().unwrap().0 - self.win.front().unwrap().0;
         let n_eff = ((span + window_s) / window_s).min(n).max(1.0);
-        let se1 = m::sqrt(1.0 / sw) * m::sqrt(n / n_eff);
-        let var = self.win.iter().map(|&(_, f, se)| (f - fm) * (f - fm) / (se * se)).sum::<f64>() / sw;
-        let se2 = m::sqrt(var / n_eff);
-        self.f_int = Some((fm, se1.max(se2)));
+        let v1 = self.win.iter().map(|w| w.2 * w.2).sum::<f64>() / n / n_eff;
+        let var = if n_eff >= 2.0 {
+            let v2 = self.win.iter().map(|w| (w.1 - fm) * (w.1 - fm)).sum::<f64>() / n / (n_eff - 1.0);
+            let nu1 = p.integration_prior_dof.max(0.0);
+            let nu2 = n_eff - 1.0;
+            (nu1 * v1 + nu2 * v2) / (nu1 + nu2)
+        } else {
+            let k = p.integration_young_se_factor.max(1.0);
+            v1 * k * k
+        };
+        self.f_int = Some((fm, m::sqrt(var).max(p.freq_se_floor_hz / m::sqrt(n_eff))));
     }
 
     pub fn push_history(&mut self, cap: usize) {

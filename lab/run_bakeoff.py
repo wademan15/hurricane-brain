@@ -335,7 +335,9 @@ def main():
         key = f'{B.STAGE_CONFIGS[n]["spectrum"]}/{B.STAGE_CONFIGS[n]["confirm"]}'
         thresholds[key] = float(np.quantile(st, 1 - C.PARAMS["alpha_peak"]))
         tune_info[key] = {"threshold": thresholds[key], "n_windows": int(st.size), "n_files": len(tr),
-                          "median_stat": float(np.median(st))}
+                          "median_stat": float(np.median(st)),
+                          "meaning": ("factor on the analytic chi-squared threshold" if key.endswith("/P1")
+                                      else "absolute threshold on the confirmation statistic")}
     # analytic P1 threshold for comparison (dof of a fully clean 4-channel S1 window)
     tune_info["S1/P1 analytic (dof 56)"] = {"threshold": C.p1_threshold(56.0, 1.0)}
     results["tuning"] = tune_info

@@ -1662,7 +1662,11 @@ impl Engine {
         scored.sort_by(|a, b| a.f.total_cmp(&b.f).then(a.id.cmp(&b.id)));
         let harm = self.harmonic_set();
         let baselines = self.baselines.clone();
-        let ctx = ScoreCtx::new(p, &harm, &baselines);
+        let mut ctx = ScoreCtx::new(p, &harm, &baselines);
+        // Chance A places each surrogate inside the band in force for its real track.
+        let edges = self.band_edges();
+        let bands: Vec<[f64; 2]> = BandName::ALL.iter().map(|b| *edges.get(*b)).collect();
+        ctx.null_bands = ratios::clip_null_bands(&bands, p);
         let sc = ratios::score_set(&scored, &ctx);
 
         // Chance refresh: every chance_refresh_s, or when the scored set changes.
@@ -1695,7 +1699,12 @@ impl Engine {
                 .iter()
                 .filter_map(|s| by_id.get(&s.id).map(|tr| ratios::History { id: tr.id, f: &tr.hist_f, se: &tr.hist_se }))
                 .collect();
-            if scored.len() >= 2 && hists.len() == scored.len() && hists.iter().all(|h| h.f.len() >= need.max(2 * min_lag + 2)) {
+            let shortest = hists.iter().map(|h| h.f.len()).min().unwrap_or(0);
+            if scored.len() >= 2
+                && hists.len() == scored.len()
+                && shortest >= need.max(2 * min_lag + 2)
+                && ratios::chance_b_feasible(p, hists.len(), shortest, min_lag)
+            {
                 self.diag.chance_b_refreshes += 1;
                 let mut rng = Rng::derive(self.seed, 0xB, u);
                 let step = (m::round(1.0 / us) as usize).max(1);

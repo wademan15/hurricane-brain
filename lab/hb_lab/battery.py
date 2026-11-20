@@ -410,16 +410,26 @@ def compare_to_clean(rec, res, clean):
     out = {}
     cw = {w["t"]: w for w in clean["windows"]}
     genuine = rec.truth.get("genuine_freqs") or [pk["f0"] for pk in rec.truth.get("peaks", [])]
+    gw = [pk["bw"] for pk in rec.truth.get("peaks", [])]
+    # an extra peak is attributed to the artifact only if (1) it matches no planted rhythm (within 0.6 Hz,
+    # 5 % or 1.5 rhythm widths), (2) the clean twin has no peak within 1 Hz in the same window, and (3) the
+    # window, or the 16 s persistence look-back before it, overlaps a truly corrupted stretch
+    am = rec.artifact_mask.any(axis=0) if rec.artifact_mask is not None else None
     attrib = 0
     attrib_win = 0
     for w in res["windows"]:
         c = cw.get(w["t"])
         if c is None or w["null"]:
             continue
+        if am is not None:
+            i1 = int(w["t"] * G.FS)
+            i0 = max(0, i1 - int(24 * G.FS))
+            if not am[i0:i1].any():
+                continue
         cp = [q[0] for q in c.get("peaks", [])]
         k = 0
         for pk in w.get("peaks", []):
-            if all(abs(pk[0] - f) > 0.6 for f in cp) and all(abs(pk[0] - f) > max(0.6, 0.05 * f) for f in genuine):
+            if all(abs(pk[0] - f) > 1.0 for f in cp) and _match(pk[0], genuine, widths=gw) is None:
                 k += 1
         attrib += k
         attrib_win += k > 0

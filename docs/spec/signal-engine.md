@@ -502,13 +502,13 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | History needed for chance B | 120 s | 8.5 |
 | Slow update time budget | 50 ms | 11 |
 
-## 15. Open decisions and things to verify
+## 15. User settings and things to verify
 
-Decisions for the owner:
+The owner's standing rule: where a design choice is a matter of the user's preference, the user gets the setting, with a sensible default. These three were first written as open decisions and are now settings. Each is saved with the session, and none of them can switch off the rules in section 2.
 
-- **D1. Which chance level drives the hurricane.** Chance A asks whether your peaks are aligned more than random peaks would be. Chance B asks whether they are moving into alignment together, beyond where each usually sits. My recommendation: the hurricane's winding uses chance A, and a separate, clearly labelled element shows chance B, so a steady, lasting alignment still forms a storm.
-- **D2. Speed against precision.** Section 6.4 means golden ratio alignment responds over tens of seconds, not instantly. The alternative is a faster, twitchier reading that is partly noise. My recommendation: keep it slow and honest, and let the tracking tone carry the moment-to-moment feel.
-- **D3. Harmonics.** Excluded from octave alignment by default (section 6.6), with a setting to include them.
+- **Which chance level the hurricane uses.** Default: chance A, "more aligned than random peaks would be", so a steady, lasting alignment still forms a storm. Option: chance B, "moving into alignment together, beyond where each rhythm usually sits". Both are always shown in the readout whichever drives the storm.
+- **Response speed of alignment.** Default: steady, 30 s integration (section 6.4). Options: quicker (shorter integration) and slower. The setting is labelled with what it costs: a quicker reading has a wider uncertainty, more pairs come back "unresolved", and the chance level is recomputed for the chosen speed, so a quicker setting cannot manufacture alignment.
+- **Whether harmonics count toward octave alignment.** Default: no (section 6.6). Option: yes, in which case harmonic pairs are still marked as harmonic on screen.
 
 To verify before or during implementation:
 

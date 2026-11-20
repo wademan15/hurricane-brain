@@ -31,6 +31,38 @@ pub struct ScoreCtx<'a> {
     pub baselines: &'a Baselines,
     /// ln(hi / lo) of the peak search range: support of the unrelated-peaks density.
     pub ln_range: f64,
+    /// Chance A placement ranges (Hz), ascending and contiguous: a surrogate peak is placed
+    /// at random in log frequency inside the range that holds its real track (spec 8.5).
+    /// `new` fills in the named bands clipped to the search range; the engine replaces them
+    /// with the bands in force (individual alpha frequency).
+    pub null_bands: Vec<[f64; 2]>,
+}
+
+/// The default chance A placement ranges: the named bands of spec 6.5, clipped to the search range.
+pub fn default_null_bands(p: &Params) -> Vec<[f64; 2]> {
+    clip_null_bands(&[[1.0, 4.0], [4.0, 8.0], [8.0, 13.0], [13.0, 30.0], [30.0, 45.0]], p)
+}
+
+/// Clip placement ranges to the peak search range and stretch the outer ones to its ends, so
+/// every searched frequency belongs to exactly one range. Empty ranges are dropped; with
+/// none left the whole search range is one range.
+pub fn clip_null_bands(bands: &[[f64; 2]], p: &Params) -> Vec<[f64; 2]> {
+    let (lo, hi) = (p.peak_search_lo_hz, p.peak_search_hi_hz);
+    let mut out: Vec<[f64; 2]> = Vec::new();
+    for b in bands {
+        let a = b[0].max(lo);
+        let z = b[1].min(hi);
+        if z > a {
+            out.push([a, z]);
+        }
+    }
+    if out.is_empty() {
+        return vec![[lo, hi]];
+    }
+    out[0][0] = lo;
+    let last = out.len() - 1;
+    out[last][1] = hi;
+    out
 }
 
 impl<'a> ScoreCtx<'a> {
@@ -42,7 +74,19 @@ impl<'a> ScoreCtx<'a> {
             harmonic,
             baselines,
             ln_range: m::ln(p.peak_search_hi_hz / p.peak_search_lo_hz),
+            null_bands: default_null_bands(p),
         }
+    }
+
+    /// The chance A placement range holding frequency `f` (the nearest one if `f` is outside all).
+    pub fn null_band_of(&self, f: f64) -> [f64; 2] {
+        let nb = &self.null_bands;
+        for (i, b) in nb.iter().enumerate() {
+            if f >= b[0] && (f < b[1] || i + 1 == nb.len()) {
+                return *b;
+            }
+        }
+        nb.first().copied().unwrap_or([self.p.peak_search_lo_hz, self.p.peak_search_hi_hz])
     }
 
     fn key(a: u32, b: u32) -> (u32, u32) {
@@ -59,13 +103,20 @@ impl<'a> ScoreCtx<'a> {
 
     /// ln q(x): density of x if the pair were just "this person's usual spread". Without a
     /// baseline for the pair, the density of two unrelated peaks placed log-uniformly in the
-    /// search range (triangular on [0, L]).
-    fn ln_q(&self, a: u32, b: u32, x: f64, sx2: f64) -> f64 {
+    /// search range (triangular on [0, L]). With a baseline, a Gaussian at the baseline mean
+    /// mixed with that density.
+    ///
+    /// q must not depend on the current measurement's s_x. An earlier version widened the
+    /// baseline Gaussian by s_x^2; a vaguer measurement then lowered q at the person's usual
+    /// ratio and raised the evidence (by up to 5 nats for a tight baseline), which spec 8.2
+    /// forbids. The baseline variance already contains the measurement noise of the baseline
+    /// block. It is floored at tau^2 so a very steady baseline cannot make q a spike.
+    fn ln_q(&self, a: u32, b: u32, x: f64) -> f64 {
         let l = self.ln_range;
         let tri = (2.0 * (l - x).max(l * 1e-3) / (l * l)).max(1e-12);
         match self.baselines.get(&Self::key(a, b)) {
             Some(&(mu, var)) => {
-                let v = var + sx2;
+                let v = var.max(self.p.tau * self.p.tau);
                 let g = m::exp(-0.5 * (x - mu) * (x - mu) / v) / m::sqrt(m::TAU * v);
                 let w = self.p.baseline_mix.clamp(0.0, 1.0);
                 m::ln((1.0 - w) * g + w * tri)
@@ -77,7 +128,7 @@ impl<'a> ScoreCtx<'a> {
     fn log_evidence_raw(&self, a: u32, b: u32, x: f64, sx: f64, t: f64) -> f64 {
         let v = sx * sx + self.p.tau * self.p.tau;
         let ln_n = -0.5 * m::ln(m::TAU * v) - 0.5 * (x - t) * (x - t) / v;
-        ln_n - self.ln_q(a, b, x, sx * sx)
+        ln_n - self.ln_q(a, b, x)
     }
 
     /// ln Lambda = ln N(x; t, s_x^2 + tau^2) - ln q(x), made non-increasing in s_x.
@@ -85,8 +136,8 @@ impl<'a> ScoreCtx<'a> {
     /// The Gaussian likelihood alone rises with s_x when the miss exceeds sqrt(s_x^2 + tau^2),
     /// which would let a vaguer measurement score better. Taking the smaller of the value at
     /// s_x and at s_x = 0 removes that: uncertainty never makes alignment easier (spec 8.2).
-    /// For the unrelated-peaks density q this is exactly monotone, because ln N is unimodal in
-    /// the variance.
+    /// This is exactly monotone for every pair, because q does not depend on s_x and ln N is
+    /// unimodal in the variance.
     pub fn log_evidence(&self, a: u32, b: u32, x: f64, sx: f64, t: f64) -> f64 {
         self.log_evidence_raw(a, b, x, sx, t).min(self.log_evidence_raw(a, b, x, 0.0, t))
     }
@@ -350,17 +401,30 @@ fn draw_of(s: &SetScore, ti: usize) -> NullDraw {
     NullDraw { steps: s.cascades[ti].steps, closeness: s.cascades[ti].closeness.ok(), stat: s.stat[ti].ok() }
 }
 
-/// Chance A (spec 8.5): the same number of tracks placed at random in log frequency across
-/// the search range, each keeping one real track's relative uncertainty and identity, scored
-/// by `score_set`. Returns [phi, octave] distributions.
+/// Chance A (spec 8.5): the same number of tracks, each placed at random in log frequency
+/// inside the band that holds the real track, keeping that track's relative uncertainty and
+/// identity, scored by `score_set`. Returns [phi, octave] distributions.
+///
+/// Placement is per band, not across the whole search range. A theta peak and an alpha peak
+/// can only form ratios between 1 and 3.25, so they land within 3 % of the golden ratio about
+/// 9 % of the time (spec 8.5, first table row); surrogates spread over 1 to 45 Hz land there
+/// under 3 % of the time, and the chance level for the commonest real configuration came out
+/// about three times too low (review, November 2026: P(p <= 0.05) was 0.16 for unrelated
+/// theta and alpha peaks).
 pub fn chance_a(tracks: &[ScoreTrack], ctx: &ScoreCtx, rng: &mut Rng) -> [NullDist; 2] {
     let p = ctx.p;
-    let (llo, lhi) = (m::ln(p.peak_search_lo_hz), m::ln(p.peak_search_hi_hz));
+    let ranges: Vec<(f64, f64)> = tracks
+        .iter()
+        .map(|t| {
+            let b = ctx.null_band_of(t.f);
+            (m::ln(b[0]), m::ln(b[1]))
+        })
+        .collect();
     let mut out = [NullDist::default(), NullDist::default()];
     let mut sur = tracks.to_vec();
     for _ in 0..p.surrogates {
-        for (s, t) in sur.iter_mut().zip(tracks.iter()) {
-            let f = m::exp(rng.uniform(llo, lhi));
+        for ((s, t), r) in sur.iter_mut().zip(tracks.iter()).zip(ranges.iter()) {
+            let f = m::exp(rng.uniform(r.0, r.1));
             *s = ScoreTrack { id: t.id, f, se: t.se / t.f * f };
         }
         sort_tracks(&mut sur);
@@ -386,26 +450,75 @@ pub struct ChanceB {
     pub thresholds: [Option<f64>; 2],
 }
 
-/// Chance B (spec 8.5): each track's own history shifted by an independent random lag of at
-/// least `min_lag` updates, wrapping within that track's history. All histories must hold at
-/// least `need` updates. `step` is the time-series sampling (in updates) for the false-alarm
-/// threshold, `span` its length in updates, `dwell` the dwell in series steps.
+/// Smallest relative lag (in slow updates) allowed between any two tracks' shifts in chance
+/// B: the larger of the minimum lag and the correlation time of an integrated frequency,
+/// which is the integration time plus one slow window. Two histories shifted against each
+/// other by less than that still share most of the data behind each value, so the surrogate
+/// would keep the very relationship it is meant to remove.
+pub fn chance_b_min_relative_lag(p: &Params, min_lag: usize) -> usize {
+    let corr = m::ceil((p.integration_s + p.slow_window_s) / p.slow_update_s) as usize;
+    corr.max(min_lag).max(1)
+}
+
+/// Whether `n` histories, the shortest `min_len` updates long, leave room for `n` shifts
+/// that are each at least `min_lag` from zero and from the wrap point and at least the
+/// minimum relative lag from each other. Until they do, chance B is still warming up.
+pub fn chance_b_feasible(p: &Params, n: usize, min_len: usize, min_lag: usize) -> bool {
+    chance_b_slack(p, n, min_len, min_lag).is_some()
+}
+
+fn chance_b_slack(p: &Params, n: usize, min_len: usize, min_lag: usize) -> Option<usize> {
+    if n < 2 {
+        return None;
+    }
+    let d = chance_b_min_relative_lag(p, min_lag);
+    // Lags lie in [min_lag, min_lag + room]; the wrap-around distance between the largest
+    // and the smallest must also be at least d.
+    let room = min_len.checked_sub(2 * min_lag)?.min(min_len.checked_sub(d + 1)?);
+    room.checked_sub((n - 1) * d)
+}
+
+/// Chance B (spec 8.5): each track's own history shifted by a random lag of at least
+/// `min_lag` updates, wrapping within that track's history, with every two tracks' lags at
+/// least `chance_b_min_relative_lag` apart. All histories must hold at least `need` updates.
+/// `step` is the time-series sampling (in updates) for the false-alarm threshold, `span` its
+/// length in updates, `dwell` the dwell in series steps.
+///
+/// The lags used to be drawn independently per track. What decides whether a pair's
+/// relationship survives is the difference of the two lags, and with independent draws that
+/// difference was under the 38 s correlation time of the integrated frequencies in about
+/// 60 % of surrogates at the minimum history (under 10 s in 19 %): the null was mostly the
+/// observed relationship itself. If the histories are too short for the separation the
+/// result holds no draws and no thresholds (the caller should test `chance_b_feasible`).
 #[allow(clippy::too_many_arguments)]
 pub fn chance_b(hist: &[History], ctx: &ScoreCtx, rng: &mut Rng, min_lag: usize, step: usize, span: usize, dwell_steps: usize, step_s: f64) -> ChanceB {
     let p = ctx.p;
     let n = hist.len();
     let mut dists = [NullDist::default(), NullDist::default()];
+    let min_len = hist.iter().map(|h| h.f.len()).min().unwrap_or(0);
+    let Some(slack) = chance_b_slack(p, n, min_len, min_lag) else {
+        return ChanceB { dists, thresholds: [None, None] };
+    };
+    let d = chance_b_min_relative_lag(p, min_lag);
     let npts = (span / step.max(1)).max(1);
     let mut series: [Vec<Vec<Option<f64>>>; 2] = [Vec::new(), Vec::new()];
     let mut set = vec![ScoreTrack { id: 0, f: 1.0, se: 0.0 }; n];
+    let mut offs = vec![0usize; n];
+    let mut order: Vec<usize> = (0..n).collect();
+    let mut lags = vec![0usize; n];
     for _ in 0..p.surrogates {
-        let lags: Vec<usize> = hist
-            .iter()
-            .map(|h| {
-                let len = h.f.len();
-                rng.range(min_lag as u64, (len - min_lag) as u64) as usize
-            })
-            .collect();
+        // n sorted offsets in [0, slack], spread by d, handed to the tracks in random order.
+        for o in offs.iter_mut() {
+            *o = rng.range(0, slack as u64) as usize;
+        }
+        offs.sort_unstable();
+        for i in (1..n).rev() {
+            let j = rng.range(0, i as u64) as usize;
+            order.swap(i, j);
+        }
+        for (k, &o) in offs.iter().enumerate() {
+            lags[order[k]] = min_lag + o + k * d;
+        }
         let at = |back: usize, set: &mut Vec<ScoreTrack>| {
             for (k, h) in hist.iter().enumerate() {
                 let len = h.f.len();

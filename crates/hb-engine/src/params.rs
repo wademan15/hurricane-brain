@@ -198,8 +198,22 @@ params! {
     bg_drop_sigma: f64 = 2.0,
     /// Background fit fails if inlier RMS residual exceeds this multiple of the expected log-SD.
     bg_fit_max_ratio: f64 = 3.0,
+    /// Background curve: number of polynomial coefficients in log power against log frequency
+    /// (2 = a plain power law, 4 = a cubic). Spec 6.2.
+    bg_curve_terms: usize = 4,
+    /// Background fit fails if the lack-of-fit statistic (block-averaged residual over its
+    /// noise level) exceeds this. Spec 6.2.
+    bg_lack_of_fit_max: f64 = 1e9,
+    /// Width of the blocks the lack-of-fit statistic averages over, Hz.
+    bg_lof_block_hz: f64 = 2.0,
     /// Floor on a window's centre-frequency standard error, Hz.
     freq_se_floor_hz: f64 = 0.005,
+    /// Integrated frequency: weight, in degrees of freedom, of the windows' own jackknife errors
+    /// when pooled with the scatter of the window estimates (spec 6.4).
+    integration_prior_dof: f64 = 1.0,
+    /// Integrated frequency: factor on the jackknife error while the estimates span less than
+    /// two slow windows and there is no scatter to pool (spec 6.4).
+    integration_young_se_factor: f64 = 2.0,
     /// Seconds a track is reported as `new`.
     track_new_s: f64 = 1.0,
     /// Track history kept for chance B, s (memory cap, spec 11).

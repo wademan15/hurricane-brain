@@ -1,0 +1,284 @@
+{
+ "phi3_10db": {
+  "bytes": 788187,
+  "seconds": 119,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "phi_cascade",
+  "truth": {
+   "cascade_freqs": [
+    4.6,
+    7.442956,
+    12.042956
+   ],
+   "ratio": 1.618034,
+   "n_members": 3,
+   "peaks": [
+    {
+     "f0": 4.6,
+     "snr_db": 10
+    },
+    {
+     "f0": 7.442956348249516,
+     "snr_db": 10
+    },
+    {
+     "f0": 12.042956348249515,
+     "snr_db": 10
+    }
+   ]
+  }
+ },
+ "phi5_15db": {
+  "bytes": 788187,
+  "seconds": 119,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "phi_cascade",
+  "truth": {
+   "cascade_freqs": [
+    3.4,
+    5.501316,
+    8.901316,
+    14.402631,
+    23.303947
+   ],
+   "ratio": 1.618034,
+   "n_members": 5,
+   "peaks": [
+    {
+     "f0": 3.4,
+     "snr_db": 15
+    },
+    {
+     "f0": 5.501315561749642,
+     "snr_db": 15
+    },
+    {
+     "f0": 8.901315561749643,
+     "snr_db": 15
+    },
+    {
+     "f0": 14.402631123499285,
+     "snr_db": 15
+    },
+    {
+     "f0": 23.30394668524893,
+     "snr_db": 15
+    }
+   ]
+  }
+ },
+ "octave3_10db": {
+  "bytes": 788196,
+  "seconds": 119,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "octave_cascade",
+  "truth": {
+   "cascade_freqs": [
+    4.5,
+    9,
+    18
+   ],
+   "ratio": 2,
+   "n_members": 3,
+   "peaks": [
+    {
+     "f0": 4.5,
+     "snr_db": 10
+    },
+    {
+     "f0": 9,
+     "snr_db": 10
+    },
+    {
+     "f0": 18,
+     "snr_db": 10
+    }
+   ]
+  }
+ },
+ "background_only": {
+  "bytes": 591024,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "background_only",
+  "truth": {
+   "peaks": []
+  }
+ },
+ "white_noise": {
+  "bytes": 393918,
+  "seconds": 59,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "white_noise",
+  "truth": {
+   "peaks": []
+  }
+ },
+ "random_bands": {
+  "bytes": 591015,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "random_peaks_bands",
+  "truth": {
+   "peaks": [
+    {
+     "f0": 7.874970801262353,
+     "snr_db": 13.445623815746472
+    },
+    {
+     "f0": 12.182670367301569,
+     "snr_db": 9.783494734841238
+    }
+   ]
+  }
+ },
+ "harmonic_8hz": {
+  "bytes": 591015,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "harmonic",
+  "truth": {
+   "peaks": [
+    {
+     "f0": 8,
+     "snr_db": 12
+    }
+   ]
+  }
+ },
+ "artifact_blinks": {
+  "bytes": 591024,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "artifact_blinks",
+  "truth": {
+   "peaks": [
+    {
+     "f0": 9.359755072252144,
+     "snr_db": 12
+    },
+    {
+     "f0": 22.800908351905612,
+     "snr_db": 9
+    }
+   ]
+  }
+ },
+ "artifact_jaw_clench": {
+  "bytes": 591036,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "artifact_jaw_clench",
+  "truth": {
+   "peaks": [
+    {
+     "f0": 10.782306666725392,
+     "snr_db": 12
+    },
+    {
+     "f0": 24.64487153396735,
+     "snr_db": 9
+    }
+   ]
+  }
+ },
+ "nearmiss_1.8_10db": {
+  "bytes": 591030,
+  "seconds": 89,
+  "clippedSamples": 0,
+  "note": "fixture as is",
+  "kind": "near_miss_cascade",
+  "truth": {
+   "cascade_freqs": [
+    4.5,
+    8.1,
+    14.58
+   ],
+   "ratio": 1.8,
+   "n_members": 3,
+   "peaks": [
+    {
+     "f0": 4.5,
+     "snr_db": 10
+    },
+    {
+     "f0": 8.1,
+     "snr_db": 10
+    },
+    {
+     "f0": 14.580000000000002,
+     "snr_db": 10
+    }
+   ]
+  }
+ },
+ "phi3_10db_shuffled_samples": {
+  "bytes": 788238,
+  "seconds": 119,
+  "clippedSamples": 0,
+  "note": "per-channel seeded permutation of samples (seed 20260101)",
+  "kind": "phi_cascade",
+  "truth": {
+   "cascade_freqs": [
+    4.6,
+    7.442956,
+    12.042956
+   ],
+   "ratio": 1.618034,
+   "n_members": 3,
+   "peaks": [
+    {
+     "f0": 4.6,
+     "snr_db": 10
+    },
+    {
+     "f0": 7.442956348249516,
+     "snr_db": 10
+    },
+    {
+     "f0": 12.042956348249515,
+     "snr_db": 10
+    }
+   ]
+  }
+ },
+ "phi3_10db_shuffled_2s_blocks": {
+  "bytes": 788244,
+  "seconds": 119,
+  "clippedSamples": 0,
+  "note": "per-channel seeded permutation of 2 s (512-sample) blocks (seed 20260102)",
+  "kind": "phi_cascade",
+  "truth": {
+   "cascade_freqs": [
+    4.6,
+    7.442956,
+    12.042956
+   ],
+   "ratio": 1.618034,
+   "n_members": 3,
+   "peaks": [
+    {
+     "f0": 4.6,
+     "snr_db": 10
+    },
+    {
+     "f0": 7.442956348249516,
+     "snr_db": 10
+    },
+    {
+     "f0": 12.042956348249515,
+     "snr_db": 10
+    }
+   ]
+  }
+ }
+}

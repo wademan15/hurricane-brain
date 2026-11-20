@@ -75,13 +75,20 @@ def condition(data):
 # =============================================================================== quality and gating
 
 
-def quality(raw, x):
-    """Per channel, per second: plausible sd after conditioning (1..100 uV), not railed/flat.
-    A failing channel stays excluded until it has passed for 3 s in a row.  Returns (n_ch, n) ok."""
+CONTACT_MAINS_UV = 80.0  # lab value: raw mains-line amplitude above this means poor contact (spec 5.2)
+
+
+def quality(raw, x, mains=None, contact=True):
+    """Per channel, per second: plausible sd after conditioning (1..100 uV), not railed/flat, and (contact)
+    raw mains-line amplitude under CONTACT_MAINS_UV.  A failing channel stays excluded until it has passed
+    for 3 s in a row.  Returns (n_ch, n) ok."""
     n_ch, n = x.shape
     sec = int(FS)
     m = n // sec + 1
     ok = np.ones((n_ch, n), bool)
+    ph = None
+    if contact and mains:
+        ph = np.exp(-2j * np.pi * mains * np.arange(sec) / FS)
     for c in range(n_ch):
         run = 3
         for k in range(m):
@@ -91,6 +98,10 @@ def quality(raw, x):
             sd = x[c, sl].std()
             rng_ = np.ptp(raw[c, sl])
             passed = (1.0 <= sd <= 100.0) and rng_ > 0.5
+            if ph is not None and sl.stop - sl.start == sec:
+                seg = raw[c, sl] - raw[c, sl].mean()
+                amp = 2 * np.abs(seg @ ph) / sec
+                passed = passed and amp < CONTACT_MAINS_UV
             run = run + 1 if passed else 0
             ok[c, sl] = passed and run >= 3
     return ok
@@ -138,7 +149,7 @@ def gate(x, motion):
         acc = np.abs(motion - np.median(motion, axis=1, keepdims=True)).sum(axis=0) + np.abs(g - np.median(g))
         k = max(1, int(0.5 * 52))
         sm = np.convolve(acc, np.ones(k) / k, mode="same")
-        rest = np.median(sm[:min(sm.size, 60 * 52)])
+        rest = np.percentile(sm, 25)  # resting level: robust to motion in up to 75 % of the file
         mot = sm > max(4 * rest, 0.03)
         idx = np.clip((np.arange(n) / FS * 52).astype(int), 0, mot.size - 1)
         mot_e = np.broadcast_to(mot[idx], (n_ch, n))
@@ -257,6 +268,8 @@ def threshold_for(cfg, dof):
             return C.p1_threshold(dof, C.RESOLUTION[cfg["spectrum"]])
         import scipy.stats as st
         return float(st.chi2.ppf(1 - PARAMS["alpha_peak"], dof) / dof)
+    if cfg["confirm"] == "P1":
+        return cfg["thresholds"][_thr_key(cfg)] * C.p1_threshold(dof, C.RESOLUTION[cfg["spectrum"]])
     return cfg["thresholds"][_thr_key(cfg)]
 
 
@@ -306,7 +319,7 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
     raw = rec.data[:, start_offset:]
     data, repaired, invalid = repair_gaps(raw)
     x, mains = condition(data)
-    qok = quality(data, x)
+    qok = quality(data, x, mains, contact=cfg.get("contact_check", True))
     if cfg["gating"]:
         flagged, _ = gate(x, None if rec.motion is None else rec.motion[:, int(start_offset / FS * 52):])
     else:
@@ -362,6 +375,11 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
             comp = C.Composite(chans)
             if tuning:
                 stat, _ = window_peaks(comp, cfg, mains, None, native_df, want_stats=True)
+                if cfg["confirm"] == "P1":
+                    # P1 is tuned as a factor on the analytic chi-squared threshold, so that the tuned
+                    # threshold still follows the window's degrees of freedom (fewer clean channels or
+                    # shorter clean stretches give a higher threshold)
+                    stat = stat / C.p1_threshold(comp.dof, C.RESOLUTION[cfg["spectrum"]])
                 tune_stats.append(stat)
                 win.append(rec_w)
                 continue
@@ -465,6 +483,7 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
         sl = np.array([q["se"] for q in integ])
         ids = [q["id"] for q in integ]
         harmonic = set()
+        pending = set()
         if len(integ) >= 2:
             pi, pj, px, psx = C.pair_arrays(fl, sl)
             if cfg["harmonic_test"]:
@@ -483,8 +502,22 @@ def analyze(rec, cfg_in=None, start_offset=0, tuning=False, t_max=None):
                             hh = harm_hist[key][-3:]
                             if sum(hh) >= 2:
                                 harmonic.add((a_, b_))
+                            elif cfg.get("harmonic_pending", True) and len(hh) < 3:
+                                # not yet shown to be independent: excluded until 3 tests have run
+                                pending.add((a_, b_))
+                if cfg.get("harmonic_family", True) and harmonic:
+                    # two harmonics of the same base (e.g. 2f and 3f, a 1.5 step) are one rhythm too
+                    by_base = {}
+                    for a_, b_ in harmonic:
+                        by_base.setdefault(a_, set()).add(b_)
+                    for a_, ups in by_base.items():
+                        ups = sorted(ups)
+                        for u in ups:
+                            for v in ups:
+                                if u < v:
+                                    harmonic.add((u, v))
             resolved = psx <= PARAMS["sx_limit"]
-            nonharm = np.array([(a_, b_) not in harmonic for a_, b_ in zip(pi, pj)])
+            nonharm = np.array([(a_, b_) not in harmonic and (a_, b_) not in pending for a_, b_ in zip(pi, pj)])
             rec_w["harmonic"] = [(ids[a_], ids[b_]) for a_, b_ in harmonic]
         tgt_out = {}
         for tk in C.TARGETS:
