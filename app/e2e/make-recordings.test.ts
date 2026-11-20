@@ -23,10 +23,12 @@ const fixtures = resolve(here, '..', '..', 'lab', 'fixtures');
 const outDir = join(here, 'out', 'recordings');
 const FS = 256;
 
-const NAMES = ['phi3_10db', 'phi5_15db', 'octave3_10db', 'background_only', 'white_noise', 'random_bands', 'harmonic_8hz', 'artifact_blinks', 'artifact_jaw_clench', 'nearmiss_1.8_10db'];
+const NAMES = ['phi3_10db', 'phi5_15db', 'octave3_10db', 'background_only', 'white_noise', 'random_bands', 'harmonic_8hz', 'artifact_blinks', 'artifact_jaw_clench', 'nearmiss_1.8_10db',
+  // second run additions
+  'phi2_6db', 'phi3_3db', 'phi3_10db_phase_randomized', 'phi3_10db_loss1pct', 'form_dissolve_120s', 'drift_band_edge', 'artifact_railed_mains60', 'nearmiss_1.5_10db', 'nearmiss_1.55_10db', 'nearmiss_1.7_10db'];
 
-function load(name: string): { x: Float32Array; n: number; nch: number } {
-  const b = readFileSync(join(fixtures, `${name}.f32`));
+function load(name: string, dir = fixtures): { x: Float32Array; n: number; nch: number } {
+  const b = readFileSync(join(dir, `${name}.f32`));
   const x = new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
   return { x, n: x.length / 4, nch: 4 };
 }
@@ -59,7 +61,7 @@ function shuffleFixture(x: Float32Array, n: number, blockLen: number, seed: numb
   return out;
 }
 
-async function toRecording(name: string, x: Float32Array, n: number): Promise<{ bytes: Uint8Array; clipped: number; seconds: number }> {
+async function toRecording(name: string, x: Float32Array, n: number): Promise<{ bytes: Uint8Array; clipped: number; seconds: number; dropped: number }> {
   const seconds = Math.floor((n - 11) / FS); // whole 12-sample packets
   let clipped = 0;
   const raw = (ch: number, idx: number) => {
@@ -68,7 +70,10 @@ async function toRecording(name: string, x: Float32Array, n: number): Promise<{ 
     if (r < 0) { r = 0; clipped++; } else if (r > 4095) { r = 4095; clipped++; }
     return r;
   };
-  const syn = synthClassic({ seconds: seconds + 1, eeg: raw, ppg: false, motion: false, t0Us: 1_000_000, latencyMs: () => 15 });
+  const dropEeg = new Set<number>();
+  for (let p = 0; p * 12 < n; p++) if (Number.isNaN(x[p * 12 * 4])) dropEeg.add(p);
+  const rawSafe = (ch: number, idx: number) => (Number.isNaN(x[idx * 4 + ch]) ? 2048 : raw(ch, idx));
+  const syn = synthClassic({ seconds: seconds + 1, eeg: rawSafe, dropEeg, ppg: false, motion: false, t0Us: 1_000_000, latencyMs: () => 15 });
   // 1) the raw notifications as a first file
   const hdr = { clock: { eegRateHz: 256 as number | null, settleSamples: 256 }, devices: [{ slot: 0 as const, kind: 'muse' as const, name: 'Muse-2 (synthetic)' }] };
   const w = new RecordingWriter({ format: 'hurricane-brain-raw', version: 1, createdAt: '2026-01-01T00:00:00.000Z', ...hdr, meta: { seed: 1, mains_hz: null, engineOverrides: {}, heartOnly: false, source: `lab/fixtures/${name}` } });
@@ -87,7 +92,7 @@ async function toRecording(name: string, x: Float32Array, n: number): Promise<{ 
   });
   await src.start();
   rec.note({ type: 'session_end', id, t: seconds, completed: true });
-  return { bytes: rec.finish(), clipped, seconds };
+  return { bytes: rec.finish(), clipped, seconds, dropped: dropEeg.size };
 }
 
 it('make recordings', async () => {
@@ -98,11 +103,14 @@ it('make recordings', async () => {
   const base = load('phi3_10db');
   jobs.push({ name: 'phi3_10db_shuffled_samples', src: 'phi3_10db', x: shuffleFixture(base.x, base.n, 1, 20260101), n: base.n, note: 'per-channel seeded permutation of samples (seed 20260101)' });
   jobs.push({ name: 'phi3_10db_shuffled_2s_blocks', src: 'phi3_10db', x: shuffleFixture(base.x, base.n, 512, 20260102), n: base.n, note: 'per-channel seeded permutation of 2 s (512-sample) blocks (seed 20260102)' });
+  jobs.push({ name: 'phi3_10db_shuffled_20ms_blocks', src: 'phi3_10db', x: shuffleFixture(base.x, base.n, 5, 20260103), n: base.n, note: 'per-channel seeded permutation of 5-sample (about 20 ms) blocks (seed 20260103): sub-cycle, must be calm' });
+  const both = load('both_phi_octave_12db', join(here, 'out', 'fixtures-extra'));
+  jobs.push({ name: 'both_phi_octave_12db', src: 'both_phi_octave_12db', x: both.x, n: both.n, note: 'golden ratio cascade 3.0/4.85/7.85 Hz plus octave cascade 6.2/12.4/24.8 Hz, 12 dB', dir: join(here, 'out', 'fixtures-extra') } as any);
   for (const j of jobs) {
     const r = await toRecording(j.name, j.x, j.n);
     writeFileSync(join(outDir, `${j.name}.hbraw`), r.bytes);
-    const truth = JSON.parse(readFileSync(join(fixtures, `${j.src}.json`), 'utf8'));
-    index[j.name] = { bytes: r.bytes.length, seconds: r.seconds, clippedSamples: r.clipped, note: j.note, kind: truth.kind, truth: { cascade_freqs: truth.truth?.cascade_freqs, ratio: truth.truth?.ratio, n_members: truth.truth?.n_members, peaks: (truth.truth?.peaks ?? []).map((p: { f0: number; snr_db: number }) => ({ f0: p.f0, snr_db: p.snr_db })) } };
+    const truth = JSON.parse(readFileSync(join((j as any).dir ?? fixtures, `${j.src}.json`), 'utf8'));
+    index[j.name] = { bytes: r.bytes.length, seconds: r.seconds, clippedSamples: r.clipped, droppedPackets: r.dropped, note: j.note, kind: truth.kind, truth: { schedule: truth.truth?.schedule, phi_freqs: truth.truth?.phi_freqs, octave_freqs: truth.truth?.octave_freqs, cascade_freqs: truth.truth?.cascade_freqs, ratio: truth.truth?.ratio, n_members: truth.truth?.n_members, peaks: (truth.truth?.peaks ?? []).map((p: { f0: number; snr_db: number }) => ({ f0: p.f0, snr_db: p.snr_db })) } };
     console.log(j.name, r.bytes.length, 'bytes', r.seconds, 's', 'clipped', r.clipped);
   }
   writeFileSync(join(outDir, 'index.json'), JSON.stringify(index, null, 1));

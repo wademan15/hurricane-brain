@@ -54,7 +54,9 @@ await page.addInitScript(() => {
 await page.goto(URL);
 await page.waitForLoadState('networkidle');
 // onboarding
-for (let i = 0; i < 10; i++) {
+const nameInput = page.locator('input[type=text], input:not([type])').first();
+if (await nameInput.count()) await nameInput.fill('Fake Test').catch(() => {});
+for (let i = 0; i < 12; i++) {
   const next = page.getByRole('button', { name: 'Next' });
   if (await next.count()) { await next.click(); continue; }
   const gs = page.getByRole('button', { name: 'Get started' });
@@ -77,8 +79,10 @@ async function snapshotText() {
       title: t('.live-top .title'),
       phi: t('[data-testid=cell-phi]'), oct: t('[data-testid=cell-oct]'), chance: t('[data-testid=cell-chance]'),
       signal: t('[data-testid=signal-state]'), chips,
+      casPhi: t('[data-testid=cascade-phi]'), casOct: t('[data-testid=cascade-oct]'), casBoth: t('[data-testid=cascade-both]'),
+      finished: !!document.querySelector('[data-testid=replay-finished]'),
       calm: t('.hb-calm-message'), guide: t('.live-guide'),
-      page: document.querySelector('[data-testid=live-session]') ? 'live' : (document.body.innerText.includes('Replay finished') ? 'finished' : 'other'),
+      page: document.querySelector('[data-testid=live-session]') ? 'live' : 'other',
     };
   });
 }
@@ -120,7 +124,7 @@ for (const name of names) {
   const timeoutMs = (dur / speedFactor) * 1000 + 90000;
   while (Date.now() - t0 < timeoutMs) {
     const s = await snapshotText();
-    if (s.page !== 'live') { ended = true; series.push({ wall: Date.now() - t0, ...s }); break; }
+    if (s.finished || s.page !== 'live') { ended = true; series.push({ wall: Date.now() - t0, ...s }); break; }
     const el = parseClock(s.title);
     series.push({ wall: Date.now() - t0, el, ...s });
     if (el !== lastElapsed) { lastElapsed = el; stuckSince = Date.now(); }
@@ -144,10 +148,11 @@ for (const name of names) {
   await sleep(4000);
   const after = await snapshotText();
   shots.afterEnd = await shot(`${name}-end.png`, 'body');
+  shots.afterEndPair = [await shot(`${name}-endA.png`, '.hb-hurricane'), (await sleep(2000), await shot(`${name}-endB.png`, '.hb-hurricane'))];
   results[name].afterEnd = after;
-  console.log('  ended page=', after.page, 'phi=', after.phi?.slice(0, 80), 'wall', ((Date.now() - t0) / 1000).toFixed(0), 's');
+  console.log('  ended=', ended, 'finishedBanner=', after.finished, 'phi=', after.phi?.slice(0, 80), 'wall', ((Date.now() - t0) / 1000).toFixed(0), 's');
   // dismiss the finished screen
-  const done = page.getByRole('button', { name: 'Done' });
+  const done = page.getByRole('button', { name: 'Exit', exact: true }).first();
   if (await done.count()) await done.click();
   results[name].audioMsgs = await page.evaluate(() => { const a = window.__audioMsgs; window.__audioMsgs = []; return a; });
   results[name].console = consoleMsgs.splice(0);
