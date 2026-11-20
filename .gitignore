@@ -6,3 +6,4 @@ __pycache__/
 .venv/
 app/src/wasm/pkg/
 lab/out/
+app/src/viz/test/out/
