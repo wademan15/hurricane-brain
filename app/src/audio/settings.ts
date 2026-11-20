@@ -32,6 +32,26 @@ export interface BreathGuideSettings {
   bpm: number;
 }
 
+/** Mute and level of one state bloom. */
+export interface BloomSetting {
+  /** false mutes this bloom (ramped over gainTauS). */
+  on: boolean;
+  /** Level 0..2 (1 = design level). */
+  level: number;
+}
+
+/** The three state blooms, each separately mutable. All on by default. */
+export interface BloomSettings {
+  /** Golden ratio aligned state. */
+  phi: BloomSetting;
+  /** Octave aligned state. */
+  octave: BloomSetting;
+  /** Combined state: both at once (`states.both`). */
+  both: BloomSetting;
+}
+
+export type BloomName = keyof BloomSettings;
+
 export interface AudioSettings {
   // --- Tracking tones -------------------------------------------------------------------------
   /** Exact multiplier from brain frequency to tone pitch. Five octaves. Not user-editable. */
@@ -74,6 +94,12 @@ export interface AudioSettings {
   bloomTauS: number;
   /** One-pole smoothing when a bloom thins (state left), seconds (>= 1). */
   bloomReleaseTauS: number;
+  /** One-pole smoothing of the combined (both) bloom rising, seconds (>= 1). Slower: it gathers. */
+  combinedBloomTauS: number;
+  /** Mute and level per state bloom. */
+  blooms: BloomSettings;
+  /** Which chance level's excess scales the blooms: 'a' reads cascades.*.excess_a, 'b' reads excess_b. */
+  bloomChance: 'a' | 'b';
 
   // --- Heart ----------------------------------------------------------------------------------
   /** Fixed latency from Beat.t (session clock) to the pulse in the ear, seconds. */
@@ -102,6 +128,11 @@ export interface AudioSettings {
   ceilingDb: number;
 
   // --- Safety ---------------------------------------------------------------------------------
+  /**
+   * New-session detection: when a frame's time is earlier than the latest frame time seen by more
+   * than this, the binder treats it as a new session and starts clean. Seconds.
+   */
+  sessionJumpS: number;
   /** Freshness: fast frames older than this are not used. Seconds. */
   staleFastS: number;
   /** Freshness: slow frames older than this are not used. Seconds. */
@@ -134,6 +165,9 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   thinFadeS: 1,
   bloomTauS: 3,
   bloomReleaseTauS: 2,
+  combinedBloomTauS: 5,
+  blooms: { phi: { on: true, level: 1 }, octave: { on: true, level: 1 }, both: { on: true, level: 1 } },
+  bloomChance: 'a',
 
   heartLatencyS: 0.3,
   heartLateToleranceS: 0.1,
@@ -149,6 +183,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   masterDb: 0,
   ceilingDb: -6,
 
+  sessionJumpS: 2,
   staleFastS: 0.25,
   staleSlowS: 1.0,
   watchdogS: 0.5,
@@ -157,9 +192,10 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
 };
 
 /** Input to setSettings: any subset, gains and breath guide may be partial too. */
-export type AudioSettingsPatch = Partial<Omit<AudioSettings, 'gains' | 'breathGuide' | 'pitchMultiplier'>> & {
+export type AudioSettingsPatch = Partial<Omit<AudioSettings, 'gains' | 'breathGuide' | 'blooms' | 'pitchMultiplier'>> & {
   gains?: Partial<LayerGains>;
   breathGuide?: Partial<BreathGuideSettings>;
+  blooms?: { [K in BloomName]?: Partial<BloomSetting> };
 };
 
 const clamp = (x: number, lo: number, hi: number, fallback: number): number =>
@@ -171,6 +207,11 @@ export function mergeSettings(base: AudioSettings, patch: AudioSettingsPatch = {
   const m = { ...base, ...patch, gains: { ...base.gains, ...patch.gains }, breathGuide: { ...base.breathGuide, ...patch.breathGuide } };
   const g = m.gains;
   const gain = (x: number, f: number) => clamp(x, 0, 2, f);
+  const bloom = (k: BloomName): BloomSetting => {
+    // Stored settings from before blooms existed lack the field: fall back to defaults.
+    const merged = { ...(base.blooms?.[k] ?? DEFAULT_AUDIO_SETTINGS.blooms[k]), ...patch.blooms?.[k] };
+    return { on: merged.on !== false, level: gain(merged.level, 1) };
+  };
   return {
     pitchMultiplier: 32,
     pitchTauS: clamp(m.pitchTauS, 0.02, 1, d.pitchTauS),
@@ -191,6 +232,9 @@ export function mergeSettings(base: AudioSettings, patch: AudioSettingsPatch = {
     thinFadeS: clamp(m.thinFadeS, 1, 10, d.thinFadeS),
     bloomTauS: clamp(m.bloomTauS, 1, 10, d.bloomTauS),
     bloomReleaseTauS: clamp(m.bloomReleaseTauS, 1, 10, d.bloomReleaseTauS),
+    combinedBloomTauS: clamp(m.combinedBloomTauS, 1, 15, d.combinedBloomTauS),
+    blooms: { phi: bloom('phi'), octave: bloom('octave'), both: bloom('both') },
+    bloomChance: m.bloomChance === 'b' ? 'b' : 'a',
     heartLatencyS: clamp(m.heartLatencyS, 0, 2, d.heartLatencyS),
     heartLateToleranceS: clamp(m.heartLateToleranceS, 0, 0.5, d.heartLateToleranceS),
     heartPitchHz: clamp(m.heartPitchHz, 35, 110, d.heartPitchHz),
@@ -205,6 +249,7 @@ export function mergeSettings(base: AudioSettings, patch: AudioSettingsPatch = {
     gainTauS: clamp(m.gainTauS, 0.02, 2, d.gainTauS),
     masterDb: clamp(m.masterDb, -60, 6, d.masterDb),
     ceilingDb: clamp(m.ceilingDb, -40, -1, d.ceilingDb),
+    sessionJumpS: clamp(m.sessionJumpS, 0.5, 60, d.sessionJumpS),
     staleFastS: clamp(m.staleFastS, 0.05, 1, d.staleFastS),
     staleSlowS: clamp(m.staleSlowS, 0.3, 3, d.staleSlowS),
     watchdogS: clamp(m.watchdogS, 0.1, 5, d.watchdogS),
