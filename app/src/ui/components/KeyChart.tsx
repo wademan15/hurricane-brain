@@ -21,8 +21,12 @@ export function KeyChart({ rows, col, label, unit }: { rows: KeyRow[]; col: stri
   }
   const t0 = pts[0].t;
   const t1 = pts[pts.length - 1].t || t0 + 1;
-  let lo = Math.min(...vals);
-  let hi = Math.max(...vals);
+  const dataLo = Math.min(...vals);
+  const dataHi = Math.max(...vals);
+  // A 0 to 1 measure is drawn on the 0 to 1 scale, so a flat line at 0 does not look like a range of -0.5 to 0.5.
+  const pinned = unit === '0..1';
+  let lo = pinned ? 0 : dataLo;
+  let hi = pinned ? 1 : dataHi;
   if (hi - lo < 1e-9) {
     lo -= 0.5;
     hi += 0.5;
@@ -44,7 +48,7 @@ export function KeyChart({ rows, col, label, unit }: { rows: KeyRow[]; col: stri
   return (
     <figure style={{ margin: '10px 0' }}>
       <figcaption className="small">
-        <strong>{label}</strong> <span className="dim">({unit}) measured in {Math.round((measured / pts.length) * 100)}% of seconds; range {lo.toFixed(2)} to {hi.toFixed(2)}</span>
+        <strong>{label}</strong> <span className="dim">({unit}) measured in {Math.round((measured / pts.length) * 100)}% of seconds; range {dataLo.toFixed(2)} to {dataHi.toFixed(2)}{pinned ? ' (drawn on a 0 to 1 scale)' : ''}</span>
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img" aria-label={`${label} over the session`} preserveAspectRatio="none">
         {bounds.map((b) => (

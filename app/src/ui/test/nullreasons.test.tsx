@@ -8,11 +8,11 @@ import { describe, expect, it } from 'vitest';
 import type { Measured, SlowFrame } from '../../engine/frames';
 import { slowFrame } from '../../training/test-fixtures';
 import { BlockTable } from '../components/BlockTable';
-import { CascadeEventLog, CascadeStates } from '../components/Cascades';
+import { CascadeEventLog, CascadeStates, StateStrip } from '../components/Cascades';
 import { FitCoach } from '../components/FitCoach';
 import { KeyChart } from '../components/KeyChart';
 import { HemisphereTable, PairTable } from '../components/LiveDetails';
-import { AlignmentTrio, HeartLine, PeaksLine, SignalLine, type Live } from '../components/LiveReadout';
+import { AlignmentDetails, AlignmentTrio, HeartLine, PeaksLine, SignalLine, type Live } from '../components/LiveReadout';
 import { Val, Num } from '../components/kit';
 import { fmtDuration, measuredLine, notMeasuredText, numberLine } from '../measured';
 import { NO_HOLD } from '../state/fit';
@@ -69,14 +69,17 @@ describe('every null rendering path includes its reason', () => {
     it(`the live readouts with ${name}`, () => {
       const html = renderToStaticMarkup(
         <div>
-          <AlignmentTrio live={l} chanceDriver="a" />
-          <AlignmentTrio live={l} chanceDriver="b" />
+          <AlignmentTrio live={l} />
+          <AlignmentDetails live={l} chanceDriver="a" />
+          <AlignmentDetails live={l} chanceDriver="b" />
           <CascadeStates live={l} />
+          <StateStrip live={l} />
           <SignalLine live={l} />
-          <PeaksLine live={l} />
+          <SignalLine live={l} compact />
+          <PeaksLine live={l} harmonicsCount={false} />
           <HeartLine live={l} heartExpected />
           <HeartLine live={l} heartExpected={false} />
-          <PairTable slow={l.slow} />
+          <PairTable slow={l.slow} harmonicsCount={false} />
           <HemisphereTable slow={l.slow} />
         </div>,
       );
@@ -105,5 +108,47 @@ describe('every null rendering path includes its reason', () => {
     } as never;
     expect(bare(renderToStaticMarkup(<BlockTable record={record} />))).toEqual([]);
     expect(bare(renderToStaticMarkup(<CascadeEventLog events={[]} tStart={0} />))).toEqual([]);
+  });
+
+  it('chance B that is not there yet says how long it needs, never zero', () => {
+    const f = slowFrame(10, { phiExcess: 0.4, phiSteps: 2 });
+    f.cascades.phi.excess_b = NULL('warming_up');
+    f.cascades.phi.chance.b = { closeness: NULL('warming_up'), p: NULL('warming_up'), p_steps: NULL('warming_up') };
+    const html = renderToStaticMarkup(<div><AlignmentTrio live={live(f)} /><AlignmentDetails live={live(f)} chanceDriver="a" /></div>);
+    expect(bare(html)).toEqual([]);
+    expect(html).toMatch(/chance B needs about 2 to 3 minutes of data/);
+    expect(html).toMatch(/beyond your own usual pattern \(B\)/);
+  });
+
+  it('the main readout uses plain words, with the precise terms in the details', () => {
+    const f = slowFrame(10, { phiExcess: 0.4, phiSteps: 2 });
+    f.cascades.phi.chance.a.p = { v: 0.03, se: null, why: 'ok' };
+    const main = renderToStaticMarkup(<div><AlignmentTrio live={live(f)} /><StateStrip live={live(f)} /></div>);
+    for (const jargon of [/over chance A/i, /p \(A\)/, /\bsteps?\b/i, /in the state/i, /\bheld\b/i, /chance A\/B/i]) expect(main).not.toMatch(jargon);
+    expect(main).toMatch(/Random peaks did this well: 3 in 100/);
+    expect(main).toMatch(/a chain of 3 peaks/);
+    // golden ratio, octave and chance stay side by side in one group
+    expect(main).toMatch(/aria-label="Golden ratio alignment, octave alignment and chance level, side by side"/);
+    expect(main.match(/data-testid="cell-(phi|oct|chance)"/g)).toHaveLength(3);
+  });
+
+  it('each state has its own icon class, and a filled badge only while the engine says it is holding', () => {
+    const f = slowFrame(10);
+    f.states.phi = { ...f.states.phi, active: true, for_s: 9 };
+    f.states.octave = { ...f.states.octave, active: false, for_s: 4 };
+    const html = renderToStaticMarkup(<StateStrip live={live(f)} />);
+    expect(html).toMatch(/state-badge phi on[^>]*>[\s\S]*Holding 0:09/);
+    expect(html).toMatch(/state-badge oct off[^>]*>[\s\S]*Not holding/);
+    expect(html).toMatch(/state-badge both off/);
+    const paths = [...html.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(paths).size).toBe(3);
+  });
+
+  it('a harmonic pair is labelled possible harmonic, not counted, also when pending', () => {
+    const f = allNull();
+    f.pairs = f.pairs.map((p) => ({ ...p, harmonic: true }));
+    const html = renderToStaticMarkup(<PairTable slow={f} harmonicsCount={false} />);
+    expect(html).toMatch(/possible harmonic, not counted/);
+    expect(renderToStaticMarkup(<PairTable slow={f} harmonicsCount />)).toMatch(/possible harmonic, counted as you chose/);
   });
 });

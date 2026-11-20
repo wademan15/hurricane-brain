@@ -32,7 +32,8 @@ an empty cell, never zero; where a column has a `_why` companion, it holds the e
 
 | Column id | Meaning |
 | --- | --- |
-| `alpha_db`, `theta_db`, `beta_db` | band power above the fitted background, temporal pair, dB |
+| `alpha_db`, `theta_db`, `beta_db` | band power above the fitted background, temporal pair, dB. The band edges follow the individual alpha frequency when one is set (the engine's `bands`) |
+| `alpha_fixed_db`, `theta_fixed_db`, `beta_fixed_db` | the same over the fixed textbook edges (the engine's `bands_fixed`: theta 4-8, alpha 8-13, beta 13-30 Hz), so sessions compare whatever the individual alpha frequency was. Empty with `not_available` for a recording made before the engine emitted it |
 | `dominant_hz` | frequency of the strongest confirmed peak |
 | `phi_closeness`, `phi_chance_a`, `phi_excess_a`, `phi_excess_b`, `phi_steps` | golden ratio alignment, chance level A, excess over A and over B, cascade steps |
 | `oct_closeness`, `oct_chance_a`, `oct_excess_a`, `oct_excess_b`, `oct_steps` | the same for the octave |

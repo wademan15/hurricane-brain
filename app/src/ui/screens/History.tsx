@@ -53,7 +53,7 @@ export function HistoryList({ navigate }: { navigate: (to: string) => void }) {
               <div style={{ minWidth: 0 }}>
                 <strong>{s.programName}</strong>
                 <div className="small dim">
-                  {fmtDateTime(s.startedAt)} . {fmtDuration(s.tEnd !== null ? s.tEnd - s.tStart : null)} . {s.completed ? 'completed' : 'ended early'}
+                  {fmtDateTime(s.startedAt)} · {fmtDuration(s.tEnd !== null ? s.tEnd - s.tStart : null)} · {s.completed ? 'completed' : 'ended early'}
                 </div>
               </div>
               <Button size="small" onClick={() => navigate(`history/${s.id}`)}>Open</Button>
@@ -75,7 +75,7 @@ export function HistoryList({ navigate }: { navigate: (to: string) => void }) {
           <div className="row split">
             <div style={{ minWidth: 0 }}>
               <strong>{r.label}</strong> {r.imported ? <Badge>imported</Badge> : null}
-              <div className="small dim">{fmtDateTime(r.createdAt)} . {fmtBytes(r.bytes)} . {fmtDuration(r.durationS)}</div>
+              <div className="small dim">{fmtDateTime(r.createdAt)} · {fmtBytes(r.bytes)} · {fmtDuration(r.durationS)}</div>
             </div>
             <div className="row">
               <Button size="small" disabled={!!st.session} onClick={async () => {
@@ -135,7 +135,7 @@ export function HistoryDetail({ id, navigate }: { id: string; navigate: (to: str
   return (
     <div>
       <p><a href="#/history">History</a></p>
-      <PageHeader title={s.programName} sub={`${fmtDateTime(s.startedAt)} . ${fmtDuration(s.tEnd !== null ? s.tEnd - s.tStart : null)} . ${s.completed ? 'completed' : 'ended early'}`} />
+      <PageHeader title={s.programName} sub={`${fmtDateTime(s.startedAt)} · ${fmtDuration(s.tEnd !== null ? s.tEnd - s.tStart : null)} · ${s.completed ? 'completed' : 'ended early'}`} />
       {error ? <Note tone="bad">{error}</Note> : null}
       <div className="row" style={{ marginBottom: 14 }}>
         <Button variant="primary" disabled={!s.recordingId || !!st.session} onClick={() => void replay()}>Replay through the engine</Button>

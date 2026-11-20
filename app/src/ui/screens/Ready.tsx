@@ -20,11 +20,13 @@ export function Ready({ navigate }: { navigate: (to: string) => void }) {
 
   if (!p) {
     return (
-      <Card>
-        <h2>Nothing is waiting to start</h2>
-        <p className="dim">Choose a session on Home or in Programs.</p>
-        <Button variant="primary" onClick={() => navigate('home')}>Go to Home</Button>
-      </Card>
+      <div>
+        <PageHeader title="Nothing is waiting to start" />
+        <Card>
+          <p className="dim">Choose a session on Home or in Programs.</p>
+          <Button variant="primary" onClick={() => navigate('home')}>Go to Home</Button>
+        </Card>
+      </div>
     );
   }
   const name = p.kind === 'free' ? 'Free session' : (getProgram(p.req.programId)?.name ?? 'Session');

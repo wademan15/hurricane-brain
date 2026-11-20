@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Note } from '../components/kit';
 import { ProfileForm, type NewPerson } from '../components/ProfileForm';
 import {
-  FIT_STEPS, GENERAL_SAFETY, GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, WELLNESS, WHAT_IT_DOES_NOT_CLAIM, WHAT_IT_MEASURES, techniqueCautions,
+  FIT_STEPS, GENERAL_SAFETY, GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, PRIVACY_SENTENCE, WELLNESS, WHAT_IT_DOES_NOT_CLAIM, WHAT_IT_MEASURES, techniqueCautions,
 } from '../copy';
 import { useServices } from '../state/app';
 
@@ -15,6 +15,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const last = i === STEPS.length - 1;
+  const h1 = useRef<HTMLHeadingElement>(null);
+  const first = useRef(true);
+  // After Next or Back the new step's heading takes focus, so a screen reader announces it.
+  useEffect(() => {
+    document.title = `${STEPS[i]} · Hurricane Brain`;
+    if (first.current) first.current = false;
+    else h1.current?.focus();
+  }, [i]);
 
   const finish = async () => {
     setBusy(true);
@@ -22,7 +30,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     try {
       if (!profile.get()) {
         const seed = crypto.getRandomValues(new Uint32Array(1))[0] & 0x7fffffff;
-        await profile.create({ name: person.name, ageGroup: person.ageGroup, safety: person.safety, questionnaire: null }, new Date(), seed);
+        await profile.create({ name: person.name.trim() || 'Me', ageGroup: person.ageGroup, safety: person.safety, questionnaire: null }, new Date(), seed);
       }
       settings.update({ onboarded: true, photoNoticeSeen: true });
       onDone();
@@ -34,11 +42,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="app-main" style={{ height: '100%' }}>
+    <main className="app-main" style={{ height: '100%' }}>
       <div className="app-main-inner">
         <header className="hero">
           <p className="dim small" aria-live="polite">Step {i + 1} of {STEPS.length}</p>
-          <h1>{i === 0 ? 'Welcome to Hurricane Brain' : STEPS[i]}</h1>
+          <h1 ref={h1} tabIndex={-1}>{i === 0 ? 'Welcome to Hurricane Brain' : STEPS[i]}</h1>
         </header>
         <div className="meter" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={i + 1} aria-label="Setup progress" style={{ marginBottom: 20 }}>
           <i style={{ width: `${((i + 1) / STEPS.length) * 100}%` }} />
@@ -70,7 +78,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           <Card>
             <p>{GOLDEN_RATIO_TEXT.measurement}</p>
             <Note>{GOLDEN_RATIO_TEXT.research}</Note>
-            <h3>Two readings</h3>
+            <h2>Two readings</h2>
             <p>{GOLDEN_RATIO_TEXT.winter}</p>
             <p>{GOLDEN_RATIO_TEXT.mainstream}</p>
             <Note>{GOLDEN_RATIO_TEXT.stance}</Note>
@@ -117,7 +125,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
         {i === 5 ? (
           <Card>
-            <ul>{PRIVACY.map((t) => <li key={t} style={{ marginBottom: 10 }}>{t}</li>)}</ul>
+            <p><strong>{PRIVACY_SENTENCE}</strong></p>
+            <ul>{PRIVACY.slice(1).map((t) => <li key={t} style={{ marginBottom: 10 }}>{t}</li>)}</ul>
           </Card>
         ) : null}
 
@@ -139,12 +148,12 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         <div className="row" style={{ marginTop: 16, justifyContent: 'space-between' }}>
           <Button variant="ghost" disabled={i === 0} onClick={() => setI(i - 1)}>Back</Button>
           {last ? (
-            <Button variant="primary" size="big" disabled={busy || !person.name.trim()} onClick={() => void finish()}>Get started</Button>
+            <Button variant="primary" size="big" disabled={busy} onClick={() => void finish()}>Get started</Button>
           ) : (
             <Button variant="primary" size="big" onClick={() => setI(i + 1)}>Next</Button>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

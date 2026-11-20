@@ -6,6 +6,7 @@ import { BLUETOOTH_UNAVAILABLE, WIRED_NOTE } from '../copy';
 import { fmtDateTime, fmtDuration } from '../measured';
 import { useController, useProfile, useProfileInfo, useServices, useSettings, useAsync } from '../state/app';
 import { useStarter } from '../state/start';
+import { NEEDS_IAF_TEXT, needsIaf } from '../session/child';
 
 export function Home({ navigate }: { navigate: (to: string) => void }) {
   const { controller, storage } = useServices();
@@ -80,7 +81,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
               <div className="small dim">
                 {st.muse.name ? `${st.muse.name}. ` : ''}
                 <span>{muse.text}</span>
-                {st.muse.battery !== null ? <span> . battery {Math.round(st.muse.battery)}%</span> : null}
+                {st.muse.battery !== null ? <span> · battery {Math.round(st.muse.battery)}%</span> : null}
               </div>
             </div>
             <div className="row">
@@ -96,7 +97,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
               <div className="small dim">
                 {st.strap.name ? `${st.strap.name}. ` : ''}
                 {strap.text}
-                {st.strap.battery !== null ? ` . battery ${Math.round(st.strap.battery)}%` : ''}
+                {st.strap.battery !== null ? ` · battery ${Math.round(st.strap.battery)}%` : ''}
               </div>
             </div>
             <div className="row">
@@ -113,7 +114,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
               </Button>
             </div>
           ) : null}
-          <p className="small dim">{WIRED_NOTE} Chrome asks you to choose a device each time, and the buttons must be tapped, not triggered automatically.</p>
+          <p className="small dim">{WIRED_NOTE} Chrome shows a list of nearby devices each time; pick your headset.</p>
           {st.notice ? (
             <Note tone="warn">
               {st.notice}{' '}
@@ -159,11 +160,12 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
           <h2>Recommended next</h2>
           <h3>{recProgram.name}</h3>
           <p className="dim">{rec.reason}</p>
+          {needsIaf(recProgram, info.ageGroup, profile) ? <p className="dim" role="status">{NEEDS_IAF_TEXT}</p> : null}
           <div className="row">
             <Button onClick={() => navigate(`programs/${recProgram.id}`)}>Open and adjust</Button>
             <Button
               variant="primary"
-              disabled={!ready || busy !== null || !!st.session}
+              disabled={!ready || busy !== null || !!st.session || needsIaf(recProgram, info.ageGroup, profile)}
               onClick={() =>
                 run('prog', () => begin({ kind: 'program', req: { programId: recProgram.id } }))
               }
@@ -211,7 +213,7 @@ export function Home({ navigate }: { navigate: (to: string) => void }) {
                 <div>
                   <div>{r.label}</div>
                   <div className="small dim">
-                    {fmtDateTime(r.createdAt)} . {fmtDuration(r.durationS)} . {r.sessions.map((s) => s.programName).join(', ') || 'no session'}
+                    {fmtDateTime(r.createdAt)} · {fmtDuration(r.durationS)} · {r.sessions.map((s) => s.programName).join(', ') || 'no session'}
                   </div>
                 </div>
                 <Button

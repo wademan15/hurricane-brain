@@ -21,7 +21,12 @@ Things the visualizer needs from other roles. The visualizer does not edit these
    provide it as a field. The visualizer will not average it privately.
 4. **Rotation reads `tracks[].freq` (latest window), not `freq_integrated`.** The table says "frequency of
    the strongest confirmed track". Say so if you meant the integrated frequency.
-5. Arms are drawn only for cascade members whose state is `confirmed`. `fading` tracks are not drawn.
+5. **Left and right match.** The binding still reads `hemispheres[].match`, which includes
+   `locking_excess`, and the review in spec 9 shows that this is inflated by the shared reference. The
+   readout now says so ("frequency and balance; locking is inflated by the shared reference").
+   When the engine adds locking that excludes zero lag, or a `match` without the zero-lag locking,
+   tell the visualizer and the binding will move to it.
+6. Arms are drawn only for cascade members whose state is `confirmed`. `fading` tracks are not drawn.
 
 ## For the app engineer
 
@@ -32,6 +37,14 @@ Things the visualizer needs from other roles. The visualizer does not edit these
 - **Reduced motion**: `HurricaneView` takes `motion: 'auto' | 'full' | 'reduced'` (default `auto`,
   which follows `prefers-reduced-motion`). If the settings screen has its own reduced-motion switch,
   pass `motion={settings.reducedMotion ? 'reduced' : 'auto'}`.
+- **Readout placement (review M5)**: set `--hb-readout-top: calc(var(--tap) + 16px)` (or whatever
+  clears `.live-top`) on the live screen, or pass `readoutClassName`. The readout's z-index is
+  `--hb-readout-z` (default 5).
+- **Announcements**: `HurricaneView` announces state changes politely, after they have held for 2 s.
+  If the app already has its own guidance live region, consider `announce={false}`, or let
+  eyes-closed mode keep it on.
+- **Technical names (review m12)**: hidden by default, with a toggle in the readout. Use
+  `showFieldNames` to tie it to a setting.
 - **Restyling**: every colour, font and size is a CSS custom property (README, "Theme tokens"). Set
   them on `:root` or a wrapper; no code change in viz needed.
 

@@ -11,7 +11,18 @@ export {
   type HurricaneUniforms,
   type VizOptions,
 } from './bindings.ts';
-export { hitTest, chanceInWords, type Readout, type AlignmentRow } from './readout.ts';
+export {
+  hitTest,
+  partAt,
+  readoutFor,
+  listParts,
+  describeState,
+  chanceInWords,
+  EXCESS_NOTE,
+  type Readout,
+  type AlignmentRow,
+  type StormPart,
+} from './readout.ts';
 export { HurricaneRenderer } from './hurricane.ts';
 export { themeFromCss } from './theme.ts';
 export {

@@ -7,7 +7,7 @@
  * The frequency axis is logarithmic, so equal ratios are equal distances: a golden ratio
  * partner is always the same distance from its peak, and an octave partner a longer one.
  */
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import type { BandName, SlowFrame, Track } from '../engine/frames.ts';
 import { FrameStore, type FrameSource } from './frameStore.ts';
 import { VIZ_SMOOTHING } from './params.ts';
@@ -22,6 +22,11 @@ export interface SpectrumViewProps {
   site: string;
   className?: string;
   style?: CSSProperties;
+  /**
+   * The text summary of the confirmed peaks (a table beside the canvas). 'hidden' (default) keeps
+   * it for screen readers only; 'visible' shows it below the plot.
+   */
+  summary?: 'hidden' | 'visible';
 }
 
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -63,7 +68,8 @@ function readColors(el: Element): SpecColors {
 
 const now = (): number => performance.now() / 1000;
 
-export function SpectrumView({ source, site, className, style }: SpectrumViewProps) {
+export function SpectrumView({ source, site, className, style, summary = 'hidden' }: SpectrumViewProps) {
+  const summaryId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState<SlowFrame | null>(null);
@@ -90,13 +96,13 @@ export function SpectrumView({ source, site, className, style }: SpectrumViewPro
   }, [source]);
 
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
+    const plot = canvasRef.current?.parentElement;
+    if (!plot) return;
     const ro = new ResizeObserver(() => {
-      const r = wrap.getBoundingClientRect();
+      const r = plot.getBoundingClientRect();
       setSize({ w: r.width, h: r.height, dpr: Math.min(window.devicePixelRatio || 1, 2) });
     });
-    ro.observe(wrap);
+    ro.observe(plot);
     return () => ro.disconnect();
   }, []);
 
@@ -119,9 +125,64 @@ export function SpectrumView({ source, site, className, style }: SpectrumViewPro
         ? `Spectrum at ${site}: not measured (${reasonText(spec?.why ?? 'not_available')})`
         : `Spectrum at ${site} with ${frame.tracks.filter((t) => t.state === 'confirmed').length} confirmed peaks`;
 
+  const live = frame && !stale && spec && spec.why === 'ok' ? frame : null;
+  const peaks = live ? live.tracks.filter((t) => t.state === 'confirmed' && t.freq.v !== null) : [];
+  const fmtHz = (f: number) => (f >= F_MIN && f <= F_MAX ? `${f.toFixed(2)} Hz` : null);
+  const partners = (f: number, k: number) => [fmtHz(f / k), fmtHz(f * k)].filter(Boolean).join(' and ') || 'outside 1 to 45 Hz';
+
   return (
-    <div ref={wrapRef} className={`hb-spectrum${className ? ` ${className}` : ''}`} style={style}>
-      <canvas ref={canvasRef} role="img" aria-label={label} />
+    <div
+      ref={wrapRef}
+      className={`hb-spectrum${className ? ` ${className}` : ''}`}
+      style={style}
+      data-summary={summary}
+    >
+      <div className="hb-spectrum-plot">
+        <canvas ref={canvasRef} role="img" aria-label={label} aria-describedby={summaryId} />
+      </div>
+      <div id={summaryId} className="hb-spectrum-summary">
+        {!live ? (
+          <p>{label}.</p>
+        ) : (
+          <table>
+            <caption>
+              Confirmed peaks at {site}. Background 1/f^{fmtNumber(spec!.bg_exponent.v ?? 0, spec!.bg_exponent.se, '')}
+              {spec!.bg_exponent.v === null ? ' (not measured)' : ''}. Partner positions are where a golden ratio
+              or octave partner would sit, not measurements.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Peak</th>
+                <th scope="col">Frequency</th>
+                <th scope="col">Height above background</th>
+                <th scope="col">Band</th>
+                <th scope="col">Strongest at</th>
+                <th scope="col">Golden ratio partners would be at</th>
+                <th scope="col">Octave partners would be at</th>
+              </tr>
+            </thead>
+            <tbody>
+              {peaks.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>No confirmed peaks.</td>
+                </tr>
+              ) : (
+                peaks.map((t) => (
+                  <tr key={t.id}>
+                    <th scope="row">Track {t.id}</th>
+                    <td>{fmtNumber(t.freq.v!, t.freq.se, 'Hz')}</td>
+                    <td>{t.height_db.v === null ? `not measured (${reasonText(t.height_db.why)})` : fmtNumber(t.height_db.v, t.height_db.se, 'dB')}</td>
+                    <td>{t.band}</td>
+                    <td>{t.site}</td>
+                    <td>{partners(t.freq.v!, PHI)}</td>
+                    <td>{partners(t.freq.v!, 2)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

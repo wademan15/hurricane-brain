@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heartFrame, slowFrame } from '../../training/test-fixtures';
-import { KeyRowSampler } from '../session/keyrows';
+import { buildCells, KEY_COLUMN_IDS, KeyRowSampler } from '../session/keyrows';
 
 describe('per-second key measures', () => {
   it('takes values from frames and keeps nulls as null with their reason', () => {
@@ -43,5 +43,17 @@ describe('per-second key measures', () => {
     s.push(heartFrame(1.5, { hr: 64, rmssd: null }));
     expect(s.rows[1].cells.hr_bpm.v).toBe(64);
     expect(s.rows[1].cells.rmssd_ms.v).toBeNull();
+  });
+
+  it('records the fixed-edge band columns beside the individual-alpha ones, and says when they are not available', () => {
+    const f = slowFrame(0.5, { bands: { alpha: 4, theta: 2, beta: 1 } });
+    const none = buildCells(f, null, null);
+    expect(none.alpha_fixed_db).toEqual({ v: null, why: 'not_available' });
+    for (const sp of f.spectra) sp.bands_fixed = { ...sp.bands, alpha: { ...sp.bands.alpha, above_bg_db: { v: 3.5, se: null, why: 'ok' } } };
+    const c = buildCells(f, null, null);
+    expect(c.alpha_db.v).toBe(4);
+    expect(c.alpha_fixed_db).toEqual({ v: 3.5, why: 'ok' });
+    expect(c.theta_fixed_db.v).toBe(2);
+    expect(KEY_COLUMN_IDS).toEqual(expect.arrayContaining(['alpha_fixed_db', 'theta_fixed_db', 'beta_fixed_db']));
   });
 });

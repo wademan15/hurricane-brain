@@ -21,7 +21,7 @@ import {
 } from '../../device';
 import type { EngineClient } from '../../engine/client';
 import type { EngineConfig, Frame, Marker, StreamDescription } from '../../engine/frames';
-import type { AppSettings, Journal, ProfileInfo, RecordingMeta, RecordingSessionRef, ResponseSpeed, SessionSettings, StoredSession } from '../../storage';
+import type { AgeGroup, AppSettings, Journal, ProfileInfo, RecordingMeta, RecordingSessionRef, ResponseSpeed, SessionSettings, StoredSession } from '../../storage';
 import { StreamOut, type StreamStatus } from '../../stream';
 import { VIZ_SMOOTHING } from '../../viz';
 import {
@@ -29,6 +29,7 @@ import {
   type RatingKey, type RunnerEvent, type RunnerOutput, type SessionRecord, type SessionRunner, type UserProfile,
 } from '../../training';
 import { CascadeLogger } from './cascadeLog';
+import { CHILD_ENGINE_PARAMS } from './child';
 import { FrameHub } from './hub';
 import { KeyRowSampler } from './keyrows';
 import { LinkRecorder } from './linkRecorder';
@@ -44,8 +45,10 @@ export const APP_VERSION = '1.1.0';
 export const RESPONSE_SPEED_INTEGRATION_S: Record<ResponseSpeed, number | null> = { quicker: 15, steady: null, slower: 60 };
 
 /** Engine parameters the settings choose (not the tolerance overrides), by name. */
-export function enginePrefs(settings: Pick<AppSettings, 'responseSpeed' | 'harmonicsCount'>): Record<string, number | boolean> {
+export function enginePrefs(settings: Pick<AppSettings, 'responseSpeed' | 'harmonicsCount'>, ageGroup: AgeGroup | null = null): Record<string, number | boolean> {
   const out: Record<string, number | boolean> = {};
+  // A child's profile starts from the engine's child preset, then the speed choice on top (spec 5.4).
+  if (ageGroup === 'child') Object.assign(out, CHILD_ENGINE_PARAMS);
   const s = RESPONSE_SPEED_INTEGRATION_S[settings.responseSpeed];
   if (s !== null) out.integration_s = s;
   if (settings.harmonicsCount) out.exclude_harmonics = false;
@@ -266,7 +269,7 @@ export class SessionController {
     const clock = kind === 'live' ? new SessionClock({ eegRateHz: heartOnly ? null : 256, hostOriginMs: performance.now() }) : null;
     const seed = hdr?.seed ?? Math.floor(this.rand() * 2 ** 31);
     const mains = hdr ? hdr.mains : settings.mains === 'auto' ? null : settings.mains;
-    const overrides = hdr?.overrides ?? { ...settings.engineOverrides, ...enginePrefs(settings) };
+    const overrides = hdr?.overrides ?? { ...settings.engineOverrides, ...enginePrefs(settings, this.deps.getProfileInfo?.()?.ageGroup ?? null) };
     const created = this.now().toISOString();
     const engine = this.deps.createEngine();
     const link: Link = {

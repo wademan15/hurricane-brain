@@ -5,7 +5,9 @@ import {
 } from '../../training';
 import { Badge, Button, Card, Field, Note, PageHeader } from '../components/kit';
 import { fmtDuration } from '../measured';
-import { useController, useProfile } from '../state/app';
+import { useController, useProfile, useProfileInfo } from '../state/app';
+import { NEEDS_IAF_TEXT, needsIaf } from '../session/child';
+import type { AgeGroup } from '../../storage';
 import { useStarter } from '../state/start';
 
 const GROUPS: { title: string; blurb: string; families: Program['family'][] }[] = [
@@ -32,9 +34,9 @@ export function GradeBadge({ g }: { g: EvidenceGrade }) {
   return <Badge tone={gradeTone(g)} title={GRADE_TEXT[g]}>Evidence {g}</Badge>;
 }
 
-export function lockedReason(p: Program, profile: UserProfile | null): string | null {
+export function lockedReason(p: Program, profile: UserProfile | null, ageGroup: AgeGroup | null = null): string | null {
   if (!profile) return 'Set up a profile first.';
-  if (availablePrograms(profile).includes(p.id)) return null;
+  if (availablePrograms(profile).includes(p.id)) return needsIaf(p, ageGroup, profile) ? NEEDS_IAF_TEXT : null;
   if ((p.unlock?.excludeIf ?? []).some((f) => profile.safety[f])) return 'Not offered, because of the safety answers you gave.';
   if (p.unlock?.afterProgram) {
     const prev = getProgram(p.unlock.afterProgram);
@@ -43,16 +45,17 @@ export function lockedReason(p: Program, profile: UserProfile | null): string | 
   }
   if (p.requires.signature && !profile.signatures.some((s) => s.status === 'reliable')) return 'Needs a reliable personal signature first (see Anchors).';
   if (p.requires.anchor && !profile.anchors.some((a) => !a.retired)) return 'Needs a sound anchor first (see Anchors).';
+  if (needsIaf(p, ageGroup, profile)) return NEEDS_IAF_TEXT;
   return 'Not available yet.';
 }
 
-function ProgramCard({ p, profile, navigate }: { p: Program; profile: UserProfile | null; navigate: (to: string) => void }) {
-  const locked = lockedReason(p, profile);
+function ProgramCard({ p, profile, ageGroup }: { p: Program; profile: UserProfile | null; ageGroup: AgeGroup | null }) {
+  const locked = lockedReason(p, profile, ageGroup);
   return (
-    <section className="card prog-card" onClick={() => navigate(`programs/${p.id}`)}>
+    <section className="card prog-card">
       <div className="row split">
         <h3 style={{ margin: 0 }}>
-          <a href={`#/programs/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }} onClick={(e) => e.stopPropagation()}>{p.name}</a>
+          <a href={`#/programs/${p.id}`} className="stretch">{p.name}</a>
         </h3>
         <GradeBadge g={p.evidence.grade} />
       </div>
@@ -67,8 +70,9 @@ function ProgramCard({ p, profile, navigate }: { p: Program; profile: UserProfil
   );
 }
 
-export function ProgramList({ navigate }: { navigate: (to: string) => void }) {
+export function ProgramList(_props: { navigate: (to: string) => void }) {
   const profile = useProfile();
+  const info = useProfileInfo();
   return (
     <div>
       <PageHeader title="Programs" sub="Each program says how strong its evidence is, and where it is weak. Grades run from A (well established) to D (exploratory)." />
@@ -80,7 +84,7 @@ export function ProgramList({ navigate }: { navigate: (to: string) => void }) {
             <h2>{g.title}</h2>
             <p className="dim">{g.blurb}</p>
             {items.map((p) => (
-              <ProgramCard key={p.id} p={p} profile={profile} navigate={navigate} />
+              <ProgramCard key={p.id} p={p} profile={profile} ageGroup={info.ageGroup} />
             ))}
           </div>
         );
@@ -97,6 +101,23 @@ export function ProgramList({ navigate }: { navigate: (to: string) => void }) {
         </ul>
       </Card>
     </div>
+  );
+}
+
+/** A number box that says so when the value is out of range, and pulls it into range when you leave it. */
+function RangeNumber({ label, min, max, step, value, onChange }: { label: string; min: number; max: number; step: number; value: string; onChange: (v: string) => void }) {
+  const n = Number(value);
+  const bad = value !== '' && !(Number.isFinite(n) && n >= min && n <= max);
+  const id = `rn-${label.replace(/\W+/g, '-')}`;
+  return (
+    <Field label={label}>
+      <input
+        type="number" min={min} max={max} step={step} value={value} aria-invalid={bad} aria-describedby={bad ? id : undefined}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => { if (bad) onChange(String(Math.min(max, Math.max(min, Number.isFinite(n) ? n : min)))); }}
+      />
+      {bad ? <span className="hint err" id={id} role="alert">Use a number from {min} to {max}.</span> : null}
+    </Field>
   );
 }
 
@@ -136,6 +157,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
   const { begin } = useStarter(navigate);
   const st = useController();
   const profile = useProfile();
+  const info = useProfileInfo();
   const program = getProgram(id);
   const [values, setValues] = useState<Record<string, VarValue>>({});
   const [level, setLevel] = useState<number | null>(null);
@@ -178,7 +200,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
       </Card>
     );
   }
-  const locked = lockedReason(program, profile);
+  const locked = lockedReason(program, profile, info.ageGroup);
   const usesUserChoice = JSON.stringify(program.blocks).includes('"user_choice"');
   const stateId = program.state.replace(/\$\{(\w+)\}/g, (_m, n: string) => String(merged[n] ?? ''));
   const strategyOptions = strategiesFor(stateId);
@@ -215,7 +237,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
 
   return (
     <div>
-      <p><a href="#/programs">Programs</a></p>
+      <nav aria-label="Breadcrumb"><a className="crumb" href="#/programs">Programs</a></nav>
       <PageHeader title={program.name} sub={program.summary} />
       <div className="tag-row">
         <GradeBadge g={program.evidence.grade} />
@@ -227,19 +249,19 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
       {locked ? <Note tone="warn">{locked}</Note> : null}
 
       <Card>
-        <h3>What it is</h3>
+        <h2>What it is</h2>
         <p>{program.description}</p>
       </Card>
 
       <Card>
-        <h3>The evidence, honestly</h3>
+        <h2>The evidence, honestly</h2>
         <p><strong>{GRADE_TEXT[program.evidence.grade]}.</strong> {program.evidence.summary}</p>
         {program.evidence.sources.length ? <p className="small dim">Sources named in the research brief (not independently re-checked by the app): {program.evidence.sources.join('; ')}.</p> : null}
         {program.experimental ? <Note tone="warn">This program is experimental. It is offered for exploration, and the app does not claim it helps.</Note> : null}
       </Card>
 
       <Card>
-        <h3>Cautions</h3>
+        <h2>Cautions</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           {[...program.safetyNotes, ...program.contraindications, ...cautions].map((t) => (
             <li key={t} style={{ marginBottom: 6 }}>{t}</li>
@@ -248,7 +270,7 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
       </Card>
 
       <Card>
-        <h3>Your choices</h3>
+        <h2>Your choices</h2>
         {program.ladder ? (
           <Field label={`Level: ${LADDER[currentLevel - 1].name}`} hint="Level 1 is fully guided. Higher levels give less guidance and test whether the skill holds without the sound. The app moves you up when your sessions meet the criterion.">
             <select value={currentLevel} onChange={(e) => setLevel(Number(e.target.value))}>
@@ -292,9 +314,9 @@ export function ProgramDetail({ id, navigate }: { id: string; navigate: (to: str
           <summary>Optional check-in (helps you read your history later)</summary>
           <label className="check"><input type="checkbox" checked={caffeine} onChange={(e) => setCaffeine(e.target.checked)} /> <span>I have had caffeine today</span></label>
           <div className="grid2">
-            <Field label="Hours slept"><input type="number" min="0" max="16" step="0.5" value={sleepHours} onChange={(e) => setSleepHours(e.target.value)} /></Field>
-            <Field label="Mood (1 to 5)"><input type="number" min="1" max="5" value={mood} onChange={(e) => setMood(e.target.value)} /></Field>
-            <Field label="Energy (1 to 5)"><input type="number" min="1" max="5" value={energy} onChange={(e) => setEnergy(e.target.value)} /></Field>
+            <RangeNumber label="Hours slept (0 to 16)" min={0} max={16} step={0.5} value={sleepHours} onChange={setSleepHours} />
+            <RangeNumber label="Mood (1 to 5)" min={1} max={5} step={1} value={mood} onChange={setMood} />
+            <RangeNumber label="Energy (1 to 5)" min={1} max={5} step={1} value={energy} onChange={setEnergy} />
           </div>
         </details>
       </Card>

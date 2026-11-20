@@ -1,7 +1,8 @@
 #!/bin/sh
-# One fresh browser (and so one fresh AudioEngine) per recording, real time, for valid in-app audio capture.
-# usage: PREVIEW_URL=http://localhost:4391 sh app/e2e/run-fresh.sh
-for n in phi3_10db phi5_15db octave3_10db background_only white_noise random_bands harmonic_8hz artifact_blinks artifact_jaw_clench nearmiss_1.8_10db phi3_10db_shuffled_samples phi3_10db_shuffled_2s_blocks; do
-  node app/e2e/fake-test.mjs --speed 1 --only $n --tag fresh_$n
+# One fresh browser (and so one fresh AudioEngine) per recording, real time, for the in-app audio control stream.
+# usage: PREVIEW_URL=http://localhost:4617 sh app/e2e/run-fresh.sh [tagprefix]
+P=${1:-fresh2}
+for n in $(python3 -c "import json;print(' '.join(json.load(open('app/e2e/out/recordings/index.json'))))"); do
+  node app/e2e/fake-test.mjs --speed 1 --only $n --tag ${P}_$n
 done
-echo done
+echo ALLDONE

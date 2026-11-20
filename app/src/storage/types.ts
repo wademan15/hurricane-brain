@@ -108,9 +108,12 @@ export interface KeyColumn {
 }
 
 export const KEY_COLUMNS: KeyColumn[] = [
-  { id: 'alpha_db', label: 'alpha above background, temporal', unit: 'dB' },
-  { id: 'theta_db', label: 'theta above background, temporal', unit: 'dB' },
-  { id: 'beta_db', label: 'beta above background, temporal', unit: 'dB' },
+  { id: 'alpha_db', label: 'alpha above background, temporal (band edges follow the individual alpha frequency when set)', unit: 'dB' },
+  { id: 'theta_db', label: 'theta above background, temporal (band edges follow the individual alpha frequency when set)', unit: 'dB' },
+  { id: 'beta_db', label: 'beta above background, temporal (band edges follow the individual alpha frequency when set)', unit: 'dB' },
+  { id: 'alpha_fixed_db', label: 'alpha above background, temporal, fixed band edges 8-13 Hz', unit: 'dB' },
+  { id: 'theta_fixed_db', label: 'theta above background, temporal, fixed band edges 4-8 Hz', unit: 'dB' },
+  { id: 'beta_fixed_db', label: 'beta above background, temporal, fixed band edges 13-30 Hz', unit: 'dB' },
   { id: 'dominant_hz', label: 'dominant confirmed peak', unit: 'Hz' },
   { id: 'phi_closeness', label: 'golden ratio alignment (closeness)', unit: '0..1' },
   { id: 'phi_chance_a', label: 'golden ratio chance level A', unit: '0..1' },
@@ -226,6 +229,14 @@ export interface AppSettings {
   engineOverrides: Record<string, number>;
   replaySpeed: 1 | 4 | 'fast';
   keepScreenOn: boolean;
+  /** Colour theme: dark (default), light, or follow the device. The live screen stays dark. */
+  theme: 'dark' | 'light' | 'system';
+  /** Text size multiplier on top of the browser's own font size setting. */
+  textSize: 'normal' | 'large' | 'larger';
+  /** The simple live view (picture, one sentence, big controls). 'auto' is on for a child profile. */
+  childView: 'auto' | 'on' | 'off';
+  /** Show the engine's field names in the picture's readout (off for everyone by default). */
+  showFieldNames: boolean;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -250,4 +261,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   engineOverrides: {},
   replaySpeed: 1,
   keepScreenOn: true,
+  theme: 'dark',
+  textSize: 'normal',
+  childView: 'auto',
+  showFieldNames: false,
 };

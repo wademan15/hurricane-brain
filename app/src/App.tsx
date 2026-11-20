@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button, Icon, Toast } from './ui/components/kit';
 import { useServices } from './ui/state/app';
 import { FitCheck } from './ui/screens/FitCheck';
@@ -18,11 +18,17 @@ import { useRoute } from './ui/state/router';
 const NAV: { to: string; label: string; icon: string }[] = [
   { to: 'home', label: 'Home', icon: 'home' },
   { to: 'programs', label: 'Programs', icon: 'programs' },
-  { to: 'discover', label: 'Discover', icon: 'profile' },
-  { to: 'signatures', label: 'Anchors', icon: 'anchor' },
+  { to: 'discover', label: 'Discover', icon: 'discover' },
+  { to: 'signatures', label: 'Signatures', icon: 'anchor' },
   { to: 'history', label: 'History', icon: 'history' },
   { to: 'settings', label: 'Settings', icon: 'settings' },
 ];
+
+const TITLES: Record<string, string> = {
+  home: 'Home', programs: 'Programs', discover: 'Discover', signatures: 'Signatures', history: 'History', settings: 'Settings',
+  ready: 'Get ready', profiles: 'People', fit: 'Fit and signal check', session: 'Session',
+};
+const TEXT_SIZE: Record<string, string> = { normal: '106.25%', large: '125%', larger: '150%' };
 
 export function App() {
   const { path, navigate } = useRoute();
@@ -43,11 +49,47 @@ export function App() {
     return () => q?.removeEventListener?.('change', apply);
   }, [settings.reducedMotion]);
 
+  // Theme and text size. The root font size is a percentage of the browser's own setting.
+  useEffect(() => {
+    const q = window.matchMedia?.('(prefers-color-scheme: light)');
+    const apply = () => {
+      const light = settings.theme === 'light' || (settings.theme === 'system' && !!q?.matches);
+      document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    };
+    apply();
+    q?.addEventListener?.('change', apply);
+    return () => q?.removeEventListener?.('change', apply);
+  }, [settings.theme]);
+  useEffect(() => {
+    document.documentElement.style.fontSize = TEXT_SIZE[settings.textSize] ?? TEXT_SIZE.normal;
+  }, [settings.textSize]);
+
+  // One title per screen, and focus on the new screen's heading after a route change.
+  const route = path.join('/');
+  const first = useRef(true);
+  useEffect(() => {
+    if (!settings.onboarded || !profile) return;
+    const heading = document.querySelector<HTMLElement>('main h1')?.textContent?.trim();
+    // A program or a past session names its own page; the others use their section name.
+    const name = (section === 'programs' || section === 'history') && path[1] && heading ? heading : (TITLES[section] ?? 'Home');
+    document.title = `${name} · Hurricane Brain`;
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (section === 'session') return; // the live screen focuses its own title
+    const h = document.querySelector<HTMLElement>('main h1');
+    h?.setAttribute('tabindex', '-1');
+    h?.focus({ preventScroll: true });
+  }, [route, section, settings.onboarded, profile, path]);
+
   if (!settings.onboarded || !profile) {
     return <Onboarding onDone={() => navigate('home')} />;
   }
 
   const live = section === 'session';
+  // While the live screen covers the page, nothing behind it can take focus.
+  const covered = live && (!!st.session || !!st.replay);
   let screen;
   switch (section) {
     case 'session':
@@ -96,7 +138,7 @@ export function App() {
           {screen}
         </div>
       </main>
-      <nav className="nav" aria-label="Main">
+      <nav className="nav" aria-label="Main" inert={covered}>
         <div className="brand">Hurricane Brain</div>
         {NAV.map((n) => (
           <a key={n.to} href={`#/${n.to}`} aria-current={section === n.to ? 'page' : undefined}>

@@ -6,7 +6,7 @@ const pct = (x: number | null | undefined) => (x === null || x === undefined ? n
 export function BlockTable({ record }: { record: SessionRecord }) {
   const fields = record.targets.map((t) => t.field).filter((f): f is string => !!f);
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" tabIndex={0} role="region" aria-label="Block statistics, scrolls sideways">
       <table>
         <thead>
           <tr>

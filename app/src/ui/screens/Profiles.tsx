@@ -47,7 +47,7 @@ export function Profiles({ navigate }: { navigate: (to: string) => void }) {
                 <span className="avatar" aria-hidden="true">{(info.name || '?').slice(0, 1).toUpperCase()}</span>
                 <div>
                   <strong>{info.name}</strong> {isActive ? <span className="badge accent">using now</span> : null}
-                  <div className="small dim">{group ? `${group} . ` : ''}{p.sessions.length} program session{p.sessions.length === 1 ? '' : 's'} . since {fmtDateTime(p.createdAt)}</div>
+                  <div className="small dim">{group ? `${group} · ` : ''}{p.sessions.length} program session{p.sessions.length === 1 ? '' : 's'} · since {fmtDateTime(p.createdAt)}</div>
                 </div>
               </div>
               <div className="row">

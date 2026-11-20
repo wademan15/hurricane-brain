@@ -386,7 +386,7 @@ export function computeVisualState(
   // --- Rotation: dominant confirmed track's frequency ------------------------------------
   let rotRead: FieldRead;
   if (!slow) rotRead = nullRead('slow.tracks[id=dominant].freq', slowMissing);
-  else if (slow.dominant === null) rotRead = nullRead('slow.tracks[id=dominant].freq', calmWhy === 'ok' ? 'not_confirmed' : calmWhy);
+  else if (slow.dominant === null) rotRead = nullRead('slow.tracks[id=dominant].freq', calmWhy === 'ok' ? 'no_dominant' : calmWhy);
   else {
     const dom = confirmed.find((t) => t.id === slow.dominant);
     rotRead = dom
@@ -424,7 +424,7 @@ export function computeVisualState(
   // --- Hemisphere symmetry ----------------------------------------------------------------
   let symRead: FieldRead;
   if (!slow) symRead = nullRead('slow.hemispheres[track=dominant].match', slowMissing);
-  else if (slow.dominant === null) symRead = nullRead('slow.hemispheres[track=dominant].match', calmWhy === 'ok' ? 'not_confirmed' : calmWhy);
+  else if (slow.dominant === null) symRead = nullRead('slow.hemispheres[track=dominant].match', calmWhy === 'ok' ? 'no_dominant' : calmWhy);
   else {
     const h = slow.hemispheres.find((x) => x.track === slow.dominant);
     symRead = h
@@ -432,7 +432,7 @@ export function computeVisualState(
       : nullRead(`slow.hemispheres[track=${slow.dominant}].match`, 'not_available');
   }
   // Rest value 1 = no mismatch drawn. Null draws the halves aligned and the readout says "not measured".
-  const symmetry = bind(ctx, 'symmetry', 'Left and right symmetry (hemisphere match)', '0..1', symRead, 1);
+  const symmetry = bind(ctx, 'symmetry', 'Left and right match (frequency and balance; locking is inflated by the shared reference)', '0..1', symRead, 1);
 
   // --- Heart: pulse and swell -------------------------------------------------------------
   const lb = frames.lastBeat;

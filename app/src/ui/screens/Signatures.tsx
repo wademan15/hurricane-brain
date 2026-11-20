@@ -5,7 +5,7 @@ import {
   type AnchorRecord, type AnchorVerdict, type Signature, type SynthParams, type UserProfile,
 } from '../../training';
 import { neutralControlFor } from '../../audio/anchors';
-import { Badge, Button, Card, Field, Note, PageHeader } from '../components/kit';
+import { Badge, Button, Card, Field, Modal, Note, PageHeader } from '../components/kit';
 import { StartButton } from '../components/StartButton';
 import { fmtDateTime, notMeasuredText, numberLine } from '../measured';
 import { relearnSignature } from '../state/stores';
@@ -67,7 +67,7 @@ function SignatureCard({ profile, state, sig, navigate }: { profile: UserProfile
             ) : null}
             <p className="small dim">To be called reliable the signature must separate feeling from comparison on sessions it was not built from, better than shuffled labels, over at least three different days. False entries when you are not in the state: about {numberLine(sig.detection.falseEntriesPer10Min, 'per 10 min')}.</p>
             {sig.history.length ? (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
                 <table>
                   <thead><tr><th>Checked</th><th>Status</th><th>Held-out</th><th>p</th><th>Sessions</th><th>Days</th></tr></thead>
                   <tbody>
@@ -106,6 +106,8 @@ function AnchorCard({ a, profile, navigate }: { a: AnchorRecord; profile: UserPr
   const { controller, profile: store } = useServices();
   const ev = evaluateAnchor(a);
   const [err, setErr] = useState<string | null>(null);
+  const [confirmRetire, setConfirmRetire] = useState(false);
+  const setRetired = (retired: boolean) => void store.put({ ...profile, anchors: profile.anchors.map((x) => (x.id === a.id ? { ...x, retired } : x)) });
   const play = async (control: boolean) => {
     setErr(null);
     try {
@@ -133,7 +135,7 @@ function AnchorCard({ a, profile, navigate }: { a: AnchorRecord; profile: UserPr
       {ev.needsRefresher ? <Note>A refresher pairing session would help keep this link strong.</Note> : null}
       <p className="small dim">{validPairings(a)} valid pairing{validPairings(a) === 1 ? '' : 's'} (the sound plays only while your signature is detected). Control sound plays still owed: {controlExposuresOwed(a)}. Plays outside pairing: {a.unpairedPlays.length}.</p>
       {a.probes.length ? (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
           <table>
             <thead><tr><th>Cue</th><th>Trials</th><th>Mean move toward signature</th><th>Reached it</th><th>Median time to reach</th></tr></thead>
             <tbody>{row('Anchor', ev.anchor)}{row('Control sound', ev.control)}</tbody>
@@ -154,8 +156,24 @@ function AnchorCard({ a, profile, navigate }: { a: AnchorRecord; profile: UserPr
             <StartButton req={{ programId: 'anchor_probe', values: { emotion: a.state }, anchorId: a.id }} navigate={navigate} variant="default">Test the anchor</StartButton>
             {!probeReady ? <div className="small dim">Testing is more informative after more valid pairings.</div> : null}
           </div>
-          <Button size="small" variant="ghost" onClick={() => void store.put({ ...profile, anchors: profile.anchors.map((x) => (x.id === a.id ? { ...x, retired: true } : x)) })}>Retire</Button>
+          <Button size="small" variant="ghost" onClick={() => setConfirmRetire(true)}>Retire</Button>
         </div>
+      ) : (
+        <div className="row" style={{ marginTop: 8 }}>
+          <Button size="small" onClick={() => setRetired(false)}>Restore this anchor</Button>
+        </div>
+      )}
+      {confirmRetire ? (
+        <Modal
+          title={`Retire ${a.name}?`}
+          onClose={() => setConfirmRetire(false)}
+          actions={<>
+            <Button variant="ghost" onClick={() => setConfirmRetire(false)}>Keep it</Button>
+            <Button variant="danger" onClick={() => { setConfirmRetire(false); setRetired(true); }}>Retire</Button>
+          </>}
+        >
+          <p className="dim">A retired anchor is no longer offered for pairing or testing. Its history is kept, and you can restore it here at any time.</p>
+        </Modal>
       ) : null}
     </Card>
   );
@@ -251,11 +269,11 @@ export function Signatures({ navigate }: { navigate: (to: string) => void }) {
   const states = [...new Set([...profile.signatures.map((s) => s.state), ...Object.keys(profile.signatureBlocks)])];
   return (
     <div>
-      <PageHeader title="Signatures and anchors" sub="A signature is what a feeling looks like in your own brain and heart measurements. It is personal, and it is tested before it is called reliable." />
+      <PageHeader title="Signatures" sub="A signature is what a feeling looks like in your own brain and heart measurements. It is personal, and it is tested before it is called reliable." />
       <Note>
         Four dry sensors cannot read emotions in general, and the evidence for doing so is weak. Everything here is learned from blocks you mark yourself and checked on sessions it has not seen. Until then it says "still learning".
       </Note>
-      <h2>Signatures</h2>
+      <h2>Your signatures</h2>
       {states.length ? states.map((s) => <SignatureCard key={s} profile={profile} state={s} sig={profile.signatures.find((x) => x.state === s) ?? null} navigate={navigate} />) : <Card><p className="dim">No feeling practised yet.</p></Card>}
       <Card>
         <h3>Practise a new feeling</h3>
@@ -266,7 +284,7 @@ export function Signatures({ navigate }: { navigate: (to: string) => void }) {
         </Field>
         <StartButton req={{ programId: 'emotional_state_practice', values: { emotion: fresh } }} navigate={navigate}>Start Emotional State Practice</StartButton>
       </Card>
-      <h2>Anchors</h2>
+      <h2>Your anchors</h2>
       {profile.anchors.length ? profile.anchors.map((a) => <AnchorCard key={a.id} a={a} profile={profile} navigate={navigate} />) : <Card><p className="dim">No anchors yet.</p></Card>}
       <CreateAnchor profile={profile} />
     </div>

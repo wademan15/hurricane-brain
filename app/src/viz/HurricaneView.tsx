@@ -6,17 +6,44 @@
  * - Pauses while the page is hidden. Frames keep arriving; staleness is judged on wall time, so a
  *   long pause comes back as "no data" until fresh frames arrive.
  * - Survives WebGL context loss.
- * - Tap or click anywhere: a readout shows the element hit, the frame field driving it, the
- *   measured number with its uncertainty and units, and golden ratio, octave and chance side by side,
- *   led by the chance comparison in plain words.
- * - Colours, fonts and sizes come from CSS custom properties (README, "Theme tokens").
+ * - Accessibility:
+ *   - The picture is a `role="img"` whose name is one sentence describing the measured state.
+ *     The same sentence goes to a polite live region when the state changes (not every frame);
+ *     the app can turn that off with `announce={false}`.
+ *   - Every part of the storm is reachable by keyboard: a list of buttons ("Parts of the storm")
+ *     named with the measurement bound to each, shown when it has focus.
+ *   - The readout is a separate labelled region (not inside the img). Focus moves to its heading
+ *     when it opens and returns where it was when it closes. Escape closes it.
+ * - Tap or click anywhere on the picture: the same readout for the part under the pointer.
+ * - Colours, fonts, sizes and the readout's position come from CSS custom properties
+ *   (README, "Theme tokens").
  */
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
-import { computeVisualState, toUniforms, type Bound, type VisualState, type VizOptions } from './bindings.ts';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
+import { computeVisualState, toUniforms, type VisualState, type VizOptions } from './bindings.ts';
 import { FrameStore, type FrameSource } from './frameStore.ts';
 import { HurricaneRenderer, STORM_RADIUS_FRACTION } from './hurricane.ts';
 import { VIZ_SMOOTHING, type ChanceDriver, type Motion, type Quality } from './params.ts';
-import { alignmentRows, chanceInWords, chanceLines, fmtBound, fmtMeasured, hitTest, type Readout } from './readout.ts';
+import {
+  chanceInWords,
+  describeState,
+  EXCESS_NOTE,
+  fmtBound,
+  fmtMeasured,
+  listParts,
+  partAt,
+  readoutFor,
+  type Readout,
+  type StormPart,
+} from './readout.ts';
 import { themeFromCss } from './theme.ts';
 import './viz.css';
 
@@ -39,6 +66,29 @@ export interface HurricaneViewProps {
    * softer pulses. Both are driven only by measurements.
    */
   motion?: Motion | 'auto';
+  /**
+   * Announce state changes ("Hurricane: golden ratio chain of 3 peaks, holding; octave: none.")
+   * through a polite live region. Default true. The picture's text alternative is always kept.
+   */
+  announce?: boolean;
+  /** Seconds a new state must hold before it is announced (avoids chatter). Default 2. */
+  announceDelayS?: number;
+  /**
+   * When the keyboard list of storm parts is visible: 'focus' (default: only while one of its
+   * buttons has focus), 'always', or 'never' (still reachable by screen readers).
+   */
+  partsVisible?: 'focus' | 'always' | 'never';
+  /** Show engine field paths in the readout from the start (the readout has its own toggle). */
+  showFieldNames?: boolean;
+  /** Extra class on the readout region, for the app shell to position it. */
+  readoutClassName?: string;
+}
+
+const now = (): number => performance.now() / 1000;
+
+interface Probe {
+  x: number;
+  y: number;
 }
 
 function useReducedMotionQuery(): boolean {
@@ -54,31 +104,21 @@ function useReducedMotionQuery(): boolean {
   return reduced;
 }
 
-const now = (): number => performance.now() / 1000;
-
-interface Probe {
-  x: number;
-  y: number;
-}
-
-/** Re-read a readout's bindings from a newer state, keeping the same element. */
-function refresh(r: Readout, s: VisualState): Readout {
-  const all: Bound[] = [
-    s.rotation, s.armCount, s.winding, s.ring, s.bandCount, s.eye, s.symmetry, s.pulse, s.swell,
-    s.combined, s.combinedStrength, s.combinedHeld, ...s.arms, ...s.bands,
-  ];
-  const byKey = new Map(all.map((b) => [b.key, b]));
-  return {
-    ...r,
-    bindings: r.bindings.map((b) => byKey.get(b.key) ?? b),
-    alignment: r.alignment ? alignmentRows(s) : null,
-    chanceLines: chanceLines(s),
-    both: s.slow ? { active: s.slow.states.both.active, forS: s.slow.states.both.for_s } : null,
-  };
-}
+const partsSignature = (ps: StormPart[]) => ps.map((p) => `${p.key}=${p.name}`).join('|');
 
 export function HurricaneView({
-  source, quality = 'medium', className, style, onReadout, chance = 'a', motion = 'auto',
+  source,
+  quality = 'medium',
+  className,
+  style,
+  onReadout,
+  chance = 'a',
+  motion = 'auto',
+  announce = true,
+  announceDelayS = 2,
+  partsVisible = 'focus',
+  showFieldNames = false,
+  readoutClassName,
 }: HurricaneViewProps) {
   const systemReduced = useReducedMotionQuery();
   const resolvedMotion: Motion = motion === 'auto' ? (systemReduced ? 'reduced' : 'full') : motion;
@@ -86,31 +126,38 @@ export function HurricaneView({
   useEffect(() => {
     optionsRef.current = { chance, motion: resolvedMotion };
   }, [chance, resolvedMotion]);
-  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const pictureRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<HurricaneRenderer | null>(null);
   const stateRef = useRef<VisualState | null>(null);
-  const readoutRef = useRef<Readout | null>(null);
+  const readoutKeyRef = useRef<string | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const onReadoutRef = useRef(onReadout);
   const qualityRef = useRef(quality);
+  const announceRef = useRef({ on: announce, delay: announceDelayS });
   const [message, setMessage] = useState<string | null>('No data');
+  const [description, setDescription] = useState('Hurricane: no data.');
+  const [announcement, setAnnouncement] = useState('');
+  const [parts, setParts] = useState<StormPart[]>([]);
   const [glProblem, setGlProblem] = useState<string | null>(null);
   const [readout, setReadoutState] = useState<Readout | null>(null);
   const [probe, setProbe] = useState<Probe | null>(null);
+  const ids = useId();
 
   useEffect(() => {
     onReadoutRef.current = onReadout;
   }, [onReadout]);
-
-  const setReadout = useCallback((r: Readout | null) => {
-    readoutRef.current = r;
-    setReadoutState(r);
-  }, []);
+  useEffect(() => {
+    announceRef.current = { on: announce, delay: announceDelayS };
+  }, [announce, announceDelayS]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
+    const picture = pictureRef.current;
+    const root = rootRef.current;
+    if (!canvas || !picture || !root) return;
 
     const store = new FrameStore(VIZ_SMOOTHING.PULSE_MIN_INTERVAL_S, now);
     const unsubscribe = source.subscribe((f) => store.push(f));
@@ -125,12 +172,12 @@ export function HurricaneView({
     rendererRef.current = renderer;
 
     const resize = () => {
-      const rect = wrap.getBoundingClientRect();
-      renderer?.setTheme(themeFromCss(wrap));
+      const rect = picture.getBoundingClientRect();
+      renderer?.setTheme(themeFromCss(root));
       renderer?.resize(rect.width, rect.height, window.devicePixelRatio || 1);
     };
     const ro = new ResizeObserver(resize);
-    ro.observe(wrap);
+    ro.observe(picture);
     resize();
 
     const onLost = () => setGlProblem('Graphics paused: the browser reclaimed the graphics context.');
@@ -140,7 +187,14 @@ export function HurricaneView({
 
     let raf = 0;
     let lastMsg: string | null | undefined;
+    let lastDesc = '';
+    let pendingDesc = '';
+    let pendingSince = 0;
+    let announced = '';
+    let lastFramesSig = '';
     let lastReadoutAt = 0;
+    let lastPartsSig = '';
+    let lastPartsAt = -Infinity;
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const t = now();
@@ -151,10 +205,37 @@ export function HurricaneView({
         lastMsg = s.message;
         setMessage(s.message);
       }
-      const r = readoutRef.current;
-      if (r && t - lastReadoutAt >= 0.25) {
+      // Text alternative: only when the sentence changes.
+      const d = describeState(s);
+      if (d !== lastDesc) {
+        lastDesc = d;
+        setDescription(d);
+      }
+      // Live region: only once a changed sentence has held for the announce delay.
+      if (d !== pendingDesc) {
+        pendingDesc = d;
+        pendingSince = t;
+      } else if (announceRef.current.on && d !== announced && t - pendingSince >= announceRef.current.delay) {
+        announced = d;
+        setAnnouncement(d);
+      }
+      // The open readout follows new frames; the keyboard part names update at most once a second.
+      const snap = store.snapshot();
+      const framesSig = `${snap.slowAt},${snap.heartAt}`;
+      if (framesSig !== lastFramesSig || t - lastReadoutAt >= 1) {
+        lastFramesSig = framesSig;
         lastReadoutAt = t;
-        setReadoutState(refresh(r, s));
+        const key = readoutKeyRef.current;
+        if (key) setReadoutState(readoutFor(s, key));
+      }
+      if (t - lastPartsAt >= 1) {
+        lastPartsAt = t;
+        const ps = listParts(s);
+        const sig = partsSignature(ps);
+        if (sig !== lastPartsSig) {
+          lastPartsSig = sig;
+          setParts(ps);
+        }
       }
     };
     const start = () => {
@@ -187,72 +268,131 @@ export function HurricaneView({
     rendererRef.current?.setQuality(quality);
   }, [quality]);
 
-  const inspect = useCallback(
-    (clientX: number, clientY: number) => {
-      const wrap = wrapRef.current;
-      const s = stateRef.current;
-      if (!wrap || !s) return;
-      const rect = wrap.getBoundingClientRect();
-      const R = STORM_RADIUS_FRACTION * Math.min(rect.width, rect.height);
-      const swell = toUniforms(s).swell;
-      const x = (clientX - rect.left - rect.width / 2) / R / swell;
-      const y = -(clientY - rect.top - rect.height / 2) / R / swell;
-      const r = hitTest(s, x, y);
-      setReadout(r);
-      setProbe({ x: clientX - rect.left, y: clientY - rect.top });
-      onReadoutRef.current?.(r);
-    },
-    [setReadout],
-  );
+  const open = useCallback((key: string, at: Probe | null) => {
+    const s = stateRef.current;
+    if (!s) return;
+    if (!readoutKeyRef.current) {
+      const active = document.activeElement;
+      returnFocusRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    }
+    const r = readoutFor(s, key);
+    readoutKeyRef.current = key;
+    setReadoutState(r);
+    setProbe(at);
+    onReadoutRef.current?.(r);
+  }, []);
 
   const close = useCallback(() => {
-    setReadout(null);
+    readoutKeyRef.current = null;
+    setReadoutState(null);
     setProbe(null);
     onReadoutRef.current?.(null);
-  }, [setReadout]);
+    const back = returnFocusRef.current;
+    returnFocusRef.current = null;
+    if (back && back.isConnected) back.focus();
+    else rootRef.current?.querySelector<HTMLElement>('.hb-parts button')?.focus();
+  }, []);
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.hb-readout')) return;
-    inspect(e.clientX, e.clientY);
+    const picture = pictureRef.current;
+    const s = stateRef.current;
+    if (!picture || !s) return;
+    const rect = picture.getBoundingClientRect();
+    const R = STORM_RADIUS_FRACTION * Math.min(rect.width, rect.height);
+    const swell = toUniforms(s).swell;
+    const x = (e.clientX - rect.left - rect.width / 2) / R / swell;
+    const y = -(e.clientY - rect.top - rect.height / 2) / R / swell;
+    open(partAt(s, x, y), { x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape') close();
-    if (e.key === 'Enter' || e.key === ' ') {
-      const rect = wrapRef.current?.getBoundingClientRect();
-      if (rect) inspect(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      e.preventDefault();
+    if (e.key === 'Escape' && readoutKeyRef.current) {
+      e.stopPropagation();
+      close();
     }
   };
 
   return (
     <div
-      ref={wrapRef}
+      ref={rootRef}
       className={`hb-hurricane${className ? ` ${className}` : ''}`}
       style={style}
-      onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
-      tabIndex={0}
-      role="img"
-      aria-label={message ?? 'Hurricane: a picture of measured brain rhythms. Tap any part to see the number behind it.'}
+      data-parts={partsVisible}
     >
-      <canvas ref={canvasRef} className="hb-hurricane-canvas" />
-      {message && (
-        <div className="hb-calm-message" aria-live="polite">
-          {message}
+      <div
+        ref={pictureRef}
+        className="hb-hurricane-picture"
+        role="img"
+        aria-label={description}
+        onPointerUp={onPointerUp}
+      >
+        <canvas ref={canvasRef} className="hb-hurricane-canvas" aria-hidden="true" />
+        {message && (
+          <div className="hb-calm-message" aria-hidden="true">
+            {message}
+          </div>
+        )}
+        {probe && readout && <div className="hb-probe" style={{ left: probe.x, top: probe.y }} aria-hidden="true" />}
+      </div>
+      <div className="hb-sr-only" aria-live="polite" aria-atomic="true">
+        {announce ? announcement : ''}
+      </div>
+      {glProblem && (
+        <div className="hb-gl-problem" role="status">
+          {glProblem}
         </div>
       )}
-      {glProblem && <div className="hb-gl-problem">{glProblem}</div>}
-      {probe && readout && <div className="hb-probe" style={{ left: probe.x, top: probe.y }} aria-hidden="true" />}
-      {readout && <ReadoutPanel r={readout} onClose={close} />}
+      <nav className="hb-parts" aria-label="Parts of the storm">
+        <ul>
+          {parts.map((p) => (
+            <li key={p.key}>
+              <button type="button" onClick={() => open(p.key, null)} aria-pressed={readout?.key === p.key}>
+                {p.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {readout && (
+        <ReadoutPanel
+          r={readout}
+          onClose={close}
+          headingId={`${ids}-readout-title`}
+          className={readoutClassName}
+          initialShowFields={showFieldNames}
+        />
+      )}
     </div>
   );
 }
 
-function ReadoutPanel({ r, onClose }: { r: Readout; onClose: () => void }) {
+function ReadoutPanel({
+  r,
+  onClose,
+  headingId,
+  className,
+  initialShowFields,
+}: {
+  r: Readout;
+  onClose: () => void;
+  headingId: string;
+  className?: string;
+  initialShowFields: boolean;
+}) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [showFields, setShowFields] = useState(initialShowFields);
+  // Move focus into the readout when it opens, and when it switches to another part.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [r.key]);
+
   return (
-    <section className="hb-readout" aria-label={`Readout: ${r.element}`}>
+    <section className={`hb-readout${className ? ` ${className}` : ''}`} aria-labelledby={headingId}>
       <header>
-        <h3>{r.element}</h3>
+        <h3 id={headingId} ref={headingRef} tabIndex={-1}>
+          {r.element}
+        </h3>
         <button type="button" onClick={onClose} aria-label="Close readout">
           ×
         </button>
@@ -268,17 +408,17 @@ function ReadoutPanel({ r, onClose }: { r: Readout; onClose: () => void }) {
       <table className="hb-readout-bindings">
         <thead>
           <tr>
-            <th>What you see</th>
-            <th>Measured</th>
+            <th scope="col">What you see</th>
+            <th scope="col">Measured</th>
           </tr>
         </thead>
         <tbody>
           {r.bindings.map((b) => (
             <tr key={b.key}>
-              <td>
+              <th scope="row">
                 {b.label}
-                <code>{b.field}</code>
-              </td>
+                {showFields && <code>{b.field}</code>}
+              </th>
               <td className={b.measured === null ? 'hb-null' : undefined}>{fmtBound(b)}</td>
             </tr>
           ))}
@@ -288,85 +428,53 @@ function ReadoutPanel({ r, onClose }: { r: Readout; onClose: () => void }) {
         <table className="hb-readout-alignment">
           <thead>
             <tr>
-              <th />
+              <th scope="col">
+                <span className="hb-sr-only">Measure</span>
+              </th>
               {r.alignment.map((a) => (
-                <th key={a.label}>{a.label}</th>
+                <th scope="col" key={a.label}>
+                  {a.label}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Steps in cascade</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{a.steps}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>As often as this by chance: random peaks (A)</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{chanceInWords(a.chanceAp)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>As often as this by chance: own wandering (B)</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{chanceInWords(a.chanceBp)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Alignment (closeness, 0 to 1)</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{fmtMeasured(a.closeness)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Typical by chance A</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{fmtMeasured(a.chanceA)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Typical by chance B</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{fmtMeasured(a.chanceB)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Beyond chance A (0 = no better than chance; not a probability)</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{fmtMeasured(a.excessA)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Beyond chance B (0 = no better than chance; not a probability)</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{fmtMeasured(a.excessB)}</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Held</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{a.heldS.toFixed(1)} s</td>
-              ))}
-            </tr>
-            <tr>
-              <td>Aligned state</td>
-              {r.alignment.map((a) => (
-                <td key={a.label}>{a.active ? 'in alignment' : 'not in alignment'}</td>
-              ))}
-            </tr>
+            <Row label="Steps in cascade" cells={r.alignment.map((a) => String(a.steps))} />
+            <Row label="As often as this by chance: random peaks (A)" cells={r.alignment.map((a) => chanceInWords(a.chanceAp))} />
+            <Row label="As often as this by chance: own wandering (B)" cells={r.alignment.map((a) => chanceInWords(a.chanceBp))} />
+            <Row label="Alignment (closeness, 0 to 1)" cells={r.alignment.map((a) => fmtMeasured(a.closeness))} />
+            <Row label="Typical by chance A" cells={r.alignment.map((a) => fmtMeasured(a.chanceA))} />
+            <Row label="Typical by chance B" cells={r.alignment.map((a) => fmtMeasured(a.chanceB))} />
+            <Row label={`Beyond chance A (${EXCESS_NOTE})`} cells={r.alignment.map((a) => fmtMeasured(a.excessA))} />
+            <Row label={`Beyond chance B (${EXCESS_NOTE})`} cells={r.alignment.map((a) => fmtMeasured(a.excessB))} />
+            <Row label="Held" cells={r.alignment.map((a) => `${a.heldS.toFixed(1)} s`)} />
+            <Row label="State" cells={r.alignment.map((a) => (a.active ? 'holding' : 'not holding'))} />
             {r.both && (
               <tr>
-                <td>Combined state (both at once)</td>
-                <td colSpan={2}>
-                  {r.both.active ? `on for ${r.both.forS.toFixed(1)} s` : 'off'}
-                </td>
+                <th scope="row">Both at once</th>
+                <td colSpan={2}>{r.both.active ? `holding for ${r.both.forS.toFixed(1)} s` : 'not holding'}</td>
               </tr>
             )}
           </tbody>
         </table>
       )}
       <p className="hb-readout-note">{r.designNote}</p>
+      <button type="button" className="hb-readout-toggle" onClick={() => setShowFields((v) => !v)} aria-pressed={showFields}>
+        {showFields ? 'Hide technical names' : 'Show technical names'}
+      </button>
     </section>
+  );
+}
+
+function Row({ label, cells }: { label: string; cells: string[] }) {
+  return (
+    <tr>
+      <th scope="row">{label}</th>
+      {cells.map((c, i) => (
+        <td key={i} className={c.startsWith('not measured') ? 'hb-null' : undefined}>
+          {c}
+        </td>
+      ))}
+    </tr>
   );
 }

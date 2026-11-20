@@ -278,6 +278,19 @@ describe('settings that reach the engine', () => {
     expect(h2.engines[0].configs[0].params).toEqual({ integration_s: 15, exclude_harmonics: false });
   });
 
+  it('starts a child profile from the child preset, with the response speed on top, and an adult from nothing', async () => {
+    nextIndex = 0;
+    const s1 = new ManualSource('muse');
+    const h1 = makeDeps({ museFactory: () => s1, getProfileInfo: () => ({ name: 'Kid', ageGroup: 'child' }), settings: { responseSpeed: 'slower' } });
+    await connected(h1, s1);
+    expect(h1.engines[0].configs[0].params).toEqual({ quality_sd_max_uv: 200, integration_s: 60 });
+
+    const s2 = new ManualSource('muse');
+    const h2 = makeDeps({ museFactory: () => s2, getProfileInfo: () => ({ name: 'Grown-up', ageGroup: 'adult' }) });
+    await connected(h2, s2);
+    expect(h2.engines[0].configs[0].params).toBeUndefined();
+  });
+
   it('stores them with the session', async () => {
     nextIndex = 0;
     const s = new ManualSource('muse');

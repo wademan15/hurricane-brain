@@ -34,9 +34,13 @@ export const HEADPHONES = [
   'Keep the volume comfortable. The app limits how loud it can get, and you can lower it further in Settings.',
 ];
 
+/** The one privacy sentence, used in onboarding, Settings and About. */
+export const PRIVACY_SENTENCE =
+  'Your data stays on this device unless you export it or turn on live stream out, which sends it only to the address you enter.';
+
 export const PRIVACY = [
-  'Everything stays on this device: recordings, sessions, your profile, signatures and anchors are stored in this browser and are never sent anywhere.',
-  'Nothing leaves the device unless you export it. You can export or delete everything in Settings.',
+  PRIVACY_SENTENCE,
+  'Recordings, sessions, your people, signatures and anchors are stored in this browser. You can export or delete everything in Settings.',
   'The app works offline after its first load.',
 ];
 
@@ -64,7 +68,7 @@ export const GENERAL_SAFETY = [
 ];
 
 export const FIT_STEPS = [
-  { title: 'Wet-free, clean skin', text: 'Wipe your forehead and the skin behind your ears. Move hair out from under the sensors.' },
+  { title: 'Clean skin, hair out of the way', text: 'Wipe your forehead and the skin behind your ears. Move hair out from under the sensors.' },
   { title: 'Forehead sensors sit high', text: 'The two front sensors rest on the forehead about a finger-width above the eyebrows, centred on each eye.' },
   { title: 'Ear sensors sit behind the ears', text: 'The two rear sensors rest on the bone just behind and above each ear. Tuck hair behind the ear first.' },
   { title: 'Snug, not tight', text: 'The band should feel secure when you nod your head, without pressing hard. Glasses arms can lift the ear sensors; slide them under the band.' },
@@ -89,7 +93,7 @@ export const PHOTOSENSITIVITY = [
 ];
 
 export const AGE_GROUPS: { value: 'child' | 'teen' | 'adult'; label: string; text: string }[] = [
-  { value: 'child', label: 'Child', text: 'Shorter, simpler sessions, with a grown-up helping.' },
+  { value: 'child', label: 'Child', text: 'Shorter, simpler sessions with a grown-up helping, a simple live view, and a rhythm check first that tunes the bands to the child.' },
   { value: 'teen', label: 'Teen', text: 'Younger person, using the app on their own or with help.' },
   { value: 'adult', label: 'Adult', text: 'Fully grown.' },
 ];
@@ -137,3 +141,36 @@ export const SMALL_HEAD_TIPS = [
   'If the two ear sensors cannot all reach the skin, that is fine: the app tells you which sensors are good, and shows only what it can measure.',
   'Let the child get settled first. Quiet, sitting or lying down, a few slow breaths. Movement is the biggest source of noise.',
 ];
+
+/** Plain words for the live screen, and the glossary that keeps the precise terms. */
+export const LIVE_WORDS = {
+  golden: 'Golden ratio',
+  octave: 'Octave',
+  both: 'Both at once',
+  chance: 'Chance',
+  chanceA: 'random peaks',
+  chanceB: 'your own usual pattern',
+  holding: 'Holding',
+  notHolding: 'Not holding',
+} as const;
+
+export const GLOSSARY: { term: string; text: string }[] = [
+  { term: 'Alignment (closeness)', text: 'How near the spacing between your rhythm peaks is to the target ratio, from 0 to 1. Golden ratio is 1.618 and octave is 2.' },
+  { term: 'Chance level', text: 'What the same measure gives for peaks placed by chance, scored by the same procedure. Two kinds are shown: random peaks (A) and your own rhythms shifted in time (B, available after about 2 to 3 minutes).' },
+  { term: 'Beyond chance (excess)', text: 'Zero unless fewer than 5 in 100 chance draws do as well as your reading. Above that it grows from 0 towards 1. It is not a probability.' },
+  { term: 'Random peaks did this well', text: 'The fraction of chance draws that scored at least as well as your reading, written as "3 in 100". Small means your reading beat most of the chance draws.' },
+  { term: 'Cascade', text: 'A chain of rhythm peaks, each about 1.618 times (golden) or 2 times (octave) the one below it. A "chain of 3 peaks" has two steps.' },
+  { term: 'Holding', text: 'The reading has cleared the evidence bar for long enough to count as a state. It leaves the state only when it falls clearly below that bar, so it does not flicker.' },
+  { term: 'Not measured', text: 'The app could not measure it right now, and says why. It never shows zero or an old number in its place.' },
+  { term: 'Possible harmonic, not counted', text: 'A peak whose frequency is a whole-number multiple of a lower peak. It may be an echo of that peak, so it is not counted toward octave alignment unless you change that in Settings.' },
+];
+
+/** What the live screen says in the simple view, from the engine states only. */
+export const CHILD_LINES = {
+  nodata: 'Nothing is being measured right now.',
+  nosignal: 'The headband is not getting a clear signal yet. Press it gently to your skin.',
+  both: 'Both of your rhythm patterns are lining up right now.',
+  phi: 'Your rhythm peaks are lining up in a golden ratio pattern.',
+  octave: 'Your rhythm peaks are lining up in an octave pattern.',
+  quiet: 'Nothing is holding right now. That is normal. Keep going.',
+} as const;

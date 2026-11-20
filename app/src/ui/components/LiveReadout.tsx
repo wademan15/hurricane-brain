@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react';
 import type { Cascade, HeartFrame, SlowFrame } from '../../engine/frames';
 import { useServices } from '../state/app';
-import { measuredLine, notMeasuredText, showMeasured, summarizeSignal } from '../measured';
-import { Val } from './kit';
+import { CHANCE_B_WAIT, inHundred, measuredLine, measuredLineB, notMeasuredText, reasonPlain, showMeasured, summarizeSignal } from '../measured';
+import { Fixed, StateIcon, Val } from './kit';
 
 const SLOW_STALE_MS = 1500;
 const HEART_STALE_MS = 3000;
@@ -41,48 +41,102 @@ export function useLive(): Live {
   return { slow: slowStale ? null : l.slow, heart: heartStale ? null : l.heart, slowStale, heartStale };
 }
 
-function AlignCell({ kind, c, live, chanceDriver }: { kind: 'phi' | 'oct'; c: Cascade | null; live: Live; chanceDriver: 'a' | 'b' }) {
+const wait = (live: Live) => (live.slowStale ? 'stale' : 'no_frame') as 'stale' | 'no_frame';
+
+/** "a chain of 3 peaks", or what is missing. */
+export function chainText(c: Cascade | null): string {
+  if (!c) return '';
+  if (c.steps < 1) return 'no chain of peaks yet';
+  return `a chain of ${c.steps + 1} peaks`;
+}
+
+/** The chance-A line shared by the cell and the details: "Random peaks did this well: 3 in 100". */
+export function randomDidLine(c: Cascade | null, live: Live): string {
+  if (!c) return `Random peaks did this well: ${notMeasuredText(wait(live))}`;
+  return `Random peaks did this well: ${inHundred(c.chance.a.p)}`;
+}
+
+function AlignCell({ kind, c, live }: { kind: 'phi' | 'oct'; c: Cascade | null; live: Live }) {
   const label = kind === 'phi' ? 'Golden ratio alignment' : 'Octave alignment';
-  const closeness = c ? c.closeness : live.slowStale ? { v: null, se: null, why: 'no_data' as const } : undefined;
-  const excess = c ? (chanceDriver === 'a' ? c.excess_a : c.excess_b) : undefined;
   return (
     <div className={`cellbox ${kind}`} data-testid={`cell-${kind}`}>
-      <div className="k">{label}</div>
+      <div className="k"><StateIcon kind={kind === 'phi' ? 'phi' : 'octave'} /> {label}</div>
       <div className="v">
-        <Val m={closeness} />
+        {c ? <Fixed m={c.closeness} /> : <span className="nm">not measured<small>{reasonPlain(wait(live))}</small></span>}
       </div>
-      <div className="s">
-        over chance {chanceDriver.toUpperCase()}: <Val m={excess} />
-        {c ? ` . ${c.steps} step${c.steps === 1 ? '' : 's'}` : ''}
-      </div>
+      <div className="s">{c ? `${randomDidLine(c, live)} · ${chainText(c)}` : ''}</div>
     </div>
   );
 }
 
-export function AlignmentTrio({ live, chanceDriver }: { live: Live; chanceDriver: 'a' | 'b' }) {
+/** Chance level for one target as one line: random peaks (A), and your own usual pattern (B) once it is there. */
+function ChanceLines({ c, live, target }: { c: Cascade | null; live: Live; target: string }) {
+  if (!c) return <div><span className="nm">{target}: not measured<small>{reasonPlain(wait(live))}</small></span></div>;
+  const a = c.chance.a.closeness;
+  const b = c.chance.b.closeness;
+  return (
+    <div className="chance-row">
+      <span className="chance-target">{target}</span>
+      <span className="chance-a" title="Random peaks (chance A)"><Fixed m={a} /></span>
+      {b.v !== null ? <span className="chance-b" title="Your own usual pattern (chance B)"> / <Fixed m={b} /></span> : null}
+    </div>
+  );
+}
+
+export function AlignmentTrio({ live }: { live: Live }) {
   const phi = live.slow?.cascades.phi ?? null;
   const oct = live.slow?.cascades.octave ?? null;
+  const bReady = (phi?.chance.b.closeness.v ?? null) !== null || (oct?.chance.b.closeness.v ?? null) !== null;
   return (
-    <div className="trio" aria-label="Golden ratio alignment, octave alignment and chance level, side by side">
-      <AlignCell kind="phi" c={phi} live={live} chanceDriver={chanceDriver} />
-      <AlignCell kind="oct" c={oct} live={live} chanceDriver={chanceDriver} />
-      <div className="cellbox" data-testid="cell-chance">
-        <div className="k">Chance level (same procedure)</div>
-        <dl className="chance-list">
-          <dt>A, golden</dt><dd>{phi ? measuredLine(phi.chance.a.closeness) : live.slowStale ? notMeasuredText('stale') : notMeasuredText('no_frame')}</dd>
-          <dt>A, octave</dt><dd>{oct ? measuredLine(oct.chance.a.closeness) : live.slowStale ? notMeasuredText('stale') : notMeasuredText('no_frame')}</dd>
-          <dt>B, golden</dt><dd>{phi ? measuredLine(phi.chance.b.closeness) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
-          <dt>B, octave</dt><dd>{oct ? measuredLine(oct.chance.b.closeness) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
-          <dt>p (A), golden</dt><dd>{phi ? measuredLine(phi.chance.a.p) : notMeasuredText(live.slowStale ? 'stale' : 'no_frame')}</dd>
-        </dl>
+    <div className="trio" role="group" aria-label="Golden ratio alignment, octave alignment and chance level, side by side">
+      <AlignCell kind="phi" c={phi} live={live} />
+      <AlignCell kind="oct" c={oct} live={live} />
+      <div className="cellbox chance" data-testid="cell-chance">
+        <div className="k">Chance (same procedure)</div>
+        <div className="v chance-v">
+          <ChanceLines c={phi} live={live} target="Golden" />
+          <ChanceLines c={oct} live={live} target="Octave" />
+        </div>
+        <div className="s">
+          {bReady ? 'Random peaks / your own usual pattern' : `Random peaks. Your own usual pattern: not measured (${CHANCE_B_WAIT})`}
+        </div>
       </div>
     </div>
   );
 }
 
-export function SignalLine({ live }: { live: Live }) {
+/**
+ * The precise numbers behind the plain wording, in an expandable view: beyond chance against
+ * each chance level, the fraction of chance draws that did as well, and the chain.
+ */
+export function AlignmentDetails({ live, chanceDriver }: { live: Live; chanceDriver: 'a' | 'b' }) {
+  const rows: { name: string; c: Cascade | null }[] = [
+    { name: 'Golden ratio', c: live.slow?.cascades.phi ?? null },
+    { name: 'Octave', c: live.slow?.cascades.octave ?? null },
+  ];
+  return (
+    <div className="stack" data-testid="alignment-details">
+      {rows.map(({ name, c }) => (
+        <dl className="kv small" key={name}>
+          <dt>{name}: beyond random peaks (A)</dt><dd>{c ? <Fixed m={c.excess_a} /> : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: beyond your own usual pattern (B)</dt><dd>{c ? measuredLineB(c.excess_b) : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: random peaks did this well</dt><dd>{c ? inHundred(c.chance.a.p) : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: your own usual pattern did this well</dt><dd>{c ? (c.chance.b.p.v === null ? measuredLineB(c.chance.b.p) : inHundred(c.chance.b.p)) : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: the chain</dt><dd>{c ? `${chainText(c)} (${c.steps} step${c.steps === 1 ? '' : 's'})` : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: chance level, random peaks (A)</dt><dd>{c ? measuredLine(c.chance.a.closeness) : notMeasuredText(wait(live))}</dd>
+          <dt>{name}: chance level, your own usual pattern (B)</dt><dd>{c ? measuredLineB(c.chance.b.closeness) : notMeasuredText(wait(live))}</dd>
+        </dl>
+      ))}
+      <p className="small live-sub">
+        Beyond chance is 0 unless fewer than 5 in 100 chance draws do as well; above that it grows towards 1. It is not a probability. The picture and the sounds follow chance {chanceDriver.toUpperCase()} ({chanceDriver === 'a' ? 'random peaks' : 'your own usual pattern'}).
+      </p>
+    </div>
+  );
+}
+
+export function SignalLine({ live, compact }: { live: Live; compact?: boolean }) {
   const sig = summarizeSignal(live.slow);
-  const text = live.slowStale && live.slow === null ? 'Signal not measured (no frames arriving)' : sig.text;
+  const text = live.slowStale && live.slow === null ? 'Signal not measured (no frames arriving)' : compact ? sig.short : sig.text;
   return (
     <span className="chip" data-testid="signal-state" role="status">
       <span className={`dot ${sig.level === 'good' ? 'ok' : sig.level === 'none' ? '' : 'bad'}`} style={{ display: 'inline-block', width: 10, height: 10, marginRight: 6 }} aria-hidden="true" />
@@ -91,7 +145,7 @@ export function SignalLine({ live }: { live: Live }) {
   );
 }
 
-export function PeaksLine({ live }: { live: Live }) {
+export function PeaksLine({ live, harmonicsCount }: { live: Live; harmonicsCount: boolean }) {
   const tracks = live.slow?.tracks.filter((t) => t.state === 'confirmed' && t.freq_integrated.v !== null) ?? [];
   if (!live.slow) return <span className="chip">Peaks: not measured (no frames arriving)</span>;
   if (!tracks.length) return <span className="chip">Peaks: none confirmed against the background yet</span>;
@@ -100,7 +154,7 @@ export function PeaksLine({ live }: { live: Live }) {
       {tracks.map((t) => (
         <span className="chip" key={t.id} title={`track ${t.id}, ${t.band}, height ${measuredLine(t.height_db, 'dB')}`}>
           {t.band}: {showMeasured(t.freq_integrated, 'Hz').text}
-          {t.harmonic_of ? ` (harmonic x${t.harmonic_of.n})` : ''}
+          {t.harmonic_of ? ` (possible harmonic x${t.harmonic_of.n}${harmonicsCount ? ', counted as you chose' : ', not counted'})` : ''}
         </span>
       ))}
     </>

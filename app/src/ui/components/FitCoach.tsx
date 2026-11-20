@@ -92,8 +92,8 @@ export function FitCoach({
                 {!q.usable ? <div className="small">{reasonPlain(q.why)}.</div> : null}
                 {fixes.map((f) => <div className="small" key={f}>{f}</div>)}
                 <div className="small dim">
-                  Clean {Math.round(q.clean_fraction * 100)}% . noise level <Num v={q.sd_uv} unit="uV" /> . muscle <Num v={q.emg_db} unit="dB" />
-                  {q.artifacts.length ? ` . seen: ${q.artifacts.join(', ')}` : ''}
+                  Clean {Math.round(q.clean_fraction * 100)}% · noise level <Num v={q.sd_uv} unit="uV" /> · muscle <Num v={q.emg_db} unit="dB" />
+                  {q.artifacts.length ? ` · seen: ${q.artifacts.join(', ')}` : ''}
                 </div>
               </div>
             </div>

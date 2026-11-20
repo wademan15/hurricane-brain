@@ -17,6 +17,14 @@ function bandAt(slow: SlowFrame | null, band: 'alpha' | 'theta' | 'beta'): KeyCe
   return cell(sp?.bands[band].above_bg_db);
 }
 
+/** The same over the fixed textbook band edges (`bands_fixed`), so sessions compare whatever the individual alpha frequency was. */
+function bandFixedAt(slow: SlowFrame | null, band: 'alpha' | 'theta' | 'beta'): KeyCell {
+  const sp = slow?.spectra.find((s) => s.site === 'temporal');
+  if (!slow) return { v: null, why: 'no_data' };
+  if (!sp?.bands_fixed) return { v: null, why: 'not_available' };
+  return cell(sp.bands_fixed[band].above_bg_db);
+}
+
 /**
  * The alpha:theta ratio of the strongest confirmed alpha peak over the strongest confirmed theta
  * peak, with the engine's own distances from 2:1, 3:1 and the golden ratio (the `miss` of the
@@ -51,6 +59,9 @@ export function buildCells(slow: SlowFrame | null, heart: HeartFrame | null, rew
   c.alpha_db = bandAt(slow, 'alpha');
   c.theta_db = bandAt(slow, 'theta');
   c.beta_db = bandAt(slow, 'beta');
+  c.alpha_fixed_db = bandFixedAt(slow, 'alpha');
+  c.theta_fixed_db = bandFixedAt(slow, 'theta');
+  c.beta_fixed_db = bandFixedAt(slow, 'beta');
   const dom = slow?.dominant != null ? slow.tracks.find((t) => t.id === slow.dominant) : undefined;
   c.dominant_hz = dom ? cell(dom.freq_integrated) : { v: null, why: slow ? 'not_confirmed' : 'no_data' };
   const phi = slow?.cascades.phi;

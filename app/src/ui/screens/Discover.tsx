@@ -34,7 +34,7 @@ function Estimates({ profile }: { profile: UserProfile }) {
         return (
           <div key={state}>
             <h3>{STATE_METRICS[state]?.label ?? state}</h3>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
               <table>
                 <thead>
                   <tr><th>Technique</th><th>Effect (95% interval)</th><th>Evidence so far</th><th>Label</th></tr>
@@ -179,7 +179,7 @@ export function Discover({ navigate }: { navigate: (to: string) => void }) {
         {svm.length ? (
           <details>
             <summary>How it felt against how it measured</summary>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
               <table>
                 <thead><tr><th>Technique</th><th>Your ease rating (1 to 5)</th><th>Measured effect</th><th>Blocks</th></tr></thead>
                 <tbody>
@@ -199,7 +199,7 @@ export function Discover({ navigate }: { navigate: (to: string) => void }) {
           <>
             <p><strong>{res.bpm} breaths a minute</strong> <span className="dim small">({fmtDateTime(res.at)})</span></p>
             <p className="dim">{res.reading}</p>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
               <table>
                 <thead><tr><th>Rate</th><th>Heart rhythm power</th><th>Resonance strength</th><th>Followed the pacer</th></tr></thead>
                 <tbody>

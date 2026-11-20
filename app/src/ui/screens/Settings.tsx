@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { DEFAULT_AUDIO_SETTINGS, mergeSettings, type AudioSettings } from '../../audio/settings';
 import { VIZ_SMOOTHING } from '../../viz';
 import { Button, Card, download, Field, Modal, Note, PageHeader, Segmented } from '../components/kit';
-import { GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, STORE_DESCRIPTION, WELLNESS, WHAT_IT_DOES_NOT_CLAIM } from '../copy';
+import { GLOSSARY, GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, PRIVACY_SENTENCE, STORE_DESCRIPTION, WELLNESS, WHAT_IT_DOES_NOT_CLAIM } from '../copy';
 import type { ResponseSpeed } from '../../storage';
 import { fmtBytes } from '../measured';
 import { APP_VERSION } from '../session/controller';
@@ -76,7 +76,7 @@ function DataManagement() {
   return (
     <Card>
       <h2>Your data</h2>
-      <p className="dim">All of it is stored in this browser on this device. Nothing is sent anywhere.</p>
+      <p className="dim">{PRIVACY_SENTENCE}</p>
       {u ? (
         <dl className="kv">
           <dt>Recordings</dt><dd>{u.recordings} ({fmtBytes(u.recordingBytes)})</dd>
@@ -153,6 +153,29 @@ function StreamSettings() {
   );
 }
 
+const TOLERANCE_PLAIN: Record<string, string> = {
+  tolerance: 'How close counts as aligned (in natural-log ratio)',
+};
+
+/** A tolerance override. Only a number above zero is accepted; anything else shows an error and is not applied. */
+function TolField({ name, engine, value, onChange }: { name: string; engine: number; value: number | undefined; onChange: (n: number | null) => void }) {
+  const [text, setText] = useState(value === undefined ? '' : String(value));
+  const n = text.trim() === '' ? null : Number(text);
+  const bad = n !== null && !(Number.isFinite(n) && n > 0 && n <= 1);
+  const errId = `tol-err-${name}`;
+  return (
+    <Field label={`${TOLERANCE_PLAIN[name] ?? name} (engine value ${engine})`} hint={name !== 'tolerance' ? `Engine name: ${name}` : undefined}>
+      <input type="number" step="any" min={0} max={1} value={text} placeholder={String(engine)} aria-invalid={bad} aria-describedby={bad ? errId : undefined} onChange={(e) => {
+        setText(e.target.value);
+        const m = e.target.value.trim() === '' ? null : Number(e.target.value);
+        if (m === null) onChange(null);
+        else if (Number.isFinite(m) && m > 0 && m <= 1) onChange(m);
+      }} />
+      {bad ? <span className="hint err" id={errId} role="alert">Enter a number above 0 and up to 1, or leave the box empty. This value is not being used.</span> : null}
+    </Field>
+  );
+}
+
 function EngineParams() {
   const { settings } = useServices();
   const st = useController();
@@ -171,20 +194,18 @@ function EngineParams() {
           <h4>Tolerances</h4>
           <p className="small dim">How close a ratio must be to its target to count as aligned. These change measurements, so they apply from the next session and are stored with it. Leave the box empty to use the engine's value.</p>
           {tol.map(([k, v]) => (
-            <Field key={k} label={`${k} (engine value ${String(v)})`}>
-              <input type="number" step="any" value={cfg.engineOverrides[k] ?? ''} placeholder={String(v)} onChange={(e) => {
-                const next = { ...cfg.engineOverrides };
-                if (e.target.value === '') delete next[k];
-                else next[k] = Number(e.target.value);
-                settings.update({ engineOverrides: next });
-              }} />
-            </Field>
+            <TolField key={k} name={k} engine={v as number} value={cfg.engineOverrides[k]} onChange={(n) => {
+              const next = { ...cfg.engineOverrides };
+              if (n === null) delete next[k];
+              else next[k] = n;
+              settings.update({ engineOverrides: next });
+            }} />
           ))}
         </div>
       ) : null}
       <details>
         <summary>All {entries.length} parameters (read only)</summary>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="All engine parameters, scrolls sideways">
           <table><tbody>{entries.map(([k, v]) => <tr key={k}><td>{k}</td><td className="mono">{String(v)}</td></tr>)}</tbody></table>
         </div>
       </details>
@@ -250,15 +271,28 @@ export function Settings() {
 
       <Card>
         <h2>Visuals</h2>
-        <Field label="Picture quality" hint="Lower is lighter on a phone battery. It changes resolution only, not what is shown.">
+        <Field label="Theme" hint="Dark is the default. The live session screen always stays dark, so it suits a dim room and closed eyes." group>
+          <Segmented label="Theme" value={cfg.theme} onChange={(v) => settings.update({ theme: v })} options={[{ value: 'dark', label: 'Dark (default)' }, { value: 'light', label: 'Light' }, { value: 'system', label: 'Follow device' }]} />
+        </Field>
+        <Field label="Text size" hint="Scales all text on top of your browser's own font size." group>
+          <Segmented label="Text size" value={cfg.textSize} onChange={(v) => settings.update({ textSize: v })} options={[{ value: 'normal', label: 'Normal' }, { value: 'large', label: 'Large' }, { value: 'larger', label: 'Larger' }]} />
+        </Field>
+        <Field label="Simple live view" hint="Shows the picture, one plain sentence and big buttons, with the numbers one tap away. Automatic means on for a child's profile and off for everyone else." group>
+          <Segmented label="Simple live view" value={cfg.childView} onChange={(v) => settings.update({ childView: v })} options={[{ value: 'auto', label: 'Automatic' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
+        </Field>
+        <Field label="Picture quality" hint="Lower is lighter on a phone battery. It changes resolution only, not what is shown." group>
           <Segmented label="Picture quality" value={cfg.vizQuality} onChange={(v) => settings.update({ vizQuality: v })} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]} />
         </Field>
-        <Field label="Which chance level drives the hurricane and the sounds" hint="Chance A places the same number of peaks at random. Chance B shifts each peak's own history in time against the others. A is the default. Both are always shown in the readout.">
+        <Field label="Which chance level drives the hurricane and the sounds" hint="Chance A (random peaks) places the same number of peaks at random. Chance B (your own usual pattern) shifts each peak's own history in time against the others. A is the default. Both are always shown in the readout." group>
           <Segmented label="Chance level" value={cfg.chanceDriver} onChange={(v) => settings.update({ chanceDriver: v })} options={[{ value: 'a', label: 'A (default)' }, { value: 'b', label: 'B' }]} />
         </Field>
-        <Field label="Reduced motion" hint="Slower, calmer movement. The default follows your device's setting.">
+        <Field label="Reduced motion" hint="Slower, calmer movement. The default follows your device's setting." group>
           <Segmented label="Reduced motion" value={cfg.reducedMotion} onChange={(v) => settings.update({ reducedMotion: v })} options={[{ value: 'system', label: 'Follow device' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
         </Field>
+        <label className="check">
+          <input type="checkbox" checked={cfg.showFieldNames} onChange={(e) => settings.update({ showFieldNames: e.target.checked })} />
+          <span><strong>Show technical names in the picture's readout</strong><div className="small dim">Adds the engine's field names under each row when you tap the picture. Off by default.</div></span>
+        </label>
         <label className="check">
           <input type="checkbox" checked={cfg.soundOnly} onChange={(e) => settings.update({ soundOnly: e.target.checked })} />
           <span><strong>Sound only: keep the screen dark during sessions</strong><div className="small dim">Sessions start with the screen dark. Tap the screen to look at it.</div></span>
@@ -267,7 +301,7 @@ export function Settings() {
           <summary>Photosensitivity</summary>
           <ul>{PHOTOSENSITIVITY.map((t) => <li key={t} style={{ marginBottom: 6 }}>{t}</li>)}</ul>
         </details>
-        <Field label={`Eyes-closed brightness: ${Math.round(cfg.eyesClosedLevel * 100)}%`} hint="How much light stays on the screen in eyes-closed mode. 0 is black.">
+        <Field label={`Eyes-closed brightness: ${Math.round(cfg.eyesClosedLevel * 100)}%`} hint="How much light stays on the screen in eyes-closed mode. 0 is black. In this mode the screen is meant to be nearly invisible, so it shows no text; tap it, or press Enter or Escape, to look again.">
           <input type="range" min={0} max={0.5} step={0.01} value={cfg.eyesClosedLevel} onChange={(e) => settings.update({ eyesClosedLevel: Number(e.target.value) })} />
         </Field>
         <label className="check">
@@ -278,10 +312,10 @@ export function Settings() {
 
       <Card>
         <h2>Measurement</h2>
-        <Field label="Mains frequency" hint="The electrical supply frequency, removed from the signal. Auto detects it. Applies from the next connection.">
+        <Field label="Mains frequency" hint="The electrical supply frequency, removed from the signal. Auto detects it. Applies from the next connection." group>
           <Segmented label="Mains frequency" value={String(cfg.mains)} onChange={(v) => settings.update({ mains: v === 'auto' ? 'auto' : (Number(v) as 50 | 60) })} options={[{ value: 'auto', label: 'Auto' }, { value: '50', label: '50 Hz' }, { value: '60', label: '60 Hz' }]} />
         </Field>
-        <Field label="Alignment response speed" hint="Applies from the next session and is stored with it.">
+        <Field label="Alignment response speed" hint="Applies from the next session and is stored with it." group>
           <Segmented label="Alignment response speed" value={cfg.responseSpeed} onChange={(v) => settings.update({ responseSpeed: v })} options={SPEEDS.map((x) => ({ value: x.value, label: x.label }))} />
         </Field>
         <p className="small dim" data-testid="speed-cost">{SPEEDS.find((x) => x.value === cfg.responseSpeed)?.cost}</p>
@@ -298,8 +332,8 @@ export function Settings() {
             <input type="range" min={3} max={30} step={1} value={cfg.fitHoldS} onChange={(e) => settings.update({ fitHoldS: Number(e.target.value) })} />
           </Field>
         ) : null}
-        <Field label="Replay speed">
-          <Segmented label="Replay speed" value={String(cfg.replaySpeed)} onChange={(v) => settings.update({ replaySpeed: v === 'fast' ? 'fast' : (Number(v) as 1 | 4) })} options={[{ value: '1', label: 'Real time (with sound)' }, { value: '4', label: '4 times' }, { value: 'fast', label: 'As fast as possible' }]} />
+        <Field label="Replay speed" group>
+          <Segmented label="Replay speed" value={String(cfg.replaySpeed)} onChange={(v) => settings.update({ replaySpeed: v === 'fast' ? 'fast' : (Number(v) as 1 | 4) })} options={[{ value: '1', label: '1x (with sound)' }, { value: '4', label: '4x' }, { value: 'fast', label: 'As fast as possible' }]} />
         </Field>
         <h3>The engine</h3>
         <EngineParams />
@@ -329,6 +363,8 @@ export function Settings() {
         <p>{GOLDEN_RATIO_TEXT.stance}</p>
         <h3>Privacy</h3>
         <ul>{PRIVACY.map((t) => <li key={t}>{t}</li>)}</ul>
+        <h3>Words used on the live screen</h3>
+        <dl>{GLOSSARY.map((g) => <div key={g.term} style={{ marginBottom: 8 }}><dt><strong>{g.term}</strong></dt><dd style={{ margin: 0 }} className="dim">{g.text}</dd></div>)}</dl>
         <p className="small dim">This app does not include binaural, monaural or isochronic stimulation. It reports what the brain and heart are doing and does not drive them.</p>
       </Card>
     </div>

@@ -60,7 +60,7 @@ export function JournalView({ journal }: { journal: Journal }) {
   ].filter(Boolean);
   return (
     <div data-testid="journal-view">
-      {bits.length ? <p>{bits.join(' . ')}</p> : <p className="dim">No ratings given.</p>}
+      {bits.length ? <p>{bits.join(' · ')}</p> : <p className="dim">No ratings given.</p>}
       {journal.tags.length ? <div className="tag-row">{journal.tags.map((t) => <span className="badge" key={t}>{t}</span>)}</div> : null}
       {journal.note ? <p>{journal.note}</p> : null}
     </div>

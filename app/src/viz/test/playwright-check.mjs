@@ -11,6 +11,9 @@
  * (e) the combined state (both at once) looks different from spiral-only, rings-only and from both
  *     cascades overlaid without the combined state; it is pixel-stable when nothing changes
  * (f) reduced motion (prefers-reduced-motion) rotates far less in the same second
+ * (g) accessibility: readout outside role="img", focus in and back, Escape, keyboard parts, text
+ *     alternative and live region, readout placement hook, greyscale distinguishability, spectrum
+ *     summary, and axe (if axe-core is available: AXE_CORE=/path/to/axe.min.js)
  * Also: frame time of the shader at 1920x1080, and animation-frame intervals of the live view.
  * Screenshots are written to app/src/viz/test/out/.
  */
@@ -39,6 +42,17 @@ page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 
 const results = [];
+/** Optional axe-core run. Fails a check on any serious or critical violation inside the views. */
+const axePath = process.env.AXE_CORE;
+const runAxe = async (label) => {
+  if (!axePath) return;
+  await page.addScriptTag({ path: axePath });
+  const v = await page.evaluate(async () => {
+    const r = await window.axe.run(document.querySelector('.hb-hurricane, .hb-spectrum'), { resultTypes: ['violations'] });
+    return r.violations.map((x) => `${x.id} (${x.impact}, ${x.nodes.length})`);
+  });
+  check(`axe on ${label}: no violations`, v.length === 0, v.join('; ') || 'clean');
+};
 const check = (name, ok, detail = '') => {
   results.push({ name, ok, detail });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
@@ -193,6 +207,80 @@ try {
   await shot('g-readout-arm');
   console.log(`  readout at (760,370): ${await page.locator('.hb-readout h3').textContent()}`);
 
+  // (g) Accessibility.
+  const a11y = await page.evaluate(() => {
+    const ro = document.querySelector('.hb-readout');
+    return {
+      insideImg: !!ro?.closest('[role="img"]'),
+      labelled: ro?.getAttribute('aria-labelledby') && document.getElementById(ro.getAttribute('aria-labelledby'))?.tagName,
+      focusIsHeading: document.activeElement?.tagName === 'H3' && !!document.activeElement.closest('.hb-readout'),
+    };
+  });
+  check('(g) the readout is a labelled region outside the picture\'s role="img"', !a11y.insideImg && a11y.labelled === 'H3');
+  check('(g) opening the readout moves focus to its heading', a11y.focusIsHeading);
+  await page.keyboard.press('Escape');
+  check('(g) Escape closes the readout', (await page.locator('.hb-readout').count()) === 0);
+  await runAxe('readout-closed');
+
+  // Keyboard route to every part.
+  await page.evaluate(() => window.hb.setScenario('combined'));
+  await wait(2600);
+  await page.evaluate(() => document.querySelector('.hb-hurricane')?.setAttribute('tabindex', '-1'));
+  await page.focus('.hb-hurricane');
+  await page.keyboard.press('Tab');
+  const partNames = await page.locator('.hb-parts button').allTextContents();
+  console.log(`  keyboard parts (combined state): ${partNames.join(' | ')}`);
+  check('(g) keyboard parts list every element of the combined storm',
+    ['Eye', 'Shared eye wall', 'Arms crossing rings', 'Spiral arm 1', 'Octave rings', 'Cloud band 1', 'Whole storm']
+      .every((n) => partNames.some((p) => p.startsWith(n))));
+  await shot('g-keyboard-parts-visible');
+  // Tab to "Spiral arm 2" and open it.
+  const idx = partNames.findIndex((p) => p.startsWith('Spiral arm 2'));
+  for (let i = 0; i < idx; i++) await page.keyboard.press('Tab');
+  const focusedName = await page.evaluate(() => document.activeElement?.textContent);
+  await page.keyboard.press('Enter');
+  await wait(300);
+  const armTitle = await page.locator('.hb-readout h3').textContent();
+  check('(g) a keyboard part opens the same readout as tapping it', /^Spiral arm 2/.test(armTitle ?? ''), `${focusedName} -> ${armTitle}`);
+  await shot('g-keyboard-readout-arm');
+  await runAxe('readout-open');
+  await page.keyboard.press('Escape');
+  const backTo = await page.evaluate(() => document.activeElement?.textContent);
+  check('(g) closing returns focus to where it was', backTo === focusedName, backTo ?? '');
+
+  // Text alternative and the polite live region.
+  const alt = await page.locator('.hb-hurricane-picture').getAttribute('aria-label');
+  const liveText = await page.locator('.hb-hurricane [aria-live="polite"]').textContent();
+  console.log(`  text alternative: "${alt}"`);
+  check('(g) one-sentence text alternative and live region state the combined state',
+    /both at once/.test(alt ?? '') && liveText === alt, `live: "${liveText}"`);
+
+  // Readout placement hook: the app can move it below its top bar.
+  await page.evaluate(() => document.documentElement.style.setProperty('--hb-readout-top', '88px'));
+  await page.mouse.click(640, 400);
+  await wait(300);
+  const top = await page.locator('.hb-readout').evaluate((el) => el.getBoundingClientRect().top);
+  check('(g) --hb-readout-top moves the readout (app shell can clear its top bar)', Math.abs(top - 88) < 1, `top ${top}px`);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => document.documentElement.style.removeProperty('--hb-readout-top'));
+
+  // Without colour: the three states in greyscale.
+  await page.addStyleTag({ content: '.grey .hb-hurricane-canvas { filter: grayscale(1); }' });
+  await page.evaluate(() => document.body.classList.add('grey'));
+  const greys = {};
+  for (const [name, sc, ms] of [['phi', 'static-norot', 1500], ['octave', 'octave', 2500], ['combined', 'combined', 1500], ['overlay', 'both-cascades-no-state', 1500]]) {
+    await page.evaluate((x) => window.hb.setScenario(x), sc);
+    await wait(ms);
+    greys[name] = await shot(`k-greyscale-${name}`);
+  }
+  await page.evaluate(() => document.body.classList.remove('grey'));
+  const g1 = await diff(greys.combined, greys.overlay);
+  const g2 = await diff(greys.combined, greys.phi);
+  const g3 = await diff(greys.combined, greys.octave);
+  check('(g) in greyscale the combined state still differs from spiral-only, rings-only and the plain overlay',
+    g1.mean > 0.5 && g2.mean > 2 && g3.mean > 2,
+    `vs overlay ${g1.mean.toFixed(2)}, vs spiral ${g2.mean.toFixed(2)}, vs rings ${g3.mean.toFixed(2)}/255`);
+
   // Context loss and restore: the storm comes back.
   await page.evaluate(() => window.hb.setScenario('static-norot'));
   await wait(3200); // heart frames from the previous scenario go stale after 2.5 s; let the swell settle
@@ -240,6 +328,11 @@ try {
   await page.evaluate(() => window.hb.setScenario('static-rot'));
   await wait(700);
   await shot('h-spectrum-phi');
+  const peakRows = await page.locator('.hb-spectrum-summary tbody tr').count();
+  const described = await page.locator('.hb-spectrum canvas').getAttribute('aria-describedby');
+  check('spectrum: accessible table of the 4 confirmed peaks, linked to the canvas',
+    peakRows === 4 && !!described && (await page.locator(`[id="${described}"] table`).count()) === 1, `${peakRows} rows`);
+  await runAxe('spectrum');
   await page.evaluate(() => window.hb.setScenario('null'));
   await wait(700);
   await shot('h-spectrum-null');

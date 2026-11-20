@@ -36,9 +36,15 @@ const source: FrameSource = { subscribe(listener) { /* call listener(frame) for 
 - `quality?: 'low' | 'medium' | 'high'` (default `medium`): render resolution only.
 - `chance?: 'a' | 'b'` (default `a`): which chance level's excess drives the winding, the rings and the combined state. The view reads `excess_a` or `excess_b` itself, so frames need no rewriting. The readout always shows both.
 - `motion?: 'auto' | 'full' | 'reduced'` (default `auto`, which follows the system's `prefers-reduced-motion` and updates live).
+- `announce?: boolean` (default `true`): polite live-region announcement of state changes. The picture's text alternative stays either way.
+- `announceDelayS?: number` (default 2): a new state must hold this long before it is announced.
+- `partsVisible?: 'focus' | 'always' | 'never'` (default `focus`): the keyboard list of storm parts is shown while it has focus, always, or never (screen readers can still reach it).
+- `showFieldNames?: boolean` (default `false`): engine field paths in the readout. The readout has its own "Show technical names" toggle.
+- `readoutClassName?: string`: an extra class on the readout region, for the app shell to position it.
 - `className?`, `style?`, `onReadout?: (r: Readout | null) => void`.
 
-`SpectrumViewProps`: `source`, `site` (channel name or composite), `className?`, `style?`.
+`SpectrumViewProps`: `source`, `site` (channel name or composite), `className?`, `style?`,
+`summary?: 'hidden' | 'visible'` (default `hidden`, which keeps the peak table for screen readers only).
 
 The views fill their parent; give the parent a height. There is no demo or simulated mode.
 
@@ -59,7 +65,7 @@ means `excess_a` or `excess_b`, as chosen by the `chance` prop. "Gate" is when t
 | Shared luminous eye wall | `slow.states.both.for_s` | 1 - exp(-for_s / 20 s): a broad warm eye wall and a soft glow in the eye | only while `both.active` |
 | Brightness of each arm | `slow.tracks[id=member i].height_db` | linear, full at 12 dB | null: that arm is dark |
 | Clarity of the eye | `slow.cascades.phi.held_s` | 1 - exp(-held_s / 20 s) | only while the spiral forms |
-| Left / right symmetry | `slow.hemispheres[track=dominant].match` | left and right halves offset by (1 - match) x 0.7 rad | null: halves drawn aligned, readout says "not measured" |
+| Left / right match | `slow.hemispheres[track=dominant].match` | left and right halves offset by (1 - match) x 0.7 rad. Labelled "Left and right match (frequency and balance; locking is inflated by the shared reference)" | null: halves drawn aligned, readout says "not measured" |
 | Pulse through the eye wall | each new `heart.beats[]` entry | 0.6 s soft rise and fall (reduced motion: 1.0 s, 35% strength) | no beat, no pulse. Beats closer than 0.34 s merge (max 3 per second) |
 | Slow swell | `heart.breath_phase` | picture scale 1 + 0.03 cos(phase) (reduced motion: half) | null: swell fades out over the ramp, phase freezes |
 | Unorganized bands of cloud | `slow.tracks[id].height_db` of confirmed tracks that are not arms | patchy rings at evenly spaced radius slots, in track order; brightness linear, full at 12 dB | confirmed tracks but no cascade: this is all you see ("honest minimum") |
@@ -90,6 +96,34 @@ theta = a0 + b ln r), the hurricane metaphor, the bead-and-shared-wall look of t
 colours, the mapping constants in `params.ts`, ring radii (doubling, as a visual pun on the octave),
 band radius slots, and the static cloud texture.
 
+## Accessibility
+
+The picture is never needed to understand the state.
+
+- **Text alternative.** The picture is a `role="img"` whose name is one sentence built from structure
+  only, for example "Hurricane: golden ratio chain of 4 peaks, holding; octave chain of 3 peaks,
+  holding; both at once; 2 rhythms outside the golden ratio chain." Counts and states only, no
+  fast-changing numbers, so the sentence changes only when the measured state changes.
+- **Live region.** The same sentence goes to a polite, atomic live region once a new state has held
+  for `announceDelayS` (2 s). `announce={false}` turns it off.
+- **Keyboard.** A list of buttons, "Parts of the storm", covers every part present:
+  - the eye, the eye wall or the shared eye wall;
+  - the bead crossings, each arm, the rings and each cloud band;
+  - the whole storm, and the swell.
+
+  Each button is named with its bound measurement (for example "Spiral arm 2, track 2: 7.00 ± 0.40 dB above background") and opens the same readout as tapping. The list appears while it has focus.
+- **Readout.** The readout is a `section` labelled by its heading, outside the `role="img"`. Focus moves to the heading on open, and returns to where it was on close. Escape closes it. Table headers are real `th` elements (the empty corner has a hidden "Measure" label). Field paths are hidden behind "Show technical names".
+- **Placement.** `--hb-readout-top`, `-right`, `-bottom`, `-left`, `-max-height` and `-z` let the app shell move the readout below its own top bar (fixes the "Eyes closed" overlap). `readoutClassName` is also available.
+- **Without colour.** The three states differ in shape as well as colour:
+  - golden ratio: spiral arms;
+  - octave: rings;
+  - combined: bright beads where arms cross rings, and a luminous filled eye wall instead of a dark eye.
+
+  Checked with greyscale screenshots (`test/out/k-greyscale-*.png`).
+- **Contrast.** `--hb-ink-dim` was raised to `#93a0b5`: 7.7:1 on `--hb-bg`, 7.2:1 on the readout panel. Other ratios: spectrum labels in `--hb-ink-dim` 7.7:1, gold 10.9:1, octave 10.3:1. The control border `--hb-control-border` is `#5a6a88`.
+- **Spectrum.** The canvas is a `role="img"` with a one-line label, described by a table of the confirmed peaks. The table gives frequency ± error, height above background, band, site, and where golden ratio and octave partners would sit. It is hidden visually by default (`summary="visible"` shows it).
+- axe-core reports no violations on the hurricane (readout closed and open) or the spectrum. Run the Playwright check with `AXE_CORE=/path/to/axe.min.js` to include it.
+
 ## Readout wording (fake-test finding)
 
 The readout leads with the chance comparison in plain words, then the alignment value:
@@ -98,8 +132,11 @@ The readout leads with the chance comparison in plain words, then the alignment 
 
 - The p value (`chance.a.p` / `chance.b.p`) is shown as "N in 100", or "fewer than 1 in 100". It is
   never described as the probability that the alignment is real.
-- Excess values are labelled "beyond chance (0 = no better than chance, 1 = exact; not a
-  probability)" wherever they appear, in the bindings list and the side-by-side table.
+- Excess values are labelled "beyond chance (0 unless fewer than 5 in 100 chance draws do as well,
+  1 = exact; not a probability)" wherever they appear. This matches the engine's revised definition
+  (spec 8.5): excess is 0 unless the percentile is 5% or less, so an unremarkable alignment draws no
+  ring and winds no arm. `excess_b` is null with its reason ("warming up") until chance B can
+  support a 5% percentile. The readout shows that reason.
 - The side-by-side table: steps, "as often as this by chance" for A and B, closeness, typical score
   by chance A and B, beyond chance A and B, held time, aligned state, combined state.
 
@@ -147,10 +184,14 @@ All colours, fonts and sizes are CSS custom properties, declared in `viz.css` wi
 | --- | --- | --- |
 | `--hb-bg` | `#03060c` | view background, spectrum background |
 | `--hb-ink` | `#c9d4e3` | text |
-| `--hb-ink-dim` | `#7d8aa0` | secondary text, axes, calm-water message |
+| `--hb-ink-dim` | `#93a0b5` | secondary text, axes, calm-water message (7.7:1 on `--hb-bg`) |
 | `--hb-panel-bg` | `rgba(10,16,28,0.92)` | readout panel |
 | `--hb-line` | `rgba(140,165,200,0.18)` | panel border, table rules |
-| `--hb-focus` | `rgba(150,180,220,0.5)` | keyboard focus ring |
+| `--hb-focus-strong` | `#c9d4e3` | keyboard focus outline |
+| `--hb-control-border` | `#5a6a88` | button borders in the readout |
+| `--hb-parts-bg` | `rgba(10,16,28,0.94)` | keyboard parts list |
+| `--hb-readout-top` / `-right` / `-bottom` / `-left` | gutter / gutter / auto / auto | where the readout sits; move it below the app's top bar |
+| `--hb-readout-max-height`, `--hb-readout-z` | fill / 5 | readout height and stacking |
 | `--hb-probe` | `rgba(220,230,245,0.7)` | tap marker |
 | `--hb-gold` | `#e2b86b` | golden ratio (readout header, spectrum markers) |
 | `--hb-octave` | `#6fc7c0` | octave (readout header, spectrum markers) |
@@ -175,7 +216,7 @@ the script also times the cheapest possible full-screen pass (one texture read p
 | --- | --- |
 | Hurricane, 1920x1080, GPU waited for | 221 to 283 ms mean across runs |
 | Trivial one-texture-read pass, 1920x1080 | 54 to 56 ms mean |
-| **Hurricane relative to the trivial pass** | **4.1x to 5.4x** (was 3.4x to 3.9x before the combined state and flicker gain) |
+| **Hurricane relative to the trivial pass** | **3.5x to 7.0x** across runs; the spread is CPU contention from other jobs (it was 3.4x to 3.9x before the combined state and flicker gain) |
 
 On real GPUs a trivial 1080p pass costs a fraction of a millisecond, so about 5x that is a few
 milliseconds on integrated graphics against a 16.7 ms budget. **An estimate, not a measurement on real
@@ -189,15 +230,17 @@ backing store: `low` 0.6x CSS pixels, `medium` pixel ratio capped at 1 and at mo
 
 ## Tests
 
-- `npx vitest run src/viz` (42 tests):
+- `npx vitest run src/viz` (51 tests):
   - `test/bindings.test.ts`: each parameter equals its bound field; null in gives calm out; nothing changes when frames do not change; stale frames dissolve; rotation stops at once on null; interpolation is monotonic and never passes the latest value; determinism; golden ratio gives arms and octave gives a ring; hit test.
   - `test/photosafe.test.ts`: the rate caps above; reduced motion; combined-state bindings; chance-driver reads `excess_b` natively; readout wording ("42 in 100" before the alignment number, excess never called a probability).
+  - `test/a11y.test.ts`: the state sentence for every state, and its stability when only numbers change; keyboard parts and their names; every part opens its readout; left and right match wording; revised excess (p 0.30 gives excess 0, so no ring); `excess_b` null with a reason.
 - `node src/viz/test/playwright-check.mjs`: renders the real shader in headless Chromium and checks:
   - (a) all-null frames give calm water, pixel-identical 1 s apart;
   - (b) a static frame rotates when the dominant frequency is measured and is pixel-identical when it is null;
   - (c) a 3-step golden ratio cascade and (d) an octave cascade look different;
   - (e) the combined state is pixel-stable and looks different from spiral-only, rings-only and the plain overlay;
   - (f) reduced motion rotates less;
+  - (g) accessibility: the readout is outside the img and focus moves into it and back; Escape closes it; the keyboard parts open readouts; the text alternative matches the live region; the placement hook works; greyscale distinguishability; the spectrum table; axe (optional);
   - readouts, WebGL context loss and restore, and frame cost.
 
   Screenshots go to `test/out/`.

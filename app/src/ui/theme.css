@@ -1,7 +1,7 @@
 /* Hurricane Brain theme. Every colour, radius, spacing step, font and shadow the app uses is a
    custom property here. A new look is a change to this file only (see ui/THEMING.md): layout
    components and behaviour never name a colour or a pixel size of their own. */
-:root {
+:root, .live {
   color-scheme: dark;
 
   /* colour: surfaces and text */
@@ -12,12 +12,15 @@
   --border: #243049;
   --text: #dbe4f1;
   --dim: #98a6bd;
-  --faint: #6f7d93;
+  --faint: #8593a9;   /* 5.6:1 on --surface-2: the not-measured text must stay readable */
+  --control-border: #4a5a7a; /* edges of buttons, inputs and tabs: 3:1 or more against the surface */
   /* colour: accent and meaning */
   --accent: #6ab7cc;
   --accent-ink: #04141a;
   --gold: #e2b86b;      /* golden ratio */
   --octave: #6fc7c0;    /* octave */
+  --both: #b9a3f0;      /* both at once */
+  --state-ink: #0a111c; /* text on a filled state badge */
   --ok: #7bc89a;
   --warn: #e6b366;
   --bad: #e58a78;
@@ -29,7 +32,7 @@
   --live-subtle: #8ea0bb;
   --live-dock-bg: #080d16;
   --live-border: #1c2740;
-  --live-control-border: #243049;
+  --live-control-border: #4a5a7a;
   --live-control-text: #a8b6cc;
   --live-control-on-bg: #1a2538;
   --live-control-on-text: #ffffff;
@@ -41,7 +44,7 @@
   --live-shade-clear: #03060c00;
   --eyes-closed-text: #2a3140;
   /* colour: drawn diagrams */
-  --diagram-unknown: #6f7d93;
+  --diagram-unknown: #8593a9;
   --diagram-ok: #7bc89a;
   --diagram-bad: #e58a78;
 
@@ -64,16 +67,16 @@
   --gutter: 16px;
 
   /* size */
-  --tap: 52px;
-  --tap-small: 40px;
-  --tap-big: 68px;
+  --tap: max(48px, 3.1rem);
+  --tap-small: max(44px, 2.75rem);
+  --tap-big: max(64px, 4rem);
   --nav-h: 64px;
   --sidebar-w: 232px;
   --content-w: 880px;
 
   /* type */
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-size: 17px;
+  --font-size: 106.25%; /* of the browser's own size: 17px at the default 16px */
   --line: 1.5;
 
   /* depth */
@@ -85,9 +88,10 @@
 }
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f3f5f9; --surface: #ffffff; --surface-2: #eef1f7; --surface-3: #e3e8f1; --border: #c8d1e0;
-  --text: #16202f; --dim: #4a586f; --faint: #6b788d; --accent: #1b6f86; --accent-ink: #ffffff;
-  --gold: #8a6112; --octave: #1c7a72; --ok: #1f7a46; --warn: #8a5a0b; --bad: #a53a28;
+  --bg: #f3f5f9; --surface: #ffffff; --surface-2: #eef1f7; --surface-3: #e3e8f1; --border: #c8d1e0; --control-border: #6f7d95;
+  --text: #16202f; --dim: #4a586f; --faint: #566379; --accent: #1b6f86; --accent-ink: #ffffff;
+  --gold: #7a5410; --octave: #176a63; --both: #5b3fa8; --state-ink: #ffffff; --ok: #1f7a46; --warn: #8a5a0b; --bad: #a53a28;
+  --scrim: rgba(0, 0, 0, 0.45);
 }
 /* reduced motion: set on the root by the app from the person's setting (or the system) */
 :root[data-motion='reduced'] * { transition: none !important; scroll-behavior: auto !important; }
