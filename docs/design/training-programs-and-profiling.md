@@ -334,8 +334,18 @@ a moving target.
 - **Wake tether:** if markers of sleep appear (sustained alpha loss with rising
   slow activity and no movement, later spindles, or the user has gone
   unresponsive), the soundscape slowly brightens and a quiet voice invites a
-  slightly deeper breath. The goal is to stay on the edge. Users can switch
-  the tether off if they want to drift into sleep.
+  slightly deeper breath. The goal is to stay on the edge.
+- **Tether is a user option** (Jesus's decision, 2026-11-20): at the start of
+  each Twilight session the user picks "Keep me on the edge" (gentle nudge)
+  or "Let me drift off" (no nudge; feedback fades out at sleep onset, as in
+  Descent). The choice is remembered as their default.
+- **How sleep is detected:** a combination of alpha dropping out at TP9/TP10,
+  slow rolling eye movements at AF7/AF8 (a classic sleep-onset sign), rising
+  theta, head-drop or no movement on the accelerometer, and later sleep
+  spindles. Overnight sleep staging from Muse-class headbands is reasonably
+  accurate for clear sleep, but the first minute or two of drifting off is
+  fuzzy, so the nudge triggers only after 20–30 s of consistent markers and
+  is always gentle.
 - Strategies: `visual_drift`, `heavy_warm`, `descent_count`, `mantra_silent`.
 - Safety: unlocks after P2 level 2; shows a one-time note that strong images or
   feelings can arise, with a grounding exit (open eyes, feet on floor, long
@@ -545,7 +555,7 @@ For the signal-engine spec thread and the build team:
 
 1. ~~Discovery length.~~ Decided 2026-11-20: 10-minute sessions, as many as
    needed (typically 5–8, cap 10), stopping early once confident.
-2. Should the twilight program's wake tether be on by default?
+2. ~~Twilight wake tether default.~~ Decided 2026-11-20: a per-session user option, remembered.
 3. Should anchors be available to every user, or unlocked as an achievement
    after the eligibility criterion?
 4. Are you comfortable with an optional, consented population model (pooled
