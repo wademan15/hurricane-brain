@@ -33,6 +33,8 @@ STAGE_CONFIGS = {
     "S2-P1": {"spectrum": "S2", "confirm": "P1"},
     "S3-P1": {"spectrum": "S3", "confirm": "P1"},
     "S1W1-P1": {"spectrum": "S1W1", "confirm": "P1"},
+    "S1Q-P1": {"spectrum": "S1Q", "confirm": "P1"},
+    "S1Q-P1-excess": {"spectrum": "S1Q", "confirm": "P1", "freq": "centroid_excess"},
     # confirmation stage (spectrum S1)
     "S1-P2": {"spectrum": "S1", "confirm": "P2"},
     "S1-P3": {"spectrum": "S1", "confirm": "P3"},
@@ -43,7 +45,7 @@ STAGE_CONFIGS = {
     "S1-P1-parabolic": {"spectrum": "S1", "confirm": "P1", "freq": "parabolic"},
 }
 DEFAULT = "S1-P1"
-TUNED_KEYS = ["S1/P1", "S2/P1", "S3/P1", "S1W1/P1", "S1/P2", "S1/P3", "S1/P4"]
+TUNED_KEYS = ["S1/P1", "S2/P1", "S3/P1", "S1W1/P1", "S1Q/P1", "S1/P2", "S1/P3", "S1/P4"]
 
 # deliberately broken builds: each should fail the test named beside it
 BROKEN = {
@@ -330,7 +332,8 @@ def summarize(job, rec, res, clean=None):
                 if abs(q[1] - tf) <= max(0.6, 0.05 * tf) and (best is None or abs(q[1] - tf) < abs(best[1] - tf)):
                     best = q
             if best is not None:
-                cal.append((k, round(tt), (best[1] - tf) / tf, (best[1] - tf) / best[2] if best[2] > 0 else None))
+                cal.append((k, round(tt), (best[1] - tf) / tf, (best[1] - tf) / best[2] if best[2] > 0 else None,
+                            truth_peaks[k]["bw"]))
                 if tt == T:
                     final[k] = (best[1], best[2], tf)
     s["cal"] = cal

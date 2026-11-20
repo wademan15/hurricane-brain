@@ -5,6 +5,7 @@
 
 use crate::m;
 use crate::params::Params;
+use crate::dsp::special::{binom_cdf, poisson_cdf};
 use crate::prng::Rng;
 use crate::types::{CascadeTarget, ChanceLevel, Measured, Reason, Target};
 use std::collections::{BTreeMap, BTreeSet};
@@ -145,11 +146,7 @@ pub fn score_set(tracks: &[ScoreTrack], ctx: &ScoreCtx) -> SetScore {
     for i in 0..n {
         for j in (i + 1)..n {
             let (a, b) = (&tracks[i], &tracks[j]);
-            let x = m::ln(b.f / a.f);
-            let ra = a.se / a.f;
-            let rb = b.se / b.f;
-            let sx = m::sqrt(ra * ra + rb * rb);
-            let resolved = sx <= p.resolved_max_sx;
+            let (x, sx, resolved) = pair_core(a, b, p);
             let harmonic = ctx.is_harmonic(a.id, b.id);
             let excluded = harmonic && p.exclude_harmonics;
             let mut pr = PairResult { lo: i, hi: j, x, sx, resolved, harmonic, miss: [0.0; 4], closeness: [None; 4], log_ev: [None; 4], aligned: [false; 4] };
@@ -169,6 +166,41 @@ pub fn score_set(tracks: &[ScoreTrack], ctx: &ScoreCtx) -> SetScore {
     let cascades = [cascade(n, &pairs, 0, ctx), cascade(n, &pairs, 1, ctx)];
     let stat = [stat_for(n, &pairs, 0, ctx), stat_for(n, &pairs, 1, ctx)];
     SetScore { pairs, cascades, stat }
+}
+
+/// Log ratio, its standard error, and whether it is resolved (spec 8.1, 8.2). The one
+/// definition used by every scoring path.
+#[inline]
+fn pair_core(a: &ScoreTrack, b: &ScoreTrack, p: &Params) -> (f64, f64, bool) {
+    let x = m::ln(b.f / a.f);
+    let ra = a.se / a.f;
+    let rb = b.se / b.f;
+    let sx = m::sqrt(ra * ra + rb * rb);
+    (x, sx, sx <= p.resolved_max_sx)
+}
+
+/// Only the aligned-state statistics [phi, octave] of a sorted track set: the same pair
+/// arithmetic, eligibility and maximum as `score_set`, without building pair records or
+/// cascades. Used for the chance-B time series, where only the statistic is needed. A unit
+/// test checks it equals `score_set(..).stat` exactly.
+pub fn stats_only(tracks: &[ScoreTrack], ctx: &ScoreCtx) -> [Option<f64>; 2] {
+    let p = ctx.p;
+    let n = tracks.len();
+    let mut best: [Option<f64>; 2] = [None, None];
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let (a, b) = (&tracks[i], &tracks[j]);
+            let (x, sx, resolved) = pair_core(a, b, p);
+            if !resolved || (p.exclude_harmonics && ctx.is_harmonic(a.id, b.id)) {
+                continue;
+            }
+            for (ti, slot) in best.iter_mut().enumerate() {
+                let e = ctx.log_evidence(a.id, b.id, x, sx, ctx.ln_t[ti]);
+                *slot = Some(slot.map_or(e, |v: f64| v.max(e)));
+            }
+        }
+    }
+    best
 }
 
 fn eligible(pr: &PairResult, ctx: &ScoreCtx) -> bool {
@@ -390,17 +422,17 @@ pub fn chance_b(hist: &[History], ctx: &ScoreCtx, rng: &mut Rng, min_lag: usize,
         let mut s1 = Vec::with_capacity(npts);
         for j in (0..npts).rev() {
             at(j * step, &mut set);
-            let sc = score_set(&set, ctx);
-            s0.push(sc.stat[0].ok());
-            s1.push(sc.stat[1].ok());
+            let st = stats_only(&set, ctx);
+            s0.push(st[0]);
+            s1.push(st[1]);
         }
         series[0].push(s0);
         series[1].push(s1);
     }
     let total_s = p.surrogates as f64 * npts as f64 * step_s;
     let thresholds = [
-        cfar_threshold(&series[0], dwell_steps, p.state_hysteresis, total_s, p.false_entry_interval_s),
-        cfar_threshold(&series[1], dwell_steps, p.state_hysteresis, total_s, p.false_entry_interval_s),
+        cfar_threshold(&series[0], dwell_steps, p.state_hysteresis, total_s, p.false_entry_interval_s, p.threshold_confidence),
+        cfar_threshold(&series[1], dwell_steps, p.state_hysteresis, total_s, p.false_entry_interval_s, p.threshold_confidence),
     ];
     ChanceB { dists, thresholds }
 }
@@ -433,20 +465,30 @@ pub fn count_entries(series: &[Vec<Option<f64>>], enter: f64, exit: f64, dwell_s
 }
 
 /// Lowest entry threshold whose false-entry rate on the null series, with dwell and
-/// hysteresis applied exactly as in the live state machine, is at most one per `interval_s`.
-pub fn cfar_threshold(series: &[Vec<Option<f64>>], dwell_steps: usize, hyst: f64, total_s: f64, interval_s: f64) -> Option<f64> {
+/// hysteresis applied exactly as in the live state machine, is shown to be at most one per
+/// `interval_s` with confidence `conf`: the observed entry count must be one that a process
+/// at the allowed rate would produce with probability at most 1 - conf (Poisson). So Monte
+/// Carlo error in the surrogates can only make entry harder.
+pub fn cfar_threshold(series: &[Vec<Option<f64>>], dwell_steps: usize, hyst: f64, total_s: f64, interval_s: f64, conf: f64) -> Option<f64> {
     let mut vals: Vec<f64> = series.iter().flat_map(|s| s.iter().filter_map(|v| *v)).collect();
     if vals.is_empty() || total_s <= 0.0 {
         return None;
     }
     vals.sort_by(|a, b| a.total_cmp(b));
     let allowed = total_s / interval_s;
+    // Largest count still significantly below the allowed rate.
+    let mut kmax: Option<usize> = None;
+    let mut k = 0usize;
+    while poisson_cdf(k, allowed) <= 1.0 - conf {
+        kmax = Some(k);
+        k += 1;
+    }
     let mut qs: Vec<f64> = (0..=40).map(|i| 0.5 + 0.0125 * i as f64).collect();
     qs.extend_from_slice(&[0.995, 0.999, 1.0]);
     for q in qs {
         let thr = m::quantile_sorted(&vals, q)?;
         let e = count_entries(series, thr, thr - hyst, dwell_steps);
-        if (e as f64) <= allowed {
+        if kmax.is_some_and(|km| e <= km) {
             return Some(thr);
         }
     }
@@ -454,18 +496,27 @@ pub fn cfar_threshold(series: &[Vec<Option<f64>>], dwell_steps: usize, hyst: f64
     vals.last().map(|v| v + 1e-9)
 }
 
-/// Threshold from a static (snapshot) null: the (1 - p*) quantile, with p* the allowed false
-/// entries per decorrelation time (the integration time).
+/// Threshold from a static (snapshot) null: an upper confidence bound (level `conf`) on the
+/// (1 - p*) quantile of the statistic, p* the allowed false entries per decorrelation time
+/// (the integration time). The order statistic is chosen from the binomial law so that the
+/// true quantile lies at or below it with probability at least `conf`.
 pub fn static_threshold(d: &NullDist, p: &Params) -> Option<f64> {
     let mut v: Vec<f64> = d.draws.iter().map(|x| x.stat.unwrap_or(f64::NEG_INFINITY)).collect();
-    if v.is_empty() {
+    let n = v.len();
+    if n == 0 {
         return None;
     }
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sort_by(|a, b| b.total_cmp(a)); // descending
     let pstar = (p.integration_s / p.false_entry_interval_s).clamp(1e-6, 1.0);
-    let t = m::quantile_sorted(&v, 1.0 - pstar)?;
-    // If the quantile falls on surrogates with no eligible pair, there is no usable
-    // threshold and the state cannot be entered (the conservative choice).
+    // j-th largest is above the true (1 - p*) quantile with probability P(Bin(n, p*) >= j).
+    // Take the largest j with P(Bin(n, p*) <= j - 1) <= 1 - conf.
+    let mut j = 1usize;
+    while j < n && binom_cdf(j, n, pstar) <= 1.0 - p.threshold_confidence {
+        j += 1;
+    }
+    let t = v[j - 1];
+    // If the bound falls on surrogates with no eligible pair, there is no usable threshold and
+    // the state cannot be entered (the conservative choice).
     if t.is_finite() {
         Some(t)
     } else {
@@ -551,6 +602,31 @@ mod tests {
         assert_eq!(s.cascades[0].members, vec![0, 2, 3]);
         assert_eq!(s.cascades[0].skipped, vec![1]);
         assert_eq!(s.cascades[1].steps, 0);
+    }
+
+    #[test]
+    fn stats_only_matches_score_set() {
+        let p = Params::default();
+        let mut h = BTreeSet::new();
+        h.insert((2u32, 5u32));
+        let mut b = Baselines::new();
+        b.insert((1, 3), (0.47, 0.0004));
+        let ctx = ScoreCtx::new(&p, &h, &b);
+        let mut rng = Rng::new(3);
+        for _ in 0..500 {
+            let n = 2 + (rng.next_u64() % 6) as usize;
+            let mut t: Vec<ScoreTrack> = (0..n)
+                .map(|k| {
+                    let f = m::exp(rng.uniform(0.0, m::ln(45.0)));
+                    ScoreTrack { id: k as u32 + 1, f, se: f * rng.uniform(0.0005, 0.03) }
+                })
+                .collect();
+            sort_tracks(&mut t);
+            let full = score_set(&t, &ctx);
+            let lean = stats_only(&t, &ctx);
+            assert_eq!(full.stat[0].ok(), lean[0]);
+            assert_eq!(full.stat[1].ok(), lean[1]);
+        }
     }
 
     #[test]

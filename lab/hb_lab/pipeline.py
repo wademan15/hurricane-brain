@@ -15,6 +15,8 @@ from scipy.signal import butter, filtfilt, iirnotch, lfilter, sosfilt, sosfiltfi
 from . import candidates as C
 from .candidates import F, FS, PARAMS
 
+MUSCLE_BAND = (65.0, 95.0)
+
 DEFAULT_CFG = {
     "spectrum": "S1", "confirm": "P1", "freq": "centroid", "thr_mode": "calibrated",
     "thresholds": {},           # calibrated thresholds keyed by "S1/P1" etc. (filled from tuning)
@@ -115,8 +117,11 @@ def gate(x, motion):
     amp = np.abs(lp - np.median(lp[:, :base_n], axis=1, keepdims=True)) > 5.0 * sig[:, None]
     flagged |= amp
     reasons["amplitude"] = amp
-    # (b) muscle: 30-45 Hz power in 0.25 s blocks over the channel's resting median
-    sos = butter(4, [30, 45], btype="band", fs=FS, output="sos")
+    # (b) muscle: broadband power in 0.25 s blocks over the channel's resting median.  The default band
+    # is 65-95 Hz, above every scored rhythm and clear of 50/60 Hz mains: the spec's 30-45 Hz band also
+    # fires on strong, bursty gamma rhythms (bake-off finding), which would delete real peaks.
+    lo_m, hi_m = MUSCLE_BAND
+    sos = butter(4, [lo_m, hi_m], btype="band", fs=FS, output="sos")
     hf = sosfiltfilt(sos, x, axis=1) ** 2
     blk = int(0.25 * FS)
     m = n // blk
@@ -218,7 +223,8 @@ def window_peaks(comp, cfg, mains, thr, native_df, want_stats=False):
         if any(l <= (a + b) // 2 <= r for a, b in covered):
             continue  # a shoulder whose own half-height region swallows a taller, accepted peak
         covered.append((l, r))
-        if not (0.8 * res <= width <= PARAMS["width_max"]):
+        res_f = C.resolution_at(cfg["spectrum"], F[i])
+        if not (0.8 * res_f <= width <= PARAMS["width_max"]):
             continue
         if conf == "P3":
             stat = C.ftest_stat(comp, F[i], 2 * PARAMS["mt_w"])

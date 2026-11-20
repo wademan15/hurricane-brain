@@ -248,6 +248,9 @@ params! {
     /// Phase comparisons: number of time-shifted surrogates and their minimum shift, s.
     compare_shifts: usize = 8,
     compare_min_shift_s: f64 = 1.0,
+    /// Confidence that a surrogate-derived aligned-state threshold is not below the true one
+    /// (Monte Carlo error must never make alignment easier).
+    threshold_confidence: f64 = 0.9,
     /// Aligned state: exit threshold = entry threshold minus this, in log-evidence units.
     state_hysteresis: f64 = 1.0,
     /// Which chance level sets the aligned-state threshold: "a", "b", or "both" (the stricter). Open decision D1.

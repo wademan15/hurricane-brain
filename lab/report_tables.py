@@ -285,17 +285,31 @@ def broken_rows(R):
     return ["deliberately broken build", "test that should catch it", "broken", "analytic S1-P1", "default S1-P1"], rows
 
 
+def merge(rs):
+    """Merge several results files: later files add configurations (and sets) to earlier ones."""
+    R = rs[0]
+    for o in rs[1:]:
+        R["tuning"].update(o.get("tuning", {}))
+        for sname, sv in o.get("sets", {}).items():
+            R["sets"].setdefault(sname, {"n_files": sv["n_files"], "configs": {}})["configs"].update(sv["configs"])
+        if o.get("trackers") and not R.get("trackers"):
+            R["trackers"] = o["trackers"]
+    return R
+
+
 def main():
-    src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "out", "bakeoff_results.json")
-    dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "out", "bakeoff_tables.md")
-    R = json.load(open(src))
+    args = sys.argv[1:]
+    dst = args.pop() if args and args[-1].endswith(".md") else os.path.join(HERE, "out", "bakeoff_tables.md")
+    srcs = args or [os.path.join(HERE, "out", "bakeoff_results.json")]
+    R = merge([json.load(open(s)) for s in srcs])
     parts = []
     parts.append("## Tuned thresholds (tuning seeds only)\n")
     parts.append(table(["key", "threshold", "windows", "files"],
                        [[k, num(v["threshold"], 3), v.get("n_windows", ""), v.get("n_files", "")] for k, v in R["tuning"].items()]))
-    spec_c = [c for c in ("S1-P1", "S1-P1-analytic", "S2-P1", "S3-P1", "S1W1-P1") if c in R["sets"]["A"]["configs"]]
+    spec_c = [c for c in ("S1-P1", "S1-P1-analytic", "S2-P1", "S3-P1", "S1W1-P1", "S1Q-P1") if c in R["sets"]["A"]["configs"]]
     conf_c = [c for c in ("S1-P1", "S1-P2", "S1-P3", "S1-P4") if c in R["sets"]["A"]["configs"]]
-    freq_c = [c for c in ("S1-P1", "S1-P1-excess", "S1-P1-gauss", "S1-P1-parabolic") if c in R["sets"]["A"]["configs"]]
+    freq_c = [c for c in ("S1-P1", "S1-P1-excess", "S1-P1-gauss", "S1-P1-parabolic", "S1Q-P1", "S1Q-P1-excess")
+              if c in R["sets"]["A"]["configs"]]
     for title, cs in (("Spectrum stage", spec_c), ("Confirmation stage", conf_c), ("Peak frequency stage (detection columns)", freq_c)):
         h, r = stage_rows(R, cs)
         parts.append(f"\n## {title}\n")

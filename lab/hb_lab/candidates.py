@@ -177,9 +177,44 @@ def s3_irasa(stretches):
     return base
 
 
+Q_REL = 0.08  # S1Q: total smoothing width as a fraction of frequency (never below the 1 Hz of S1)
+
+
+def _q_edges():
+    half = np.maximum(0.0, 0.5 * Q_REL * F - 0.5)  # extra half-width beyond S1's own 0.5 Hz
+    lo = np.searchsorted(F, F - half, side="left")
+    hi = np.searchsorted(F, F + half, side="right")
+    return lo, hi
+
+
+_QE = None
+
+
+def s1q_multitaper(stretches):
+    """S1 variant with constant relative resolution: S1 (W = 0.5 Hz) eigenspectra, each then averaged over
+    a frequency-dependent boxcar so that the total smoothing is max(1 Hz, 8 % of f).  Brain rhythms get
+    wider with frequency; a fixed 1 Hz resolution splits a 1.5 Hz wide beta rhythm into lumps."""
+    global _QE
+    if _QE is None:
+        _QE = _q_edges()
+    lo, hi = _QE
+    cs = s1_multitaper(stretches)
+    c = np.concatenate([np.zeros((cs.eig.shape[0], 1)), np.cumsum(cs.eig, axis=1)], axis=1)
+    cs.eig = (c[:, hi] - c[:, lo]) / (hi - lo)[None, :]
+    cs.coef = None
+    return cs
+
+
 SPECTRA = {"S1": s1_multitaper, "S2": s2_welch, "S3": s3_irasa,
-           "S1W1": lambda st: s1_multitaper(st, 1.0)}   # S1 variant: half-bandwidth 1.0 Hz instead of 0.5
-RESOLUTION = {"S1": 1.0, "S2": 1.0, "S3": 1.0, "S1W1": 2.0}  # Hz, full width of the estimator's smoothing
+           "S1W1": lambda st: s1_multitaper(st, 1.0),   # S1 variant: half-bandwidth 1.0 Hz instead of 0.5
+           "S1Q": s1q_multitaper}                       # S1 variant: resolution max(1 Hz, 8 % of f)
+RESOLUTION = {"S1": 1.0, "S2": 1.0, "S3": 1.0, "S1W1": 2.0, "S1Q": 1.0}  # Hz, full width of the smoothing
+
+
+def resolution_at(spectrum, f):
+    if spectrum == "S1Q":
+        return max(1.0, Q_REL * f)
+    return RESOLUTION[spectrum]
 
 
 class Composite:
@@ -217,30 +252,67 @@ def fit_mask(mains_hz):
     return m
 
 
-def robust_background(p, dof, mains_hz, bias_correct=True, n_iter=5, drop_sd=1.5):
-    """Robust log-log line fit: fit, drop bins above the line, refit.  Then shift the offset so the
-    median residual equals the median of log(chi2_dof/dof), which removes the downward bias of fitting
-    in log power and of having dropped the upper bins.  Returns (bg, chi, offset, fit_error)."""
+_TRUNC = {}
+
+
+def _trunc_mean_fn(dof):
+    """Returns u -> E[Y | Y < u] for Y = log10(chi2_dof / dof), on a grid (cached per dof)."""
+    key = round(float(dof), 1)
+    if key not in _TRUNC:
+        x = np.exp(np.linspace(np.log(stats.chi2.ppf(1e-7, dof) / dof), np.log(stats.chi2.ppf(1 - 1e-7, dof) / dof), 4000))
+        pdf = stats.chi2.pdf(x * dof, dof) * dof
+        y = np.log10(x)
+        w = pdf * np.gradient(x)
+        cw = np.cumsum(w)
+        cy = np.cumsum(w * y)
+        _TRUNC[key] = (y, cy / np.maximum(cw, 1e-300))
+    y, m = _TRUNC[key]
+    return lambda u: float(np.interp(u, y, m))
+
+
+def robust_background(p, dof, mains_hz, bias_correct=True, n_iter=8, drop_sd=1.5):
+    """Robust log-log line fit (spec 6.2): fit, drop bins above the line by more than drop_sd standard
+    deviations of a log chi-squared variable, refit, repeat.
+
+    Bias: in log power the background sits above the mean of the log spectrum, and dropping the upper
+    bins pulls the fit lower still.  With bias_correct, the offset is solved so that the mean of the kept
+    residuals equals the mean of a log chi-squared variable truncated at the same cut, which uses only
+    the kept (background) bins and so is not lifted by peaks.  Returns (bg, chi, offset, fit_error)."""
     m = fit_mask(mains_hz)
-    # thin the zero-padded grid: every 4th bin (0.125 Hz) is plenty for a 2-parameter fit
-    idx = np.flatnonzero(m)[::4]
+    idx = np.flatnonzero(m)[::4]  # 0.125 Hz spacing is plenty for a 2-parameter fit
     lx = np.log10(F[idx])
     ly = np.log10(np.maximum(p[idx], 1e-30))
     keep = np.ones(idx.size, bool)
-    sd_chi = np.sqrt(stats.chi2.var(dof) / dof ** 2) / np.log(10)  # sd of log10 of chi2/dof (approx)
+    sd_chi = np.sqrt(2.0 / dof) / np.log(10)  # approximate sd of log10(chi2_dof / dof)
+    cut = drop_sd * max(sd_chi, 1e-3)
     for _ in range(n_iter):
         b, a = np.polyfit(lx[keep], ly[keep], 1)
         r = ly - (a + b * lx)
-        new = r < drop_sd * max(sd_chi, 1e-3)
-        if new.sum() < 10 or (new == keep).all():
-            keep = new if new.sum() >= 10 else keep
+        new = r < cut
+        if new.sum() < 10:
+            break
+        if (new == keep).all():
             break
         keep = new
     b, a = np.polyfit(lx[keep], ly[keep], 1)
     r = ly - (a + b * lx)
+    kept = r[r < cut]
+    if kept.size < 10:
+        kept = r
     if bias_correct:
-        a += np.median(r) - np.log10(stats.chi2.median(dof) / dof)
-    err = float(np.sqrt(np.mean((r - np.median(r))[keep] ** 2)))
+        # r = d + Y with Y = log10(chi2/dof); kept iff r < cut, i.e. Y < cut - d.  Solve
+        # mean(kept) = d + E[Y | Y < cut - d] for d by bisection (the right side increases with d).
+        tm = _trunc_mean_fn(dof)
+        target = float(kept.mean())
+        lo, hi = -1.0, 1.0
+        for _ in range(50):
+            mid = 0.5 * (lo + hi)
+            if mid + tm(cut - mid) < target:
+                lo = mid
+            else:
+                hi = mid
+        a += 0.5 * (lo + hi)
+    err = float(np.sqrt(np.mean((kept - kept.mean()) ** 2)))
     bg = 10 ** (a + b * np.log10(np.maximum(F, 0.5)))
     return bg, float(-b), float(a), err
 

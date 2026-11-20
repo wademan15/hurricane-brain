@@ -648,6 +648,9 @@ impl Engine {
         if end % self.quantum as u64 == 0 {
             self.block_detect(idx);
         }
+        if end % self.fast_block as u64 == 0 {
+            self.muscle_detect(idx, end % self.quantum as u64 == 0);
+        }
         if end % self.qlen as u64 == 0 {
             self.quality_update(idx);
         }
@@ -687,25 +690,32 @@ impl Engine {
         }
         let a = idx.saturating_sub(self.step_lag as u64 + self.pad);
         let b = idx + self.pad;
+        let pf = self.p.step_partner_fraction;
         let fr = self.frontal.clone();
-        if fr.len() >= 2 && z[fr[0]] >= 1.0 && z[fr[1]] >= 1.0 {
+        let mut handled = vec![false; nch];
+        // Frontal pair moving together: blink (same sign) or eye movement (opposite sign).
+        // One side may cross a sample before the other, so the partner needs only part of
+        // the threshold.
+        if fr.len() >= 2 && (z[fr[0]] >= 1.0 || z[fr[1]] >= 1.0) && z[fr[0]].min(z[fr[1]]) >= pf {
             let bit = if sign[fr[0]] == sign[fr[1]] { flag::BLINK } else { flag::EYE };
-            for c in 0..nch {
-                if fr[..2].contains(&c) || z[c] >= 1.0 {
-                    self.mark(c, a, b, bit);
-                }
+            for &c in &fr[..2] {
+                self.mark(c, a, b, bit);
+                handled[c] = true;
             }
-            return;
         }
-        let over: Vec<usize> = (0..nch).filter(|&c| z[c] >= 1.0).collect();
-        for &c in &over {
-            let partner = (0..nch).any(|o| o != c && z[o] >= self.p.step_partner_fraction);
+        // Any other channel over threshold: a step with no partner is a pop; with a partner
+        // on another channel it is a multi-channel movement.
+        for c in 0..nch {
+            if handled[c] || z[c] < 1.0 {
+                continue;
+            }
+            let partner = (0..nch).any(|o| o != c && z[o] >= pf);
             let bit = if partner { flag::MOTION } else { flag::POP };
             self.mark(c, a, b, bit);
         }
     }
 
-    /// Per-block detectors: muscle, and the step detector's reference scale.
+    /// Per-block reference for the step detector: median |step| of each clean block.
     fn block_detect(&mut self, idx: u64) {
         let p = self.p.clone();
         let rate = self.rate;
@@ -714,8 +724,7 @@ impl Engine {
         let warm_blocks = (m::ceil(p.gate_warmup_s / p.slow_update_s) as usize).max(4);
         let keep = (p.track_history_s / p.slow_update_s) as usize;
         let t = idx as f64 / rate;
-        let mut marks: Vec<(usize, u64, u64)> = Vec::new();
-        for (c, ch) in self.chans.iter_mut().enumerate() {
+        for ch in self.chans.iter_mut() {
             let start = (idx + 1).saturating_sub(q);
             if start < ch.flags.start {
                 continue;
@@ -743,17 +752,35 @@ impl Engine {
                     ch.recent_step.pop_front();
                 }
             }
-            // Muscle: 30-45 Hz power of the last 128 samples (Hann), against the reference.
-            let n = 128u64;
+        }
+    }
+
+    /// Muscle detector (spec 5.3): 30-45 Hz power of the last 128 samples (Hann) against the
+    /// channel's reference level. Runs every fast frame so the artifact flag reacts within
+    /// about 30 ms of the evidence; the reference only collects once per slow block.
+    fn muscle_detect(&mut self, idx: u64, collect_ref: bool) {
+        let p = &self.p;
+        let rate = self.rate;
+        let ref_len = m::round(p.gate_reference_s * rate) as u64;
+        let warm_blocks = (m::ceil(p.gate_warmup_s / p.slow_update_s) as usize).max(4);
+        let keep = (p.track_history_s / p.slow_update_s) as usize;
+        let thr = m::pow(10.0, p.muscle_db / 10.0);
+        let t = idx as f64 / rate;
+        let n = 128u64;
+        let mut marks: Vec<(usize, u64, u64)> = Vec::new();
+        for (c, ch) in self.chans.iter_mut().enumerate() {
             let s0 = (idx + 1).saturating_sub(n);
             if rate < 96.0 || idx + 1 < n || s0 < ch.x.start || (s0..=idx).any(|i| ch.flags.get(i) & flag::INVALID != 0) {
                 continue;
             }
             let mut buf = vec![C::default(); n as usize];
-            let xs: Vec<f64> = (s0..=idx).map(|i| ch.x.get(i) as f64).collect();
-            let mean = xs.iter().sum::<f64>() / n as f64;
-            for i in 0..n as usize {
-                buf[i].re = (xs[i] - mean) * self.hann128[i];
+            let mut mean = 0.0;
+            for i in s0..=idx {
+                mean += ch.x.get(i) as f64;
+            }
+            mean /= n as f64;
+            for (j, i) in (s0..=idx).enumerate() {
+                buf[j].re = (ch.x.get(i) as f64 - mean) * self.hann128[j];
             }
             self.fft128.forward(&mut buf);
             let df = rate / n as f64;
@@ -769,18 +796,21 @@ impl Engine {
                 continue;
             }
             let pw = s / cnt as f64;
-            if in_ref || ch.musc_ref.is_none() {
-                ch.musc_ref_vals.push(pw);
-                if ch.musc_ref_vals.len() >= warm_blocks {
-                    ch.musc_ref = m::median(&ch.musc_ref_vals);
+            if collect_ref {
+                let in_ref = ch.valid_seen <= ref_len;
+                if in_ref || ch.musc_ref.is_none() {
+                    ch.musc_ref_vals.push(pw);
+                    if ch.musc_ref_vals.len() >= warm_blocks {
+                        ch.musc_ref = m::median(&ch.musc_ref_vals);
+                    }
+                }
+                ch.recent_musc.push_back((t, pw));
+                while ch.recent_musc.len() > keep {
+                    ch.recent_musc.pop_front();
                 }
             }
-            ch.recent_musc.push_back((t, pw));
-            while ch.recent_musc.len() > keep {
-                ch.recent_musc.pop_front();
-            }
             if let Some(r) = ch.musc_ref {
-                if r > 0.0 && pw > r * m::pow(10.0, p.muscle_db / 10.0) {
+                if r > 0.0 && pw > r * thr {
                     marks.push((c, s0, idx));
                 }
             }
@@ -918,7 +948,10 @@ impl Engine {
         let start = (idx + 1).saturating_sub(n);
         let rate = self.rate;
         let df = rate / n as f64;
-        let mut best: [f64; 2] = [f64::NEG_INFINITY; 2];
+        // Mains is common to every channel: average the channels' periodograms first (2 dof
+        // each), so a chance excess of mains_detect_db over the neighbourhood is negligible.
+        let mut acc = vec![0.0f64; n as usize / 2];
+        let mut used = 0usize;
         for ch in &self.chans {
             if start < ch.rawhp.start || (start..=idx).any(|i| ch.flags.get(i) & flag::INVALID != 0) {
                 continue;
@@ -928,24 +961,28 @@ impl Engine {
                 buf[j].re = ch.rawhp.get(i) as f64 * win[j];
             }
             fft.forward(&mut buf);
-            let pw: Vec<f64> = buf.iter().take(n as usize / 2).map(|v| v.norm_sqr()).collect();
+            for (a, v) in acc.iter_mut().zip(buf.iter()) {
+                *a += v.norm_sqr();
+            }
+            used += 1;
+        }
+        let mut best: [f64; 2] = [f64::NEG_INFINITY; 2];
+        if used >= 2 {
             let mut neigh = Vec::new();
-            for (k, v) in pw.iter().enumerate() {
+            for (k, v) in acc.iter().enumerate() {
                 let f = k as f64 * df;
                 if (40.0..=70.0).contains(&f) && (f - 50.0).abs() > 2.0 && (f - 60.0).abs() > 2.0 {
                     neigh.push(*v);
                 }
             }
-            let Some(med) = m::median(&neigh) else { continue };
-            if med <= 0.0 {
-                continue;
-            }
-            for (j, mf) in [50.0f64, 60.0].iter().enumerate() {
-                if *mf + 1.0 >= rate / 2.0 {
-                    continue;
+            if let Some(med) = m::median(&neigh).filter(|v| *v > 0.0) {
+                for (j, mf) in [50.0f64, 60.0].iter().enumerate() {
+                    if *mf + 1.0 >= rate / 2.0 {
+                        continue;
+                    }
+                    let line = acc.iter().enumerate().filter(|(k, _)| ((*k as f64) * df - mf).abs() <= 0.5).map(|(_, v)| *v).fold(0.0, f64::max);
+                    best[j] = m::db(line / med);
                 }
-                let line = pw.iter().enumerate().filter(|(k, _)| ((*k as f64) * df - mf).abs() <= 0.5).map(|(_, v)| *v).fold(0.0, f64::max);
-                best[j] = best[j].max(m::db(line / med));
             }
         }
         let pick = if best[0] >= best[1] { 0 } else { 1 };

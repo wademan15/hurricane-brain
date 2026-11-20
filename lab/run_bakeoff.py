@@ -83,6 +83,14 @@ def agg_A(rows, cfg):
     out["calibration_z_sd_6dB_up"] = round(float(np.std(z)), 3) if len(z) > 2 else None
     out["calibration_z_robust_sd_6dB_up"] = round(float(1.4826 * np.median(np.abs(z))), 3) if z else None
     out["calibration_n"] = len(z)
+    # integrated-frequency error against the rhythm's own width (>= 10 dB, final window)
+    wb = {}
+    for lo, hi in ((0.25, 0.5), (0.5, 0.8), (0.8, 1.51)):
+        e = [abs(c[2]) for r in rows if r["job"]["snr"] >= 10 for c in r["by_cfg"][cfg]["cal"]
+             if c[1] == 90 and len(c) > 4 and lo <= c[4] < hi]
+        wb[f"{lo}-{hi} Hz"] = {"n": len(e), "within_1pct": frac(sum(v <= 0.01 for v in e), len(e)),
+                               "median": round(float(np.median(e)), 5) if e else None}
+    out["int_err_by_width_10dB_up"] = wb
     return out
 
 
@@ -317,7 +325,7 @@ def main():
     # ---- 1. tuning thresholds on tuning seeds only
     tune_jobs = B.jobs_tuning(6 if q else 48)
     tune_cfgs = sorted({n for n in cfgs if n in B.STAGE_CONFIGS and B.STAGE_CONFIGS[n].get("thr_mode") != "analytic"
-                        and n in ("S1-P1", "S2-P1", "S3-P1", "S1W1-P1", "S1-P2", "S1-P3", "S1-P4")})
+                        and n in ("S1-P1", "S2-P1", "S3-P1", "S1W1-P1", "S1Q-P1", "S1-P2", "S1-P3", "S1-P4")})
     print("tuning thresholds:", tune_cfgs, flush=True)
     tr = B.run_pool([(j, tune_cfgs, {}) for j in tune_jobs], a.procs, "tune")
     thresholds = {}

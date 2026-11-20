@@ -87,6 +87,32 @@ pub fn chi2_isf(p: f64, dof: f64) -> f64 {
     0.5 * (lo + hi)
 }
 
+/// P(Binomial(n, p) <= k).
+pub fn binom_cdf(k: usize, n: usize, p: f64) -> f64 {
+    if k >= n {
+        return 1.0;
+    }
+    let p = p.clamp(1e-300, 1.0 - 1e-16);
+    let lc = |j: usize| m::lgamma(n as f64 + 1.0) - m::lgamma(j as f64 + 1.0) - m::lgamma((n - j) as f64 + 1.0);
+    let mut s = 0.0;
+    for j in 0..=k {
+        s += m::exp(lc(j) + j as f64 * m::ln(p) + (n - j) as f64 * m::ln1p(-p));
+    }
+    s.min(1.0)
+}
+
+/// P(Poisson(lambda) <= k).
+pub fn poisson_cdf(k: usize, lambda: f64) -> f64 {
+    if lambda <= 0.0 {
+        return 1.0;
+    }
+    let mut s = 0.0;
+    for j in 0..=k {
+        s += m::exp(j as f64 * m::ln(lambda) - lambda - m::lgamma(j as f64 + 1.0));
+    }
+    s.min(1.0)
+}
+
 /// Trigamma function psi'(x) for x > 0.
 pub fn trigamma(mut x: f64) -> f64 {
     let mut r = 0.0;

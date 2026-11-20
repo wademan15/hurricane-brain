@@ -430,7 +430,7 @@ pub struct PeakResult {
     pub threshold: f64,
 }
 
-/// Contiguous region around `i` where `flat > level`; returns (left crossing Hz, right crossing Hz, lo bin, hi bin)
+/// Contiguous region around `i` where `vals > level`; returns (left crossing Hz, right crossing Hz, lo bin, hi bin)
 /// or None if a crossing is not found inside [min_bin, max_bin].
 fn half_region(flat: &[f64], i: usize, level: f64, min_bin: usize, max_bin: usize, df: f64) -> Option<(f64, f64, usize, usize)> {
     let mut l = i;
@@ -523,23 +523,53 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
     let min_w = p.peak_width_min_factor * w2;
     let mut consumed: Vec<(usize, usize)> = Vec::new();
     let mut peaks = Vec::new();
-    for &i in &cands {
-        if consumed.iter().any(|(a, b)| i >= *a && i <= *b) {
+    // Region, width and centre use the rhythm's own power above the background, e = S - bg:
+    // "half height" is half of the peak's excess. The flattened spectrum S / bg would weight
+    // each bin by (f / f0)^chi relative to the rhythm's power and shift a broad low-frequency
+    // rhythm upward by about chi sigma^2 / f0 (1 % at 5 Hz); the excess has no such skew.
+    let excess: Vec<f64> = spec.s.iter().zip(bg.iter()).map(|(s, b)| s - b).collect();
+    for &i0 in &cands {
+        if consumed.iter().any(|(a, b)| i0 >= *a && i0 <= *b) {
             continue;
         }
-        let h = flat[i];
-        let level = 1.0 + (h - 1.0) / 2.0;
-        let Some((fl, fr, l, r)) = half_region(flat, i, level, min_bin, max_bin, df) else {
-            consumed.push((i, i));
+        // Move to the top: from the candidate, take the highest excess inside its half-height
+        // region and repeat until the region's maximum is its own. A ripple or shoulder thus
+        // becomes the larger peak it belongs to, and a peak already taken is not taken twice.
+        let mut i = i0;
+        let mut region = None;
+        for _ in 0..16 {
+            let level = excess[i] / 2.0;
+            if !(level > 0.0) {
+                break;
+            }
+            let Some(rg) = half_region(&excess, i, level, min_bin, max_bin, df) else { break };
+            let (_, _, l, r) = rg;
+            let mut top = i;
+            for j in l..=r {
+                if excess[j] > excess[top] {
+                    top = j;
+                }
+            }
+            if top == i {
+                region = Some(rg);
+                break;
+            }
+            i = top;
+        }
+        let Some((fl, fr, l, r)) = region else { continue };
+        let level = excess[i] / 2.0;
+        if consumed.iter().any(|(a, b)| l <= *b && r >= *a) {
             continue;
-        };
+        }
         consumed.push((l, r));
+        // Height: the flattened maximum within the peak's own region (spec 9: at the peak).
+        let h = flat[l..=r].iter().fold(flat[i0], |a, b| a.max(*b));
         let width = fr - fl;
         if width < min_w || width > p.peak_width_max_hz {
             continue;
         }
-        let Some(f) = centroid(flat, l, r, level, df) else { continue };
-        // Jackknife over groups (tapers).
+        let Some(f) = centroid(&excess, l, r, level, df) else { continue };
+        // Jackknife over groups (tapers), repeating the whole estimate on each delete-one spectrum.
         let g = spec.groups;
         if g < 2 || spec.k < 2 {
             continue;
@@ -547,43 +577,46 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
         let ext = (m::ceil(1.0 / df) as usize).max(1);
         let a = l.saturating_sub(ext).max(min_bin);
         let b = (r + ext).min(max_bin);
-        let mut fl_del = vec![0.0; n];
+        let mut e_del = vec![0.0; n];
         let mut cs = Vec::with_capacity(g);
         let mut hs = Vec::with_capacity(g);
         let mut ok = true;
         for gi in 0..g {
+            let mut hmax: f64 = 0.0;
             for j in a..=b {
-                fl_del[j] = spec.s_del(gi, j) / bg[j];
+                let sd = spec.s_del(gi, j);
+                e_del[j] = sd - bg[j];
+                if j >= l && j <= r {
+                    hmax = hmax.max(sd / bg[j]);
+                }
             }
-            // Maximum within the original half-height region.
             let mut im = l;
             for j in l..=r {
-                if fl_del[j] > fl_del[im] {
+                if e_del[j] > e_del[im] {
                     im = j;
                 }
             }
-            let hg = fl_del[im];
-            if hg <= 1.0 {
+            let lev = e_del[im] / 2.0;
+            if !(lev > 0.0) || hmax <= 0.0 {
                 ok = false;
                 break;
             }
-            let lev = 1.0 + (hg - 1.0) / 2.0;
             let mut ll = im;
-            while ll > a && fl_del[ll - 1] > lev {
+            while ll > a && e_del[ll - 1] > lev {
                 ll -= 1;
             }
             let mut rr = im;
-            while rr < b && fl_del[rr + 1] > lev {
+            while rr < b && e_del[rr + 1] > lev {
                 rr += 1;
             }
-            match centroid(&fl_del, ll, rr, lev, df) {
+            match centroid(&e_del, ll, rr, lev, df) {
                 Some(c) => cs.push(c),
                 None => {
                     ok = false;
                     break;
                 }
             }
-            hs.push(m::db(hg));
+            hs.push(m::db(hmax));
         }
         if !ok {
             continue;

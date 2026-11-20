@@ -35,6 +35,7 @@ pub mod m;
 pub mod params;
 pub mod prng;
 pub mod ratios;
+pub mod selfcheck;
 pub mod spectral;
 pub mod tracks;
 pub mod types;

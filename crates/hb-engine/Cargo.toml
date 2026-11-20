@@ -13,6 +13,12 @@ name = "hb-run"
 path = "src/bin/hb-run.rs"
 required-features = ["cli"]
 
+# Exports `hb_selfcheck(seed, secs)` from a wasm module so the native and browser builds can be
+# compared (spec 11). Build: cargo build -p hb-engine --example wasm_probe --target wasm32-unknown-unknown --release
+[[example]]
+name = "wasm_probe"
+crate-type = ["cdylib"]
+
 [features]
 default = ["cli"]
 # The fixture runner. Pure std; the library itself does no I/O.
