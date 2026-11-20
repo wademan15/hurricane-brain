@@ -69,19 +69,27 @@ export function App() {
   const first = useRef(true);
   useEffect(() => {
     if (!settings.onboarded || !profile) return;
-    const heading = document.querySelector<HTMLElement>('main h1')?.textContent?.trim();
-    // A program or a past session names its own page; the others use their section name.
-    const name = (section === 'programs' || section === 'history') && path[1] && heading ? heading : (TITLES[section] ?? 'Home');
-    document.title = `${name} · Hurricane Brain`;
+    // A program or a past session names its own page (its heading may arrive a moment after the
+    // route changes, so the title follows the heading); the others use their section name.
+    const named = (section === 'programs' || section === 'history') && !!path[1];
+    const setTitle = () => {
+      const heading = document.querySelector<HTMLElement>('main h1')?.textContent?.trim();
+      document.title = `${named && heading ? heading : (TITLES[section] ?? 'Home')} · Hurricane Brain`;
+    };
+    setTitle();
+    const main = named ? document.querySelector('main') : null;
+    const obs = main ? new MutationObserver(setTitle) : null;
+    obs?.observe(main as Element, { childList: true, subtree: true, characterData: true });
     if (first.current) {
       first.current = false;
-      return;
+    } else if (section !== 'session') {
+      // the live screen focuses its own title
+      const h = document.querySelector<HTMLElement>('main h1');
+      h?.setAttribute('tabindex', '-1');
+      h?.focus({ preventScroll: true });
     }
-    if (section === 'session') return; // the live screen focuses its own title
-    const h = document.querySelector<HTMLElement>('main h1');
-    h?.setAttribute('tabindex', '-1');
-    h?.focus({ preventScroll: true });
-  }, [route, section, settings.onboarded, profile, path]);
+    return () => obs?.disconnect();
+  }, [route, section, settings.onboarded, profile]); // eslint-disable-line react-hooks/exhaustive-deps -- `path` is derived from `route`
 
   if (!settings.onboarded || !profile) {
     return <Onboarding onDone={() => navigate('home')} />;
@@ -125,7 +133,8 @@ export function App() {
 
   return (
     <div className="app">
-      <main className="app-main" id="main">
+      <button type="button" className="skip-link" inert={covered} onClick={() => document.getElementById('main')?.focus()}>Skip to content</button>
+      <main className="app-main" id="main" tabIndex={-1}>
         <div className="app-main-inner">
           {st.session && !live ? (
             <div className="note" role="status">

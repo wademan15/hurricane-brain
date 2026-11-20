@@ -67,6 +67,7 @@ await page.waitForSelector('text=Replay a recording');
 await page.screenshot({ path: join(outDir, '00-home.png') });
 // Settings > replay speed
 await page.evaluate(() => { window.location.hash = '#/settings'; });
+await page.waitForSelector('text=Replay speed', { timeout: 90000 });
 await page.getByRole('button', { name: speedLabel, exact: true }).click().catch(async () => { await page.getByText(speedLabel).first().click(); });
 await page.screenshot({ path: join(outDir, '00-settings.png') });
 await page.evaluate(() => { window.location.hash = '#/home'; });

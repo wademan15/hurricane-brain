@@ -78,8 +78,15 @@ function QuestionnaireCard({ profile }: { profile: UserProfile }) {
   const [draft, setDraft] = useState<Questionnaire>(q ?? {});
   const [saved, setSaved] = useState(false);
   const num = (k: keyof Questionnaire, label: string, lo: number, hi: number, hint: string) => (
-    <Field label={label} hint={hint}>
-      <input type="number" min={lo} max={hi} value={(draft[k] as number | undefined) ?? ''} onChange={(e) => { setSaved(false); setDraft({ ...draft, [k]: e.target.value === '' ? undefined : Number(e.target.value) }); }} />
+    <Field label={`${label} (${lo} to ${hi})`} hint={hint}>
+      <input
+        type="number" min={lo} max={hi} value={(draft[k] as number | undefined) ?? ''}
+        aria-invalid={draft[k] !== undefined && !((draft[k] as number) >= lo && (draft[k] as number) <= hi)}
+        onChange={(e) => { setSaved(false); setDraft({ ...draft, [k]: e.target.value === '' ? undefined : Number(e.target.value) }); }}
+        // leaving the box pulls an out-of-range number into range, so nothing outside it is saved
+        onBlur={() => { const v = draft[k] as number | undefined; if (v !== undefined && Number.isFinite(v) && (v < lo || v > hi)) setDraft({ ...draft, [k]: Math.min(hi, Math.max(lo, v)) }); }}
+      />
+      {draft[k] !== undefined && !((draft[k] as number) >= lo && (draft[k] as number) <= hi) ? <span className="hint err" role="alert">Use a number from {lo} to {hi}.</span> : null}
     </Field>
   );
   const guesses = useMemo(() => {

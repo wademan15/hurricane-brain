@@ -172,5 +172,5 @@ export const CHILD_LINES = {
   both: 'Both of your rhythm patterns are lining up right now.',
   phi: 'Your rhythm peaks are lining up in a golden ratio pattern.',
   octave: 'Your rhythm peaks are lining up in an octave pattern.',
-  quiet: 'Nothing is holding right now. That is normal. Keep going.',
+  quiet: 'That is normal. Keep breathing slowly and keep going.',
 } as const;

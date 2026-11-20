@@ -67,7 +67,7 @@ function render(fr: any[], seconds: number, gains: Record<string, number>, probe
       if (Math.floor(t) % 10 === 9 && pos % SR >= SR - 128 - SR / 4) { per.push({ t: Math.floor(t) + 1, maxPhi: curPhi, maxOct: curOct, maxBoth: curBoth, voices: curV, bed: curBed }); curPhi = curOct = curBoth = curV = 0; curBed = false; }
     }
   }
-  return { L, per };
+  return { L, R, per };
 }
 
 it('audio offline', async () => {

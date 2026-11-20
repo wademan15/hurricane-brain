@@ -70,3 +70,13 @@ decorative animation, and the golden ratio, octave and chance cells always shown
 `useServices`, `useController` (session, devices, replay, stream status), `useSettings`, `useProfile`,
 `useProfiles`, `useProfileInfo`, `useAsync`, `useLive` (latest frames with staleness), `useFitHold`,
 `useStarter`, `useRoute`. Layout components call these and render; they never compute a measurement.
+
+## Round 3 additions
+
+- Dark values are declared on `:root, .live`, and the light values on `:root[data-theme='light']`, so the live
+  screen stays dark whatever the theme. `App.tsx` sets `data-theme` from Settings (dark, light, follow device)
+  and the root font size from the text-size setting (a percentage of the browser's own size).
+- New tokens: `--control-border` (3:1 edges for buttons, inputs and tabs), `--both` (both at once), `--state-ink`
+  (text on a filled state badge). `--faint` is 5.6:1 on `--surface-2` so the not-measured text passes AA.
+- `--tap`, `--tap-small` and `--tap-big` are `max(Npx, Nrem)`: never under 44 px (48 and 64 for the others).
+- State badges (`.state-badge.phi | .oct | .both`, `.on` when holding) take their colour from `--c`, set per kind.

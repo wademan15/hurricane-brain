@@ -4,10 +4,12 @@ Nothing here blocks the build. All four checks run in the real tree.
 
 ## Wanted from other modules
 
-- **Engine (`crates/hb-engine`)**: an age-group or child preset. `params.rs` has none, so the app stores
-  the age group per person (and with each session) and uses it for wording and fit tips only. If a
-  preset appears (a named parameter set), `enginePrefs()` in `session/controller.ts` is the one place to
-  pass it.
+- **Engine**: presets exist (`Params::preset`, spec 5.4 and 15) but `EngineConfig.params` takes individual
+  parameter names only. The app copies the child preset's one value (`quality_sd_max_uv: 200`) into
+  `CHILD_ENGINE_PARAMS` in `session/child.ts` (the single place, with a comment pointing at spec 5.4) and
+  merges it with the response-speed choice in `enginePrefs()`. A way to pass a preset name through the
+  worker would remove the copy. The child preset is applied when a connection is made, so changing the
+  active person mid-connection keeps the old parameters until the next connection or replay.
 - **Engine**: the alignment response speed is the `integration_s` parameter (steady 30 s, quicker 15 s,
   slower 60 s); harmonics are `exclude_harmonics`. The quicker and slower values are the app's choice
   (`RESPONSE_SPEED_INTEGRATION_S`); the signal architect should confirm them, and that the chance level
@@ -25,6 +27,18 @@ Nothing here blocks the build. All four checks run in the real tree.
   `reset()` or `beginSession()`, reuse would be possible but is not needed.
 - **Repo**: `.gitignore` should list `app/src/ui/test/out/` (screenshots). `app/e2e/ui-verify.cjs` is
   the Playwright check of the built app; `e2e/make-session.test.ts` writes the seed session it uses.
+
+## Handed to others (round 3)
+
+- **Visualizer**: the live screen sets `--hb-readout-top` on `.live-stage` (below the top bar) and passes
+  `showFieldNames` from a Settings switch. The `Inspect` parts list and the readout as a labelled region
+  are in `viz/`.
+- **Signal architect**: `PairScore.harmonic` is shown as "possible harmonic, not counted" (or "counted, as you
+  chose" when the Settings switch is on). Chance B is null with `warming_up` for about 2 to 3 minutes; the
+  UI words that as "chance B needs about 2 to 3 minutes of data". Please confirm the wording of
+  `CHANCE_B_WAIT` in `measured.ts` against the real figure for each response speed.
+- **Not done**: "Try a sample recording" on Home (needs a bundled recording asset); a hold-to-stop in eyes
+  closed mode; faces on the rating buttons.
 
 ## Not verifiable here
 

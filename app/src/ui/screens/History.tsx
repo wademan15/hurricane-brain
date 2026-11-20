@@ -111,7 +111,7 @@ export function HistoryDetail({ id, navigate }: { id: string; navigate: (to: str
   const [error, setError] = useState<string | null>(null);
   const s = q.data;
   if (q.loading) return <div className="empty">Loading</div>;
-  if (!s) return <Card><h2>Session not found</h2><Button onClick={() => navigate('history')}>Back to History</Button></Card>;
+  if (!s) return <div><PageHeader title="Session not found" /><Card><Button onClick={() => navigate('history')}>Back to History</Button></Card></div>;
   const rec = s.record;
   const replay = async () => {
     setError(null);
