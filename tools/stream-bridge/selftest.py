@@ -128,7 +128,11 @@ async def lsl_part(lsl: B.LslOutputs) -> dict:
 
     def find(name: str):
         res = pylsl.resolve_byprop("name", name, 1, 5.0)
-        return pylsl.StreamInlet(res[0], recover=False) if res else None
+        if not res:
+            return None
+        i = pylsl.StreamInlet(res[0], recover=False)
+        i.open_stream(timeout=5.0)
+        return i
 
     inl = {n: await asyncio.to_thread(find, f"HurricaneBrain-{n}") for n in ("EEG", "Motion", "PPG", "Markers", "Metrics")}
     out["inlets"] = inl
@@ -198,12 +202,12 @@ async def main_async() -> None:
     check("OSC blink while blink artifact present", len(udp.of("/muse/elements/blink")) == 2)
     check("OSC touching_forehead 0 when AF8 unusable", udp.of("/muse/elements/touching_forehead")[0] == (0,))
     check("OSC peak confirmed sent, 'new' not sent", udp.of("/hb/peak/1/freq") and not udp.of("/hb/peak/2/freq"))
-    check("OSC peak uncertainty", udp.of("/hb/peak/1/freq_se")[0] == (0.05,))
+    check("OSC peak uncertainty", abs(udp.of("/hb/peak/1/freq_se")[0][0] - 0.05) < 1e-6)
     check("OSC null freq_se (None) omitted for peak 2 / reasons omitted", not udp.of("/hb/peak/1/width_hz"))
     check("OSC null band power omitted", not udp.of("/hb/band/alpha/TP9/power_uv2") and udp.of("/hb/band/alpha/TP9/above_bg_db") == [(3.5,)] * 2)
     check("OSC chance A and B (null B omitted)", udp.of("/hb/cascade/phi/chance_a/p") and not udp.of("/hb/cascade/phi/chance_b/p") and not udp.of("/hb/cascade/phi/excess_b"))
     check("OSC states", udp.of("/hb/state/phi") == [(0,), (1,)] and udp.of("/hb/state/both") == [(0,), (0,)])
-    check("OSC pair closeness", udp.of("/hb/pair/1/2/phi/closeness")[0] == (0.99,))
+    check("OSC pair closeness", abs(udp.of("/hb/pair/1/2/phi/closeness")[0][0] - 0.99) < 1e-6)
     check("OSC heart hr sent, rmssd NOT sent as 0", udp.of("/hb/heart/hr_bpm") == [(74.0,)] and not udp.of("/hb/heart/rmssd_ms"))
     check("OSC /hb/absent names the rmssd null", ("/hb/heart/rmssd_ms", "too_few_beats") in udp.of("/hb/absent") or
           any(p == ("/hb/heart/rmssd_ms", "too_few_beats") for a, p in udp.msgs if a == "/hb/absent"))

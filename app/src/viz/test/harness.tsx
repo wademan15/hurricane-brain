@@ -14,6 +14,7 @@ import {
   allNullSlow,
   bandsOnly,
   cascade,
+  combinedFrame,
   heartFrame,
   nullHeart,
   octaveCascadeFrame,
@@ -22,7 +23,9 @@ import {
   track,
 } from './fixtures.ts';
 
-type Scenario = 'null' | 'static-rot' | 'static-norot' | 'phi' | 'octave' | 'bands' | 'phi-heart' | 'stop';
+type Scenario =
+  | 'null' | 'static-rot' | 'static-norot' | 'phi' | 'octave' | 'bands' | 'phi-heart'
+  | 'combined' | 'both-cascades-no-state' | 'static-rot-8arms-45hz' | 'stop';
 
 const listeners = new Set<(f: Frame) => void>();
 const source: FrameSource = {
@@ -79,6 +82,17 @@ function tick() {
       emit(heartFrame(t, beats, (t * 2 * Math.PI) / 10));
       break;
     }
+    case 'combined':
+      emit(combinedFrame(10, null, 40, true));
+      break;
+    case 'both-cascades-no-state':
+      emit(combinedFrame(10, null, 0, false));
+      break;
+    case 'static-rot-8arms-45hz': {
+      const tracks = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => track(i, i === 8 ? 45 : 2 + i * 4, 10, 'beta'));
+      emit(slowFrame({ t: 10, tracks, dominant: 8, phi: cascade('phi', [1, 2, 3, 4, 5, 6, 7, 8], 0.8, 40), match: 0.9 }));
+      break;
+    }
     case 'stop':
       break;
   }
@@ -86,10 +100,10 @@ function tick() {
 
 setInterval(tick, 250);
 
-function App({ quality }: { quality: Quality }) {
+function App({ quality, chance }: { quality: Quality; chance: 'a' | 'b' }) {
   return (
     <div style={{ display: 'grid', gridTemplateRows: '1fr', height: '100%' }}>
-      <HurricaneView source={source} quality={quality} />
+      <HurricaneView source={source} quality={quality} chance={chance} />
     </div>
   );
 }
@@ -103,7 +117,7 @@ if (params.get('view') === 'spectrum') {
     </div>,
   );
 } else {
-  root.render(<App quality={(params.get('quality') as Quality) ?? 'medium'} />);
+  root.render(<App quality={(params.get('quality') as Quality) ?? 'medium'} chance={params.get('chance') === 'b' ? 'b' : 'a'} />);
 }
 
 /** Draw cost at a given size: the shader at full resolution, GPU work waited for with finish(). */
@@ -116,7 +130,7 @@ function bench(w: number, h: number, n: number): { meanMs: number; p95Ms: number
   const u: HurricaneUniforms = {
     rotation: 0, armCount: 4, armBrightness: [0.4, 0.6, 0.9, 0.5, 0, 0, 0, 0], winding: 1.2,
     bandCount: 2, bandBrightness: [0.3, 0.5, 0, 0, 0, 0, 0, 0], ring: 0.5, eye: 0.8, symmetry: 0.1,
-    pulse: 0.3, swell: 1.01,
+    pulse: 0.3, swell: 1.01, both: 0.6, bothEye: 0.8, rotRate: 0.08,
   };
   const times: number[] = [];
   r.draw(u, true);

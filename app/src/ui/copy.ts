@@ -11,7 +11,7 @@ export const WHAT_IT_MEASURES = [
 ];
 
 export const WHAT_IT_DOES_NOT_CLAIM = [
-  'This is a relaxation and self-awareness tool. It is not a medical device and does not diagnose, treat or prevent anything.',
+  'Hurricane Brain is for wellness and self-exploration. It is not a medical device, and nothing it shows is medical advice.',
   'Four dry sensors cannot read specific emotions or thoughts. Anything the app calls your signature is built from your own marked blocks and tested before it is called reliable.',
   'When a value cannot be measured the app says "not measured" and why. It never shows a made-up or old number in its place.',
 ];
@@ -23,6 +23,8 @@ export const GOLDEN_RATIO_TEXT = {
     'One reading, associated with Dan Winter, takes a high golden ratio alignment to indicate coherent, well-organised rhythmic activity.',
   mainstream:
     'The mainstream reading is that golden-ratio spacing is the most "irrational" spacing, and rhythms with such spacing are the least likely to lock onto one another, which keeps them from synchronizing.',
+  research:
+    'What the published research tested: ratios of 2 to 1 (octave) and 3 to 1 between rhythms such as theta and alpha. The golden ratio has not been tested in that research. Looking for golden ratio alignment is this app\'s own hypothesis, a frontier idea that you can explore with the chance level beside it.',
   stance: 'The app measures the alignment and takes no side between these readings.',
 };
 
@@ -57,7 +59,7 @@ export function techniqueCautions(): string[] {
 export const GENERAL_SAFETY = [
   'Stop at any time: open your eyes, feel your feet on the floor and take a long, slow breath out. The sound fades out gently.',
   'Never use the app while driving or operating machinery.',
-  'If you have epilepsy or a seizure history, or a history of psychosis or bipolar condition, talk with your doctor before using biofeedback. The app has no flashing, but this advice stands.',
+  'If you have epilepsy or a seizure history, or a history of psychosis or bipolar condition, talk with your doctor first. The picture does not flash, but this advice stands.',
   'Breathe gently. If you feel light-headed, go back to natural breathing. The app never asks you to hold your breath or breathe fast.',
 ];
 
@@ -73,3 +75,65 @@ export const BLUETOOTH_UNAVAILABLE =
   'This browser cannot connect to Bluetooth devices. Connecting works in Chrome or Edge on Windows, Mac, Linux and Android. It does not work in Safari or Firefox, or in any browser on an iPhone or iPad. You can still replay recorded sessions and look at your history here.';
 
 export const WIRED_NOTE = 'A Muse must not be paired in your system settings or connected to another app. Close the Muse phone app, then choose the headset in the list.';
+
+export const WELLNESS =
+  'Hurricane Brain is for wellness and self-exploration. It is not a medical device, and it does not replace care from a professional. If something worries you about your health, talk with a professional.';
+
+export const STORE_DESCRIPTION =
+  'A brainwave and heart biofeedback app for Muse headbands and the Polar H10 chest strap. See your own rhythms as a slowly moving picture and a gentle sound. Wellness and self-exploration, not a medical device. Everything stays on your device.';
+
+export const PHOTOSENSITIVITY = [
+  'The picture on screen does not flash. It moves slowly, and nothing on it changes faster than a few times a second.',
+  'If you are sensitive to light, motion or patterns, you can turn on reduced motion, or run sessions with the screen dark and sound only. Both are in Settings and can be changed at any time.',
+  'If anything on the screen is uncomfortable, close your eyes or look away. Sessions work with eyes closed.',
+];
+
+export const AGE_GROUPS: { value: 'child' | 'teen' | 'adult'; label: string; text: string }[] = [
+  { value: 'child', label: 'Child', text: 'Shorter, simpler sessions, with a grown-up helping.' },
+  { value: 'teen', label: 'Teen', text: 'Younger person, using the app on their own or with help.' },
+  { value: 'adult', label: 'Adult', text: 'Fully grown.' },
+];
+
+export const CHILD_HELPER_NOTE =
+  'Children can use this with a grown-up helping. The grown-up fits the band, starts the session and stays nearby. Short sessions are fine. Stop whenever the child wants to.';
+
+/** Plain fixes for each way a sensor can fail (keys are the engine's reasons) and each artifact kind. */
+export const FIX_BY_REASON: Record<string, string> = {
+  bad_contact: 'The sensor is not touching the skin. Move hair out from under it and press the band gently into place.',
+  insufficient_clean: 'Not enough clean signal. Sit still, relax the jaw and forehead, and give it a few seconds.',
+  artifact: 'Movement or muscle tension is getting in. Sit still, relax the jaw and forehead.',
+  no_data: 'Nothing is arriving from this sensor yet. Wait a moment, or check the headset is on and awake.',
+  warming_up: 'Still settling. Hold still for a few seconds.',
+  gap: 'Some data was lost on the way. Move closer to the device and away from other Bluetooth things.',
+};
+
+export const FIX_BY_ARTIFACT: Record<string, string> = {
+  blink: 'Blinks show up on the forehead sensors. Blink gently and keep your eyes relaxed or closed.',
+  eye_movement: 'Eye movement shows up on the forehead sensors. Rest your gaze, or close your eyes.',
+  muscle: 'Muscle tension. Unclench the jaw, soften the forehead, drop the shoulders.',
+  motion: 'The head is moving. Sit still and let the head rest.',
+  pop: 'A sensor shifted or lost contact for a moment. Press the band gently into place.',
+  gap: 'Some data was lost. Move closer to the device.',
+};
+
+/** Where to look for each channel, in plain words. */
+export const CHANNEL_HELP: Record<string, { where: string; tip: string }> = {
+  TP9: { where: 'behind the left ear', tip: 'Tuck hair behind the ear and make sure the sensor rests on skin, just behind and above the ear. Glasses arms can lift it.' },
+  TP10: { where: 'behind the right ear', tip: 'Tuck hair behind the ear and make sure the sensor rests on skin, just behind and above the ear. Glasses arms can lift it.' },
+  AF7: { where: 'left of the forehead', tip: 'Move hair and fringe away. If the skin is dry, a slightly damp fingertip wiped across it helps. Raise the band a little if it sits on the eyebrow.' },
+  AF8: { where: 'right of the forehead', tip: 'Move hair and fringe away. If the skin is dry, a slightly damp fingertip wiped across it helps. Raise the band a little if it sits on the eyebrow.' },
+};
+
+export const GENERAL_FIT_TIPS = [
+  'Wipe the forehead and the skin behind the ears. Moisten dry skin very slightly with a damp fingertip.',
+  'Move hair out from under every sensor, especially behind the ears.',
+  'Snug, not tight. If the band slides when you nod, tighten the fit a little. If it leaves a mark, loosen it.',
+  'Relax the jaw and forehead, and sit still while the signal settles.',
+];
+
+export const SMALL_HEAD_TIPS = [
+  'A smaller head: wear the band a little lower at the back so the ear sensors sit on the bone behind the ears, and fold the band arms in so it feels snug without pressure.',
+  'A thin headband or a hair tie around the back of the band can take up slack. Do not squeeze: it should feel like a comfortable hat.',
+  'If the two ear sensors cannot all reach the skin, that is fine: the app tells you which sensors are good, and shows only what it can measure.',
+  'Let the child get settled first. Quiet, sitting or lying down, a few slow breaths. Movement is the biggest source of noise.',
+];

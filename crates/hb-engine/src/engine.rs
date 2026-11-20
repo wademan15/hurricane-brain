@@ -1634,7 +1634,6 @@ impl Engine {
                 let tol = (3.0 * m::sqrt(ph.se * ph.se + nf * nf * pl.se * pl.se)).max(self.mt.df).max(0.5 * nf * pl.width);
                 if (ph.f - nf * pl.f).abs() > tol {
                     // Out of the harmonic's band: evidence against an existing mark.
-                    eprintln!("DBG t {t:.1} n {nn} lo {:.2} hi {:.2} w {:.2} GATE tol {tol:.2}", pl.f, ph.f, pl.width);
                     tests.push(((lo.id, hi.id), nn, false));
                     continue;
                 }
@@ -1665,7 +1664,6 @@ impl Engine {
                     // (a strictly periodic waveform is its own shifted copy), so it is flagged.
                     let steady = sur >= p.harmonic_plv_min;
                     let pass = plv >= p.harmonic_plv_min && (plv - sur >= p.harmonic_plv_excess || steady);
-                    eprintln!("DBG t {t:.1} n {nn} lo {:.2} hi {:.2} w {:.2} len {} plv {plv:.2} sur {sur:.2}", pl.f, ph.f, pl.width, len);
                     tests.push(((lo.id, hi.id), nn, pass));
                 }
             }
