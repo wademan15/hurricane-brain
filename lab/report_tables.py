@@ -285,6 +285,87 @@ def broken_rows(R):
     return ["deliberately broken build", "test that should catch it", "broken", "analytic S1-P1", "default S1-P1"], rows
 
 
+def passmarks(R, cfg, rule="T1", fghcfg=None):
+    """Spec 10.3 pass marks for one configuration and one aligned-state rule."""
+    S = R["sets"]
+    A, B, Cc, D, E = (S[k]["configs"].get(cfg) for k in "ABCDE")
+    rows = []
+
+    def mark(test, req, meas, ok):
+        rows.append([test, req, meas, "met" if ok else ("MISSED" if ok is not None else "not measured")])
+
+    p = pooled(A, (10, 15), "peaks_confirmed")
+    mark("A >=10 dB", "every planted peak confirmed in >= 95% of files", fr(p), p["rate"] >= 0.95)
+    p = pooled(A, (10, 15), "int_freq_within_1pct")
+    mark("A >=10 dB", "integrated frequency within 1% of truth", fr(p) + " of matched tracks", p["rate"] >= 0.95)
+    p = pooled(A, (10, 15), "cascade_length_correct_final")
+    mark("A >=10 dB", "correct cascade length in >= 90%", fr(p), p["rate"] >= 0.90)
+    p = A["6"]["peaks_confirmed"]
+    mark("A 6 dB", ">= 80% of planted peaks confirmed", fr(p), p["rate"] >= 0.80)
+    p = A["6"]["files_with_false_cascade_member"]
+    mark("A 6 dB", "no false cascade members", fr(p) + " files with one", p["k"] == 0)
+    p = A["3"]["files_with_false_cascade_member"]
+    mark("A 3 dB", "silence acceptable, wrong answer not", fr(p) + " files with a false cascade member", p["k"] == 0)
+    lab = B["labels"]
+    o, g = lab["octave_files_labelled_golden"][rule], lab["golden_files_labelled_octave"][rule]
+    mark("B", "octave cascades labelled golden in < 1% of files", f"{fr(o)}, 95% CI upper {pct(o['ci95'][1])}",
+         o["k"] == 0 and (o["ci95"][1] or 1) < 0.01 if o["n"] else None)
+    mark("B", "golden cascades labelled octave in < 1% of files", f"{fr(g)}, 95% CI upper {pct(g['ci95'][1])}",
+         g["k"] == 0 and (g["ci95"][1] or 1) < 0.01 if g["n"] else None)
+    co = B["control_over_phi_rate"][rule]
+    mark("B", "aligned-state rate at 1.5 and 1.8 under 10% of the rate at 1.618",
+         f"1.5: {num(co['1.500'], 3)}, 1.8: {num(co['1.800'], 3)}",
+         co["1.500"] is not None and co["1.500"] < 0.1 and co["1.800"] < 0.1)
+    nopeak = [k for k in ("background_only", "white_noise", "headset_on_table", "surrogate_sample_shuffle") if k in Cc]
+    k = sum(Cc[x]["peak_window_rate"]["k"] for x in nopeak)
+    n = sum(Cc[x]["peak_window_rate"]["n"] for x in nopeak)
+    mark("C", "confirmed peaks in no-rhythm noise at or under alpha_peak = 1% of windows",
+         fr({"k": k, "n": n, "rate": k / n}, 2), k / n <= 0.01)
+    t = Cc["_total"]
+    mark("C", "aligned state entered at or under 1 false entry per 10 min (all C files)",
+         f'{t["per_10min"]["phi"][rule]:.2f} per 10 min; files with an entry {fr(t["files_with_entry"]["phi"][rule])}',
+         t["per_10min"]["phi"][rule] <= 1.0)
+    c4 = sum(v["phi_casc_ge4_files"] for kk, v in Cc.items() if kk != "_total")
+    c3 = sum(v["phi_casc_ge3_files"] for kk, v in Cc.items() if kk != "_total")
+    mark("C", "golden cascades of 3 or more steps (4 members): none", f"{c4} files", c4 == 0)
+    mark("C", "hurricane structure (golden cascade of 3 members, two arms or more): none", f"{c3} files", c3 == 0)
+    mark("D", ">= 95% of harmonics marked harmonic (2x)", fr(D["marked_x2"]), D["marked_x2"]["rate"] >= 0.95)
+    mark("D", ">= 95% of harmonics marked harmonic (3x)", fr(D["marked_x3"]), D["marked_x3"]["rate"] >= 0.95)
+    oc = D["octave_state_entered"][rule]
+    mark("D", "no octave alignment credited", f"octave state entered in {fr(oc)}; octave pair or cascade at any time in {fr(D['octave_cascade_files'])}",
+         oc["k"] == 0 and D["octave_cascade_files"]["k"] == 0)
+    et = E["_total"]
+    mark("E", "no confirmed peak attributable to an artifact", f'{et["attrib_peak_windows"]} windows in {et["files_with_attrib_peak"]} files',
+         et["attrib_peak_windows"] == 0)
+    mark("E", "no aligned state or cascade attributable to an artifact",
+         f'state entries {et["attrib_state_entries"][rule]}, cascades {et["attrib_cascades"]}',
+         et["attrib_state_entries"][rule] == 0 and et["attrib_cascades"] == 0)
+    mark("E", "recovery within 3 s of the artifact ending", fr(et["recovery_3s"]), et["recovery_3s"]["rate"] == 1.0)
+    z = A["calibration_z_sd_6dB_up"]
+    mark("Calibration", "reported SEs match the spread of errors within a factor 1.5", f"sd of error/SE = {num(z, 2)}",
+         z is not None and 1 / 1.5 <= z <= 1.5)
+    fc = fghcfg or cfg
+    if fc in S.get("F", {}).get("configs", {}):
+        fd = S["F"]["configs"][fc]["form_dissolve"][rule]
+        mark("F", "cascade schedule recovered, median delay under 20 s",
+             f'median entry delay {num(fd["entry_median_s"], 1)} s, exit {num(fd["exit_median_s"], 1)} s, missed {fd["missed_formations"]}',
+             fd["entry_median_s"] is not None and fd["entry_median_s"] < 20)
+    if fc in S.get("G", {}).get("configs", {}):
+        G = S["G"]["configs"][fc]
+        w1 = G["loss1"]["tracks_within_2se_of_clean"]
+        mark("G", "up to 1% loss: results within the uncertainty of the clean run", f"{fr(w1)} tracks within 2 SE",
+             w1["rate"] is not None and w1["rate"] >= 0.95)
+        mark("G", "5% loss: null with the reason, never a wrong value",
+             f'null windows {pct(G["loss5"]["null_frac"])}; extra peak windows {G["loss5"]["attrib_peak_windows"]}',
+             G["loss5"]["null_frac"] >= 0.99 and G["loss5"]["attrib_peak_windows"] == 0)
+    if fc in S.get("H", {}).get("configs", {}):
+        H = S["H"]["configs"][fc]
+        mark("H", "bit-identical on repeat", f'{sum(H["identical_on_repeat"])}/{len(H["identical_on_repeat"])}', all(H["identical_on_repeat"]))
+        mark("H", "offset changes results by no more than the reported uncertainty", fr(H["offset_within_se"]),
+             H["offset_within_se"]["rate"] is not None and H["offset_within_se"]["rate"] >= 0.68)
+    return ["test", "requirement (spec 10.3)", "measured", "result"], rows
+
+
 def merge(rs):
     """Merge several results files: later files add configurations (and sets) to earlier ones."""
     R = rs[0]
