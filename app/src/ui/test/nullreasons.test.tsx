@@ -134,7 +134,7 @@ describe('every null rendering path includes its reason', () => {
 
   it('each state has its own icon class, and a filled badge only while the engine says it is holding', () => {
     const f = slowFrame(10);
-    f.states.phi = { ...f.states.phi, active: true, for_s: 9 };
+    f.states.phi = { ...f.states.phi, active: true, for_s: 9, stat: { v: 0.9, why: 'ok' }, exit_at: 0.3 };
     f.states.octave = { ...f.states.octave, active: false, for_s: 4 };
     const html = renderToStaticMarkup(<StateStrip live={live(f)} />);
     expect(html).toMatch(/state-badge phi on[^>]*>[\s\S]*Holding 0:09/);

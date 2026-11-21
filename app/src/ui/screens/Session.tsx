@@ -4,10 +4,11 @@ import type { RatingKey } from '../../training';
 import { BlockTable } from '../components/BlockTable';
 import { CascadeStates, GoldenRatioInfo, StateStrip } from '../components/Cascades';
 import { JournalForm } from '../components/Journal';
-import { CHILD_LINES, GLOSSARY, PHOTOSENSITIVITY } from '../copy';
+import { GLOSSARY, PHOTOSENSITIVITY } from '../copy';
 import { Button, Card, Modal, Note, PageHeader, Segmented, StateIcon } from '../components/kit';
 import { AlignmentDetails, AlignmentTrio, HeartLine, PeaksLine, SignalLine, useLive } from '../components/LiveReadout';
 import { AlignmentBars, CascadeChips, OneLine, StepStones, WordsTrio } from '../components/LiveVariants';
+import { plainSentence } from '../stateStatus';
 import { layoutOf, sessionPalette, useResolvedMode } from '../themes';
 import { HemisphereTable, PairTable } from '../components/LiveDetails';
 import { summarizeSignal, fmtDuration } from '../measured';
@@ -141,17 +142,6 @@ function FinishedPanel({ navigate }: { navigate: (to: string) => void }) {
       </div>
     </div>
   );
-}
-
-/** One plain sentence about what is happening, from the engine's own states and signal summary. Nothing here is a number. */
-function plainSentence(live: ReturnType<typeof useLive>, sigLevel: string): { icon: 'phi' | 'octave' | 'both' | null; word: string; line: string } {
-  const f = live.slow;
-  if (!f) return { icon: null, word: 'Not measured', line: CHILD_LINES.nodata };
-  if (f.states.both.active) return { icon: 'both', word: 'Both at once: holding', line: CHILD_LINES.both };
-  if (f.states.phi.active) return { icon: 'phi', word: 'Golden ratio: holding', line: CHILD_LINES.phi };
-  if (f.states.octave.active) return { icon: 'octave', word: 'Octave: holding', line: CHILD_LINES.octave };
-  if (sigLevel === 'poor' || sigLevel === 'none') return { icon: null, word: 'Waiting for a clear signal', line: CHILD_LINES.nosignal };
-  return { icon: null, word: 'Nothing holding right now', line: CHILD_LINES.quiet };
 }
 
 export function Session({ navigate }: { navigate: (to: string) => void }) {

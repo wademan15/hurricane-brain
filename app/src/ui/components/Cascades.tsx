@@ -9,6 +9,7 @@ import { GOLDEN_RATIO_TEXT } from '../copy';
 import { fmtDuration, measuredLine, notMeasuredText, numberLine, reasonPlain } from '../measured';
 import { chainText, type Live } from './LiveReadout';
 import { StateIcon } from './kit';
+import { statusesOf, type StateStatus } from '../stateStatus';
 
 type Kind = 'phi' | 'octave' | 'both';
 const STATE_NAME: Record<Kind, string> = { phi: 'Golden ratio', octave: 'Octave', both: 'Both at once' };
@@ -18,9 +19,9 @@ const KIND_CLS: Record<Kind, string> = { phi: 'phi', octave: 'oct', both: 'both'
  * One state as a badge: its own icon and colour, filled with "Holding 0:09" while the engine says
  * the state is active, outlined and muted with "Not holding" when it is not. Never by colour alone.
  */
-function StateBadge({ kind, active, forS, live }: { kind: Kind; active: boolean | null; forS: number | null; live: Live }) {
+function StateBadge({ kind, status, forS, live }: { kind: Kind; status: StateStatus | null; forS: number | null; live: Live }) {
   const cls = KIND_CLS[kind];
-  if (active === null) {
+  if (status === null) {
     return (
       <span className={`state-badge ${cls} off`} data-testid={`state-${cls}`}>
         <StateIcon kind={kind} />
@@ -29,9 +30,9 @@ function StateBadge({ kind, active, forS, live }: { kind: Kind; active: boolean 
     );
   }
   return (
-    <span className={`state-badge ${cls} ${active ? 'on' : 'off'}`} data-testid={`state-${cls}`}>
+    <span className={`state-badge ${cls} ${status === 'holding' ? 'on' : status === 'fading' ? 'fade' : 'off'}`} data-testid={`state-${cls}`}>
       <StateIcon kind={kind} />
-      <span><strong>{STATE_NAME[kind]}</strong> {active ? `Holding ${fmtDuration(forS)}` : 'Not holding'}</span>
+      <span><strong>{STATE_NAME[kind]}</strong> {status === 'holding' ? `Holding ${fmtDuration(forS)}` : status === 'fading' ? 'Fading' : 'Not holding'}</span>
     </span>
   );
 }
@@ -39,19 +40,20 @@ function StateBadge({ kind, active, forS, live }: { kind: Kind; active: boolean 
 /** The pinned strip: the three states, each with its own icon and a filled badge while holding. */
 export function StateStrip({ live }: { live: Live }) {
   const st = live.slow?.states;
+  const sx = st ? statusesOf(st) : null;
   return (
     <div className="state-strip" role="group" aria-label="Golden ratio, octave, and both at once: holding or not">
-      <StateBadge kind="phi" active={st ? st.phi.active : null} forS={st ? st.phi.for_s : null} live={live} />
-      <StateBadge kind="octave" active={st ? st.octave.active : null} forS={st ? st.octave.for_s : null} live={live} />
-      <StateBadge kind="both" active={st ? st.both.active : null} forS={st ? st.both.for_s : null} live={live} />
+      <StateBadge kind="phi" status={sx ? sx.phi : null} forS={st ? st.phi.for_s : null} live={live} />
+      <StateBadge kind="octave" status={sx ? sx.octave : null} forS={st ? st.octave.for_s : null} live={live} />
+      <StateBadge kind="both" status={sx ? sx.both : null} forS={st ? st.both.for_s : null} live={live} />
     </div>
   );
 }
 
 /** Per-state detail: the chain, how long it has held, and the chance levels beside it. */
-function StateCell({ kind, cascades, active, forS, live }: { kind: Kind; cascades: Cascade[]; active: boolean | null; forS: number | null; live: Live }) {
+function StateCell({ kind, cascades, status, forS, live }: { kind: Kind; cascades: Cascade[]; status: StateStatus | null; forS: number | null; live: Live }) {
   const cls = KIND_CLS[kind];
-  if (active === null) {
+  if (status === null) {
     return (
       <div className={`cellbox ${cls}`} data-testid={`cascade-${cls}`}>
         <div className="k"><StateIcon kind={kind} /> {STATE_NAME[kind]} state</div>
@@ -65,7 +67,7 @@ function StateCell({ kind, cascades, active, forS, live }: { kind: Kind; cascade
   return (
     <div className={`cellbox ${cls}`} data-testid={`cascade-${cls}`}>
       <div className="k"><StateIcon kind={kind} /> {STATE_NAME[kind]} state</div>
-      <div className="v">{active ? 'Holding' : 'Not holding'}</div>
+      <div className="v">{status === 'holding' ? 'Holding' : status === 'fading' ? 'Fading' : 'Not holding'}</div>
       {cascades.map((c) => (
         <div className="s" key={c.target}>
           {cascades.length > 1 ? `${c.target === 'phi' ? 'Golden' : 'Octave'}: ` : ''}
@@ -73,7 +75,7 @@ function StateCell({ kind, cascades, active, forS, live }: { kind: Kind; cascade
           {c.chance.b.closeness.v !== null ? `, your own usual pattern ${measuredLine(c.chance.b.closeness)}` : ''}
         </div>
       ))}
-      <div className="s">{active ? 'holding' : 'not holding'} for {fmtDuration(forS)}</div>
+      <div className="s">{status === 'fading' ? 'the engine still counts this state (its exit dwell), but the measured value has already dropped below the exit level' : `${status === 'holding' ? 'holding' : 'not holding'} for ${fmtDuration(forS)}`}</div>
     </div>
   );
 }
@@ -84,9 +86,9 @@ export function CascadeStates({ live }: { live: Live }) {
   const oct = f?.cascades.octave;
   return (
     <div className="trio" role="group" aria-label="Golden ratio state, octave state, and both at once" data-testid="state-cells">
-      <StateCell kind="phi" cascades={phi ? [phi] : []} active={f ? f.states.phi.active : null} forS={f ? f.states.phi.for_s : null} live={live} />
-      <StateCell kind="octave" cascades={oct ? [oct] : []} active={f ? f.states.octave.active : null} forS={f ? f.states.octave.for_s : null} live={live} />
-      <StateCell kind="both" cascades={phi && oct ? [phi, oct] : []} active={f ? f.states.both.active : null} forS={f ? f.states.both.for_s : null} live={live} />
+      <StateCell kind="phi" cascades={phi ? [phi] : []} status={f ? statusesOf(f.states).phi : null} forS={f ? f.states.phi.for_s : null} live={live} />
+      <StateCell kind="octave" cascades={oct ? [oct] : []} status={f ? statusesOf(f.states).octave : null} forS={f ? f.states.octave.for_s : null} live={live} />
+      <StateCell kind="both" cascades={phi && oct ? [phi, oct] : []} status={f ? statusesOf(f.states).both : null} forS={f ? f.states.both.for_s : null} live={live} />
     </div>
   );
 }

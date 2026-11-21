@@ -282,3 +282,7 @@ textarea { resize: vertical; }
 .theme-card-name { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
 .theme-card-feel { font-size: 0.82rem; color: var(--dim); line-height: 1.3; }
 .live-stage { color: var(--live-text); }
+/* Fading: the state is still counted for its exit dwell but the measure has dropped. Dashed, no fill, no timer. */
+.state-badge.fade { color: var(--live-text); border-style: dashed; border-color: var(--c); background: transparent; }
+.state-badge.fade .state-icon { color: var(--c); }
+:root[data-colour="shape"] .state-badge.fade { text-decoration: underline dotted; }

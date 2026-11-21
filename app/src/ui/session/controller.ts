@@ -151,6 +151,9 @@ export interface ControllerState {
 
 const emptyDevice = (): DeviceView => ({ state: 'none', detail: null, attempt: null, retryInMs: null, name: null, battery: null });
 
+/** Only if the engine never answers the end-of-feed barrier: how long without frames before a replay counts as ended. */
+const REPLAY_END_FALLBACK_MS = 5000;
+
 interface Link {
   kind: 'live' | 'replay';
   heartOnly: boolean;
@@ -215,8 +218,6 @@ export class SessionController {
   private finishedCtx: { runner: SessionRunner | null; stored: StoredSession; t: number } | null = null;
   private replayTimer: ReturnType<typeof setInterval> | null = null;
   private lastFrameWall = 0;
-  /** The longest quiet spell between engine frames during the open replay (ms): the end must outlast it. */
-  private maxFrameGapMs = 0;
   /** A replay link whose recording has ended: its late frames are dropped so nothing is shown after the end banner. */
   private replayClosed: Link | null = null;
   private replayNotes: { tUs: number; json: Record<string, unknown> }[] = [];
@@ -298,7 +299,6 @@ export class SessionController {
     this.link = link;
     this.hub.reset();
     this.replayClosed = null;
-    this.maxFrameGapMs = 0;
     this.lastFrameT = -Infinity;
     this.set({ link: { kind, heartOnly }, engine: 'none', engineError: null, engineInfo: null, streams: null, gaps: 0, clockS: null });
     return link;
@@ -490,9 +490,7 @@ export class SessionController {
   private onFrame(link: Link, f: Frame): void {
     if (this.link !== link || this.replayClosed === link) return;
     if (f.t > this.lastFrameT) this.lastFrameT = f.t;
-    const nowMs = performance.now();
-    if (link.kind === 'replay' && this.lastFrameWall > 0) this.maxFrameGapMs = Math.max(this.maxFrameGapMs, nowMs - this.lastFrameWall);
-    this.lastFrameWall = nowMs;
+    this.lastFrameWall = performance.now();
     const a = this.active;
     if (f.kind === 'slow' && a && !a.finishing) a.cascades.push(f);
     this.stream?.handleFrame(f);
@@ -1010,15 +1008,24 @@ export class SessionController {
     }
   }
 
+  /**
+   * The replay has ended when the feed is finished AND the engine has handed back everything it was
+   * sent. The worker answers messages in order, so an `info` request sent after the last push is a
+   * barrier: its reply arrives after every frame those pushes produced. A timing guess (no frames
+   * for a while, capped) remains only as a fallback for an engine that never answers.
+   */
   private waitForReplayToSettle(link: Link): void {
     const settleMs = this.deps.replaySettleMs ?? 800;
+    const fallbackMs = Math.max(settleMs, REPLAY_END_FALLBACK_MS);
     if (this.replayTimer) clearInterval(this.replayTimer);
     this.lastFrameWall = performance.now();
+    let drained = false;
+    this.push(link, (en) => {
+      en.info().then(() => { drained = true; }, () => { drained = true; });
+    });
     this.replayTimer = setInterval(() => {
       if (this.link !== link) return;
-      // The engine may still be working through a backlog (as fast as possible): the recording has
-      // ended only after a quiet spell longer than any gap seen so far, not merely 0.8 s.
-      if (performance.now() - this.lastFrameWall < Math.max(settleMs, 3 * this.maxFrameGapMs)) return;
+      if (!drained && performance.now() - this.lastFrameWall < fallbackMs) return;
       if (this.replayTimer) clearInterval(this.replayTimer);
       this.replayTimer = null;
       if (this.active) void this.finishReplaySession();
@@ -1028,7 +1035,7 @@ export class SessionController {
       this.hub.reset();
       const r = this.state.replay;
       if (r) this.set({ replay: { ...r, ended: true } });
-    }, 100);
+    }, 50);
   }
 
   private async finishReplaySession(): Promise<void> {

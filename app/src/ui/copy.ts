@@ -151,6 +151,7 @@ export const LIVE_WORDS = {
   chanceA: 'random peaks',
   chanceB: 'your own usual pattern',
   holding: 'Holding',
+  fading: 'Fading',
   notHolding: 'Not holding',
 } as const;
 
@@ -160,6 +161,7 @@ export const GLOSSARY: { term: string; text: string }[] = [
   { term: 'Beyond chance (excess)', text: 'Zero unless fewer than 5 in 100 chance draws do as well as your reading. Above that it grows from 0 towards 1. It is not a probability.' },
   { term: 'Random peaks did this well', text: 'The fraction of chance draws that scored at least as well as your reading, written as "3 in 100". Small means your reading beat most of the chance draws.' },
   { term: 'Cascade', text: 'A chain of rhythm peaks, each about 1.618 times (golden) or 2 times (octave) the one below it. A "chain of 3 peaks" has two steps.' },
+  { term: 'Fading', text: 'The app keeps a state for a few seconds after the reading drops, so it does not flicker on and off. While the reading is already below the level that ends the state, the badge says Fading, and the picture and the sound have already eased.' },
   { term: 'Holding', text: 'The reading has cleared the evidence bar for long enough to count as a state. It leaves the state only when it falls clearly below that bar, so it does not flicker.' },
   { term: 'Not measured', text: 'The app could not measure it right now, and says why. It never shows zero or an old number in its place.' },
   { term: 'Possible harmonic, not counted', text: 'A peak whose frequency is a whole-number multiple of a lower peak. It may be an echo of that peak, so it is not counted toward octave alignment unless you change that in Settings.' },
@@ -172,5 +174,6 @@ export const CHILD_LINES = {
   both: 'Both of your rhythm patterns are lining up right now.',
   phi: 'Your rhythm peaks are lining up in a golden ratio pattern.',
   octave: 'Your rhythm peaks are lining up in an octave pattern.',
+  fading: 'It was lining up a moment ago and is easing off now.',
   quiet: 'That is normal. Keep breathing slowly and keep going.',
 } as const;

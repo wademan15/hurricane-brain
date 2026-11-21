@@ -387,13 +387,48 @@ describe('the end of a replay', () => {
     expect(c.hub.latest().slow).toBeNull();
     expect(c.hub.latest().slowAt).toBeNull();
   });
+  it('ends each of several replays in a row at 4x, with no carry-over between them', async () => {
+    const h = makeDeps();
+    const c = new SessionController(h.deps);
+    const bytes = buildRecording({ seconds: 3, notes: [{ afterInput: 3, json: freeStart }] });
+    for (let i = 0; i < 5; i++) {
+      await c.startReplay(bytes, { label: `r${i}`, speed: 4 });
+      await vi.waitFor(() => expect(c.getState().replay?.ended).toBe(true), { timeout: 5000 });
+      expect(c.hub.latest().slow).toBeNull();
+      await c.closeReplay();
+    }
+  });
+  it('ends when the engine has returned everything it was sent, not on a guess about quiet', async () => {
+    const h = makeDeps();
+    const c = new SessionController(h.deps);
+    // an engine that answers its end-of-feed barrier late: the replay must not end before that
+    const releases: (() => void)[] = [];
+    const release = () => releases.forEach((r) => r());
+    h.deps.createEngine = () => {
+      const e = new FakeEngine();
+      const real = e.info.bind(e);
+      let calls = 0;
+      // the first call is the start-up handshake; the second is the end-of-feed barrier
+      e.info = () => (++calls === 1 ? real() : new Promise((res) => { releases.push(() => res({ version: 'f', params: { tolerance_phi: 0.02, window_s: 8 } })); }));
+      h.engines.push(e);
+      return e;
+    };
+    const bytes = buildRecording({ seconds: 3, notes: [{ afterInput: 3, json: freeStart }] });
+    await c.startReplay(bytes, { label: 'x', speed: 'fast' });
+    await new Promise((r) => setTimeout(r, 400)); // far longer than the 30 ms quiet spell
+    expect(c.getState().replay?.ended).toBe(false);
+    release();
+    await vi.waitFor(() => expect(c.getState().replay?.ended).toBe(true), { timeout: 3000 });
+  });
   it('a new replay starts receiving frames again', async () => {
     const h = makeDeps();
     const c = new SessionController(h.deps);
     const bytes = buildRecording({ seconds: 6, notes: [{ afterInput: 3, json: freeStart }] });
     await runReplay(c, bytes);
     await c.replayAgain('fast');
-    await vi.waitFor(() => expect(c.hub.latest().slow).not.toBeNull(), { timeout: 5000 });
+    await vi.waitFor(() => expect(h.engines.length).toBe(2), { timeout: 5000 });
+    await vi.waitFor(() => expect(h.engines[1].emitted.length).toBeGreaterThan(0), { timeout: 5000 });
+    await vi.waitFor(() => expect(c.getState().replay?.ended).toBe(true), { timeout: 5000 });
   });
 });
 

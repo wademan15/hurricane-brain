@@ -46,7 +46,7 @@ These are the honest gaps. Everything so far ran on synthetic recordings in a cl
 ## How to rerun the checks
 
 - Engine: `cargo test --workspace`
-- App: `pnpm --dir app test` (394 tests)
+- App: `pnpm --dir app test` (404 tests)
 - Whole-app fake test: commands are at the end of `docs/spec/fake-test-report.md`
 - Lab comparison against the reference: `python3 lab/compare_rust.py`
 
