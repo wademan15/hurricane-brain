@@ -7,7 +7,7 @@ state is a gentle thinning. This borrows the design instinct of the Safe and Sou
 claiming to deliver that protocol.
 
 No binaural, monaural or isochronic entrainment. Both channels carry the same dry signal. The only
-left/right difference is the decorrelated tail of a static room on bloom and anchor sends. Nothing is
+left/right difference is the decorrelated tail of a static room on anchor sends. Nothing is
 amplitude-modulated at a brainwave rate except the measured content itself (two measured tracks close
 in frequency will beat against each other, because that is what they are).
 
@@ -63,9 +63,14 @@ Every audible change traces to a frame field with a declared smoothing. Nothing 
 | Steadiness of the bed ("how long it has held") | the same field | adds a warm low body as the value holds | one-pole `steadyTauS` 8 s |
 | Bed present or absent | that field not null AND a `SlowFrame.tracks[k]` with `band === 'alpha'`, `state` `confirmed` or `fading`, followed at `bedSite` (or one of its channels: temporal = TP9, TP10), slow frame fresh. A measurable band power alone is not a rhythm: with no confirmed peak anywhere the output is exact silence | on or off | raised-cosine fade `bedFadeS` 2 s |
 | Thinning of the bed | `FastFrame.artifact` | level x `thinLevel` 0.35 | raised-cosine fade `thinFadeS` 1 s |
-| Golden ratio bloom | `SlowFrame.states.phi.active`, `SlowFrame.cascades.phi.excess_a.v` (or `excess_b.v` when `bloomChance` is `'b'`), `SlowFrame.cascades.phi.tracks` | each member's own tone gains its sub-octave and a doubling, sent to a soft room, level = excess x the tone's loudness x `blooms.phi.level` (muted by `blooms.phi.on: false`) | one-pole `bloomTauS` 3 s rising, `bloomReleaseTauS` 2 s thinning; mute and level ramp over `gainTauS` |
-| Octave bloom (sounds different) | `SlowFrame.states.octave.active`, `cascades.octave.excess_a.v` (or `excess_b.v`), `cascades.octave.tracks` | each member's tone gains hollow upper octaves (2x, 4x), mostly dry; `blooms.octave` mute and level | same as above |
-| Combined bloom (both at once; sounds different again) | `SlowFrame.states.both.active` only, scaled by min(`cascades.phi.excess`, `cascades.octave.excess`) with the chosen chance level; members are the tracks in either cascade | each member's tone gains its fifth (1.5x) and twelfth (3x) above, the 3rd and 6th harmonics of its own sub-octave, so it is phase-locked to the measured tone and cannot beat; deep in the room, so the two blooms resolve into something fuller and wider. Silent unless `states.both.active` and both excesses are measured; `blooms.both` mute and level | one-pole `combinedBloomTauS` 5 s rising (it gathers), `bloomReleaseTauS` 2 s thinning |
+| Golden ratio bloom | `SlowFrame.states.phi.active`, `SlowFrame.cascades.phi.excess_a.v` (or `excess_b.v` when `bloomChance` is `'b'`), `SlowFrame.cascades.phi.tracks` | each member's own tone gains its soft sub-octave and a doubling, dry and phase-locked, level = excess x the tone's bloom presence x `blooms.phi.level` (muted by `blooms.phi.on: false`). Bloom presence is the tone's gate x loudness followed slowly (`bloomFollowTauS`), so a flicker of lock or loudness never reaches the state sound | amount: one-pole `bloomTauS` 3 s rising, `bloomReleaseTauS` 2 s thinning; presence: one-pole `bloomFollowTauS` 1.5 s. Each follower lands exactly (below a quarter of full scale it moves linearly at 1/(4 tau) per s), never faster than 1/tau of full scale per second. Mute and level ramp over `gainTauS` |
+| Octave bloom (sounds different) | `SlowFrame.states.octave.active`, `cascades.octave.excess_a.v` (or `excess_b.v`), `cascades.octave.tracks` | each member's tone gains hollow upper octaves (2x, 4x), dry; `blooms.octave` mute and level | same as above |
+| Combined bloom (both at once; sounds different again) | `SlowFrame.states.both.active` only, scaled by min(`cascades.phi.excess`, `cascades.octave.excess`) with the chosen chance level; members are the tracks in either cascade | each member's tone gains its fifth (1.5x) and twelfth (3x) above, the 3rd and 6th harmonics of its own sub-octave, so it is phase-locked to the measured tone and cannot beat; with the other two blooms it spans sub-octave to twelfth, so the two resolve into something fuller and wider. Silent unless `states.both.active` and both excesses are measured; `blooms.both` mute and level | one-pole `combinedBloomTauS` 5 s rising (it gathers), `bloomReleaseTauS` 2 s thinning, presence `bloomFollowTauS` |
+
+No bloom goes through a room. Any reverb turns the measured pitch's natural wander (the fast path
+moves a 13 Hz tone by several Hz within a second) into level swings that are not in the data: on
+`both_phi_octave_12db` the bloom layer swung 52.7% of its peak within 250 ms with the earlier comb room,
+36% with a flat allpass diffuser, 12.9% dry. The blooms are told apart by which partials they add.
 | Heartbeat | `HeartFrame.beats[j].t` (and `.flagged`), `HeartFrame.source` | one low rounded pulse (58 Hz falling 20%, 40 ms raised-cosine attack, 420 ms) per beat; flagged beats at `heartFlaggedLevel` 0.5 | fixed latency `heartLatencyS` 300 ms after `Beat.t`; beats later than that by more than `heartLateToleranceS` 100 ms are dropped, never shifted |
 | Breath guide (NOT a measurement) | settings `breathGuide.enabled` (default **false**), `breathGuide.bpm` | slow swell of soft air at the pacer rate, louder and brighter on the in-breath | on/off fade `breathFadeS` 2 s |
 | Personal anchor | explicit `playAnchor(params)` only | parametric voice | its own attack and release (each >= 1 s) |
@@ -117,6 +122,7 @@ All in `settings.ts` (`DEFAULT_AUDIO_SETTINGS`), clamped by `mergeSettings`:
 | `bedFadeS`, `thinLevel`, `thinFadeS` | 2 s, 0.35, 1 s | fades >= 1 |
 | `bloomTauS`, `bloomReleaseTauS` | 3 s, 2 s | >= 1 |
 | `combinedBloomTauS` | 5 s | 1..15 |
+| `bloomFollowTauS` | 1.5 s | 1..10 |
 | `blooms` | `{ phi, octave, both }`, each `{ on: true, level: 1 }` | level 0..2 |
 | `bloomChance` | `'a'` (reads `excess_a`; `'b'` reads `excess_b`) | `'a'` or `'b'` |
 | `sessionJumpS` | 2 s | 0.5..60 |
@@ -168,7 +174,8 @@ unresolved, so `addModule` fails. Use the `?worker&url` import. Verified: `vite 
 
 ## Test results
 
-`npx vitest run src/audio` (54 tests, all passing). Numbers from the run:
+`npx vitest run src/audio` (58 tests, all passing; the 4 in `test/recording.test.ts` need the wasm
+package and `e2e/out/recordings/both_phi_octave_12db.hbraw`, and skip with a warning without them). Numbers from the run:
 
 - Pitch after 7 x `pitchTauS`: |error| <= 0.073 cents across steps 10 to 10.37, 4.3 to 6.1, 16.18 to 12.5,
   2.2 to 2.6 and 23.5 to 28.9 Hz (limit 1 cent). Steady state: 0.0000 cents.
@@ -177,15 +184,16 @@ unresolved, so `addModule` fails. Use the `?worker&url` import. Verified: `vite 
 - Null input: still sounding 0.9 s after null (fade >= 1 s), pitch unchanged while fading (< 1 cent),
   exact zero from 1.55 s after null onwards, slot released.
 - All-null frames from the start (and no frames at all): every sample exactly 0.
-- Frames stop with a bloom playing: last non-zero sample 5.19 s later (watchdog 0.5 s + fade 2 s + room tail).
+- Frames stop with a bloom playing: last non-zero sample 4.77 s later (bound: watchdog 0.5 s + 2.4 x
+  `bloomFollowTauS` + 4 s).
 - Worst case (8 voices at 60 dB height, all three blooms at excess 1, bed at +40 dB, beats every 125 ms,
-  breath guide, anchor, all gains x2, master +6 dB): peak 0.48506 under a 0.50119 ceiling (-6 dBFS),
-  0.86056 under 0.89125 (-1 dBFS), 0.09971 under 0.10000 (-20 dBFS).
-- Attacks: first non-zero sample <= 2.3e-8 for every layer; within the first 50 ms the tone, bed, breath and
-  anchor stay under 0.06% of their peak, the blooms under 1.7%; the heartbeat under 2.75% within 5 ms.
-- Blooms: golden ratio centroid 305 Hz, octave 815 Hz, spectral cosine similarity 0.000. The golden
+  breath guide, anchor, all gains x2, master +6 dB): peak 0.48761 under a 0.50119 ceiling (-6 dBFS),
+  0.86711 under 0.89125 (-1 dBFS), 0.09973 under 0.10000 (-20 dBFS).
+- Attacks: first non-zero sample <= 1.5e-7 for every layer; within the first 50 ms the tone, bed, breath and
+  anchor stay under 0.06% of their peak, the blooms under 1.3%; the heartbeat under 2.75% within 5 ms.
+- Blooms: golden ratio centroid 230 Hz, octave 823 Hz, spectral cosine similarity 0.000. The golden
   ratio bloom contains the measured 320 and 517.8 Hz and their sub-octaves, nothing between. It reaches
-  21% of its settled level 0.5 to 1 s after entry, and scales with excess_a (0.5 gives half).
+  16.6% of its settled level 0.5 to 1 s after entry, and scales with excess_a (0.5 gives half).
 - Bed: centroid 423 Hz at baseline, 157 Hz at +6 dB over baseline.
 - Noise only: background-only frames (alpha above background 0.2 to 0.6 dB, measured, no tracks) render
   exact zeros for 12 s; a theta-only peak, an unconfirmed alpha peak, or an alpha peak at the wrong site
@@ -193,11 +201,17 @@ unresolved, so `addModule` fails. Use the `?worker&url` import. Verified: `vite 
 - Two consecutive sessions (clock restarts at 0, same track id, 10 then 12 Hz, beats in both): session B
   plays 384.000 Hz (0 cents), all 14 beats sound (5 + 9), changeover max sample step 8.266e-3, equal to
   the steady-state maximum (no click). Same with the automatic detection and the explicit reset.
-- Three blooms: centroids golden ratio 305 Hz, octave 815 Hz, combined 629 Hz; pairwise spectral cosine
+- Three blooms: centroids golden ratio 230 Hz, octave 823 Hz, combined 653 Hz; pairwise spectral cosine
   similarity 0.000 / 0.000 / 0.000. The combined bloom is exactly zero when `states.both` is inactive
-  (even with both states active), when an excess is missing, and for non-member tracks; it reaches 13%
+  (even with both states active), when an excess is missing, and for non-member tracks; it reaches 10.5%
   of its settled level 0.5 to 1 s after entry; it scales with min(excess) (0.9 and 0.5 give 0.5), with
   its level setting, and mutes to exact zero. `bloomChance: 'b'` scales by `excess_b`.
+- Recording `both_phi_octave_12db` (real engine frames): the octave bloom target jumps by up to 0.99
+  between consecutive slow frames (50 to 64 s); the sounding bloom levels (presence x amount, summed
+  over voices) change at most 0.389 / 0.395 / 0.304 of full scale per second (golden ratio / octave /
+  combined; per-voice bound 1.167); the bloom layer's 250 ms RMS changes at most 12.9% of its peak per
+  window (limit 20%; 52.7% before this fix). During the combined state (48.5 to 78.5 s) the three blooms
+  have centroids 166 / 1351 / 910 Hz and pairwise spectral cosine similarity 0.000 / 0.006 / 0.038.
 - Heartbeat: centroid 59.9 Hz; energy above 300 Hz -91 dB, above 1 kHz -122 dB. A beat at t = 1.000 s
   sounds at 1.3000 s.
 - Anchors: 24 seeded candidates with minimum pairwise distance 0.87; neutral control within 0.03 dB of

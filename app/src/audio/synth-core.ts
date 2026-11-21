@@ -13,17 +13,18 @@
  *     moved toward anything that was not measured.
  *  b. State bed: a fixed, seeded noise carrier whose level and colour move only with alpha power
  *     above background (relative to baseline). Blooms: the measured tones themselves gain a soft
- *     sub-octave pad in a room (golden ratio) or a hollow octave-above pad, dry (octave alignment).
+ *     soft sub-octave pad (golden ratio) or a hollow octave-above pad (octave alignment), both dry
+ *     and phase-locked to the tone, following the tone's presence with the declared bloomFollowTauS.
  *     When both states hold at once (`states.both`), a third bloom gathers: the fifth and twelfth
- *     above each member (the 3rd and 6th harmonics of its own sub-octave), deep in the room.
+ *     above each member (the 3rd and 6th harmonics of its own sub-octave), the widest spread.
  *  c. Heartbeat: a low, rounded pulse with a smooth envelope on each scheduled measured beat.
  *  d. Breath guide: a slow swell of soft air at the pacer rate. Off by default. Not a measurement.
  *  e. Personal anchors: a small parametric voice, played only on explicit request.
  *  f. Per-layer gains, master gain, a peak leveller and a soft clipper under an absolute ceiling.
  *
  * No binaural, monaural or isochronic entrainment: both output channels carry the same dry signal,
- * the only left/right difference is the decorrelated tail of a static room on bloom and anchor
- * sends, and nothing is amplitude-modulated at a brainwave rate.
+ * the only left/right difference is the decorrelated tail of a static room on anchor sends, and
+ * nothing is amplitude-modulated at a brainwave rate.
  */
 
 import { type AnchorSynthParams, sanitizeAnchor } from './anchors.ts';
@@ -83,6 +84,8 @@ export interface VoiceStatus {
   phi: number;
   octave: number;
   both: number;
+  /** 0..1 presence the blooms of this voice are scaled by (slow follower of gate x loudness). */
+  bloomPresence: number;
   fadingOut: boolean;
 }
 
@@ -277,6 +280,8 @@ interface ToneVoice {
   octTarget: number;
   both: number;
   bothTarget: number;
+  /** Bloom presence: the tone's gate x loudness, followed with the declared bloomFollowTauS. */
+  pres: number;
 }
 
 interface Pulse {
@@ -334,6 +339,11 @@ export class SynthCore {
   private kBloomUp = 0;
   private kBloomDown = 0;
   private kBothUp = 0;
+  private kPres = 0;
+  private floorUp = 0;
+  private floorDown = 0;
+  private floorBoth = 0;
+  private floorPres = 0;
   private retiredId = -1;
   private kGain = 0;
   private rollExp = 0;
@@ -419,6 +429,14 @@ export class SynthCore {
     this.kBloomUp = tauCoef(s.bloomTauS, sr);
     this.kBloomDown = tauCoef(s.bloomReleaseTauS, sr);
     this.kBothUp = tauCoef(s.combinedBloomTauS, sr);
+    this.kPres = tauCoef(s.bloomFollowTauS, sr);
+    // Finite-time landing: below a quarter of full scale the approach becomes linear at 1/(4 tau)
+    // per second, so a bloom reaches its target (and exact zero) instead of creeping for minutes.
+    // The rate never exceeds 1/tau per second of full scale.
+    this.floorUp = 1 / (4 * s.bloomTauS * sr);
+    this.floorDown = 1 / (4 * s.bloomReleaseTauS * sr);
+    this.floorBoth = 1 / (4 * s.combinedBloomTauS * sr);
+    this.floorPres = 1 / (4 * s.bloomFollowTauS * sr);
     this.kGain = tauCoef(s.gainTauS, sr);
     this.rollExp = s.rolloffDbPerOctave / (20 * Math.log10(2));
     this.logRollStart = Math.log(s.rolloffStartHz);
@@ -428,7 +446,7 @@ export class SynthCore {
     this.breathGate.setLevel(s.breathGuide.enabled ? 1 : 0);
     while (this.voices.length < s.maxVoices) {
       const gate = new Fade();
-      this.voices.push({ id: null, gate, logF: 0, logFTarget: 0, phase: 0, loud: 0, loudTarget: 0, phi: 0, phiTarget: 0, oct: 0, octTarget: 0, both: 0, bothTarget: 0 });
+      this.voices.push({ id: null, gate, logF: 0, logFTarget: 0, phase: 0, loud: 0, loudTarget: 0, phi: 0, phiTarget: 0, oct: 0, octTarget: 0, both: 0, bothTarget: 0, pres: 0 });
     }
     // Voices beyond a reduced maxVoices fade out and are not reused.
     for (let i = s.maxVoices; i < this.voices.length; i++) this.voices[i].gate.setLevel(0);
@@ -474,7 +492,7 @@ export class SynthCore {
       used.add(v);
       if (valid) {
         const lf = Math.log((vc.freqHz as number) * this.s.pitchMultiplier);
-        if (v.gate.idle) {
+        if (v.gate.idle && v.pres === 0) {
           // Silent: start exactly at the measured pitch (no glide from a stale or default pitch).
           v.logF = lf;
           v.phase = 0;
@@ -613,6 +631,7 @@ export class SynthCore {
         phi: v.phi,
         octave: v.oct,
         both: v.both,
+        bloomPresence: v.pres,
         fadingOut: v.gate.target === 0,
       });
     });
@@ -698,8 +717,11 @@ export class SynthCore {
         const v = voices[vi];
         if (v.id === null) continue;
         const gate = v.gate.tick();
-        if (v.gate.idle) {
-          // Fully faded: release the slot. Nothing about it is kept.
+        // Bloom presence follows the tone's own presence and loudness, but slowly: a state sound
+        // never inherits the tone's faster loudness or a flicker of its lock (rule 5).
+        v.pres = follow(v.pres, gate * v.loud, this.kPres, this.floorPres);
+        if (v.gate.idle && v.pres === 0) {
+          // Fully faded, tone and bloom: release the slot. Nothing about it is kept.
           v.id = null;
           v.phi = 0;
           v.oct = 0;
@@ -708,12 +730,9 @@ export class SynthCore {
         }
         v.logF += (v.logFTarget - v.logF) * kPitch;
         v.loud += (v.loudTarget - v.loud) * kLoud;
-        v.phi += (v.phiTarget - v.phi) * (v.phiTarget > v.phi ? this.kBloomUp : this.kBloomDown);
-        v.oct += (v.octTarget - v.oct) * (v.octTarget > v.oct ? this.kBloomUp : this.kBloomDown);
-        if (v.phi < SNAP && v.phiTarget === 0) v.phi = 0;
-        if (v.oct < SNAP && v.octTarget === 0) v.oct = 0;
-        v.both += (v.bothTarget - v.both) * (v.bothTarget > v.both ? this.kBothUp : this.kBloomDown);
-        if (v.both < SNAP && v.bothTarget === 0) v.both = 0;
+        v.phi = v.phiTarget > v.phi ? follow(v.phi, v.phiTarget, this.kBloomUp, this.floorUp) : follow(v.phi, v.phiTarget, this.kBloomDown, this.floorDown);
+        v.oct = v.octTarget > v.oct ? follow(v.oct, v.octTarget, this.kBloomUp, this.floorUp) : follow(v.oct, v.octTarget, this.kBloomDown, this.floorDown);
+        v.both = v.bothTarget > v.both ? follow(v.both, v.bothTarget, this.kBothUp, this.floorBoth) : follow(v.both, v.bothTarget, this.kBloomDown, this.floorDown);
         const f = Math.exp(v.logF);
         v.phase += f * inv;
         if (v.phase >= 2) v.phase -= 2;
@@ -729,24 +748,24 @@ export class SynthCore {
         const amp = gate * v.loud;
         dry += g.tones * LAYER_LEVELS.tone * amp * (r1 * s1 + h2 * r2 * s2);
         if (v.phi > 0 || v.oct > 0 || v.both > 0) {
-          const bl = g.bloom * LAYER_LEVELS.bloom * amp;
-          // Golden ratio bloom: the measured tone and its own sub-octave, into the room.
+          const bl = g.bloom * LAYER_LEVELS.bloom * v.pres;
+          // The blooms are dry and phase-locked to their tone. No room: any reverb (comb or allpass)
+          // turns the measured pitch's natural wander into level swings that are not in the data
+          // (both_phi_octave_12db: 52.7% of peak per 250 ms with the old comb room, 36% with a flat
+          // allpass diffuser, 12.8% dry). The three blooms differ by which partials they add.
+          // Golden ratio bloom: the measured tone's own sub-octave, deep and soft, plus a doubling.
           const sub = Math.sin(0.5 * p);
-          const phiPad = bl * g.bPhi * v.phi * (0.6 * sub + 0.35 * r1 * s1);
+          dry += bl * g.bPhi * v.phi * (0.75 * sub + 0.25 * r1 * s1);
           // Octave bloom: hollow upper octaves of the same tone, dry and close.
-          const octPad = bl * g.bOct * v.oct * (0.55 * r2 * s2 + 0.3 * r4 * Math.sin(4 * p));
-          dry += 0.35 * phiPad + 0.9 * octPad;
-          send += 1.0 * phiPad + 0.15 * octPad;
+          dry += bl * g.bOct * v.oct * 0.5 * (r2 * s2 + 0.55 * r4 * Math.sin(4 * p));
           if (v.both > 0) {
             // Combined bloom: the fifth (1.5x) and twelfth (3x) above the tone, i.e. the 3rd and
-            // 6th harmonics of its own sub-octave (phase-locked, no beating), mostly in the room.
+            // 6th harmonics of its own sub-octave (phase-locked, no beating): the widest spread.
             const over15 = over + LN15;
             const r15 = over15 > 0 ? Math.exp(-rollExp * over15) : 1;
             const over3 = over + LN3;
             const r3 = over3 > 0 ? Math.exp(-rollExp * over3) : 1;
-            const bothPad = bl * g.bBoth * v.both * (0.5 * r15 * Math.sin(1.5 * p) + 0.22 * r3 * Math.sin(3 * p));
-            dry += 0.3 * bothPad;
-            send += 1.4 * bothPad;
+            dry += bl * g.bBoth * v.both * (0.55 * r15 * Math.sin(1.5 * p) + 0.25 * r3 * Math.sin(3 * p));
           }
         }
       }
@@ -909,6 +928,18 @@ export class SynthCore {
     an.t++;
     return env * ((1 - p.noise) * tonal + p.noise * air);
   }
+}
+
+/**
+ * One-pole approach with a floor speed: moves by at least `floor` per sample toward the target
+ * and lands on it exactly. Never overshoots.
+ */
+function follow(v: number, target: number, k: number, floor: number): number {
+  const d = target - v;
+  if (d === 0) return v;
+  let step = d * k;
+  if (Math.abs(step) < floor) step = d > 0 ? floor : -floor;
+  return Math.abs(step) >= Math.abs(d) ? target : v + step;
 }
 
 function bloomGains(s: AudioSettings): { bPhi: number; bOct: number; bBoth: number } {

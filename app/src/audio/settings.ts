@@ -94,6 +94,11 @@ export interface AudioSettings {
   bloomTauS: number;
   /** One-pole smoothing when a bloom thins (state left), seconds (>= 1). */
   bloomReleaseTauS: number;
+  /**
+   * One-pole follower between a tone's presence x loudness and the presence of its blooms,
+   * seconds (>= 1). Keeps the state sounds slow when a tone's lock or loudness flickers.
+   */
+  bloomFollowTauS: number;
   /** One-pole smoothing of the combined (both) bloom rising, seconds (>= 1). Slower: it gathers. */
   combinedBloomTauS: number;
   /** Mute and level per state bloom. */
@@ -166,6 +171,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   bloomTauS: 3,
   bloomReleaseTauS: 2,
   combinedBloomTauS: 5,
+  bloomFollowTauS: 1.5,
   blooms: { phi: { on: true, level: 1 }, octave: { on: true, level: 1 }, both: { on: true, level: 1 } },
   bloomChance: 'a',
 
@@ -232,6 +238,7 @@ export function mergeSettings(base: AudioSettings, patch: AudioSettingsPatch = {
     thinFadeS: clamp(m.thinFadeS, 1, 10, d.thinFadeS),
     bloomTauS: clamp(m.bloomTauS, 1, 10, d.bloomTauS),
     bloomReleaseTauS: clamp(m.bloomReleaseTauS, 1, 10, d.bloomReleaseTauS),
+    bloomFollowTauS: clamp(m.bloomFollowTauS, 1, 10, d.bloomFollowTauS),
     combinedBloomTauS: clamp(m.combinedBloomTauS, 1, 15, d.combinedBloomTauS),
     blooms: { phi: bloom('phi'), octave: bloom('octave'), both: bloom('both') },
     bloomChance: m.bloomChance === 'b' ? 'b' : 'a',

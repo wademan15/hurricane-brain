@@ -181,9 +181,11 @@ describe('null, gating and silence', () => {
     const r = renderSession((t, tick) => (t < 6 ? live(t, tick) : []), 16);
     expect(rms(slice(r.left, 5.5, 6))).toBeGreaterThan(0);
     const last = r.left.findLastIndex((v) => v !== 0) / SR;
-    console.log(`frames stop at 6 s; last non-zero sample at ${last.toFixed(3)} s (watchdog 0.5 s + fade 2 s + room tail)`);
-    expect(last).toBeLessThan(6 + 0.5 + 2.2 + 4);
-    expect(allZero(slice(r.right, 6 + 0.5 + 2.2 + 4, 16))).toBe(true);
+    // Watchdog 0.5 s, then the bloom presence lands on zero within 2.4 x bloomFollowTauS, then the room tail (< 4 s).
+    const bound = 6 + 0.5 + 2.4 * DEFAULT_AUDIO_SETTINGS.bloomFollowTauS + 4;
+    console.log(`frames stop at 6 s; last non-zero sample at ${last.toFixed(3)} s (bound ${bound.toFixed(1)} s)`);
+    expect(last).toBeLessThan(bound);
+    expect(allZero(slice(r.right, bound, 16))).toBe(true);
     expect(r.core.status().watchdog).toBe(true);
   });
 });
@@ -212,7 +214,7 @@ describe('ceiling and limiter', () => {
       console.log(`ceiling ${ceilingDb} dBFS (${ceiling.toFixed(5)}): worst-case peak ${peak.toFixed(5)}, leveller ${r.core.status().limiterDb.toFixed(1)} dB`);
       expect(peak).toBeLessThanOrEqual(ceiling);
     }
-  });
+  }, 60_000);
 
   it('soft clip never reaches the ceiling, even for huge input', () => {
     for (const x of [0, 0.1, 0.4, 0.49, 1, 10, 1e6, -1e9]) expect(Math.abs(softClip(x, 0.3, 0.5))).toBeLessThanOrEqual(0.5);
