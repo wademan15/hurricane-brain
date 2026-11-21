@@ -7,9 +7,11 @@ import { JournalForm } from '../components/Journal';
 import { CHILD_LINES, GLOSSARY, PHOTOSENSITIVITY } from '../copy';
 import { Button, Card, Modal, Note, PageHeader, Segmented, StateIcon } from '../components/kit';
 import { AlignmentDetails, AlignmentTrio, HeartLine, PeaksLine, SignalLine, useLive } from '../components/LiveReadout';
+import { AlignmentBars, CascadeChips, OneLine, StepStones, WordsTrio } from '../components/LiveVariants';
+import { layoutOf, sessionPalette, useResolvedMode } from '../themes';
 import { HemisphereTable, PairTable } from '../components/LiveDetails';
 import { summarizeSignal, fmtDuration } from '../measured';
-import { useController, useProfile, useProfileInfo, useServices, useSettings } from '../state/app';
+import { useAppearance, useController, useProfile, useProfileInfo, useServices, useSettings } from '../state/app';
 import { isChild, profileIaf, simpleViewOn } from '../session/child';
 import { deviceText } from '../components/bits';
 
@@ -54,6 +56,31 @@ function RatingSheet({ keys, onDone }: { keys: RatingKey[]; onDone: (r: Partial<
       </div>
     </div>
   );
+}
+
+/** Dims the screen after a quiet spell and brings it back on any touch, key or pointer move. */
+function useDim(afterS: number | null, active: boolean): boolean {
+  const [dimmed, setDimmed] = useState(false);
+  useEffect(() => {
+    if (!active || afterS === null) return;
+    let t: ReturnType<typeof setTimeout>;
+    const arm = () => {
+      clearTimeout(t);
+      t = setTimeout(() => setDimmed(true), afterS * 1000);
+    };
+    const wake = () => {
+      setDimmed(false);
+      arm();
+    };
+    arm();
+    const ev = ['pointerdown', 'pointermove', 'keydown', 'touchstart'] as const;
+    ev.forEach((e) => window.addEventListener(e, wake, { passive: true }));
+    return () => {
+      clearTimeout(t);
+      ev.forEach((e) => window.removeEventListener(e, wake));
+    };
+  }, [afterS, active]);
+  return dimmed && active && afterS !== null;
 }
 
 function useWakeLock(on: boolean) {
@@ -134,6 +161,8 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   const profile = useProfile();
   const info = useProfileInfo();
   const live = useLive();
+  const ap = useAppearance();
+  const mode = useResolvedMode(ap.mode);
   const [panel, setPanel] = useState<Panel>('none');
   const [site, setSite] = useState('temporal');
   const [eyesClosed, setEyesClosed] = useState(() => settings.soundOnly);
@@ -150,6 +179,7 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   const fin = st.finished;
   useWakeLock(!!s && settings.keepScreenOn);
   const running = !!s || !!replay;
+  const dimmed = useDim(ap.dim === 'off' ? null : Number(ap.dim), running);
 
   // The live screen is the only thing in the tab order, and it takes focus when it opens.
   useEffect(() => {
@@ -172,28 +202,36 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
     }, 0);
   };
   // Escape closes the open panel and returns to its tab; in eyes closed it leaves that mode.
+  // One listener for the life of the screen, reading the latest state from a ref, so a stream of
+  // re-renders from the engine can never leave a gap in which Escape is not heard.
+  const escRef = useRef<() => boolean>(() => false);
+  escRef.current = () => {
+    if (eyesClosed) {
+      leaveEyesClosed();
+      return true;
+    }
+    if (panel !== 'none') {
+      const id = `panel-tab-${panel}`;
+      setPanel('none');
+      setTimeout(() => document.getElementById(id)?.focus(), 0);
+      return true;
+    }
+    return false;
+  };
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-      if (eyesClosed) {
-        e.preventDefault();
-        leaveEyesClosed();
-      } else if (panel !== 'none') {
-        e.preventDefault();
-        const id = `panel-tab-${panel}`;
-        setPanel('none');
-        setTimeout(() => document.getElementById(id)?.focus(), 0);
-      }
+      if (escRef.current()) e.preventDefault();
     };
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
-  });
+  }, []);
 
   const sig = summarizeSignal(live.slow);
   const motion = settings.reducedMotion === 'on' ? 'reduced' : settings.reducedMotion === 'off' ? 'full' : 'auto';
   const hurricane = useMemo(
-    () => <HurricaneView source={view} quality={settings.vizQuality} chance={settings.chanceDriver} motion={motion} showFieldNames={settings.showFieldNames} />,
-    [view, settings.vizQuality, settings.chanceDriver, motion, settings.showFieldNames],
+    () => <HurricaneView source={view} quality={settings.vizQuality} chance={settings.chanceDriver} motion={motion} showFieldNames={ap.technicalNames} />,
+    [view, settings.vizQuality, settings.chanceDriver, motion, ap.technicalNames],
   );
 
   // A live session that has ended shows its summary and journal. A replay keeps the live screen.
@@ -218,9 +256,10 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   const heartExpected = st.strap.state === 'streaming' || st.strap.state === 'reconnecting' || (st.streams?.chest_strap ?? null) !== null;
   const title = replayDone ? 'Replay finished' : s ? (s.blockTitle ?? s.programName) : (replay?.label ?? 'Replay');
   const elapsed = s ? s.elapsedS : (fin?.elapsedS ?? null);
-  const simple = simpleViewOn(settings, info.ageGroup);
+  const simple = simpleViewOn(ap, info.ageGroup);
   const needIaf = isChild(info.ageGroup) && profileIaf(profile) === null;
   const plain = plainSentence(live, sig.level);
+  const layout = layoutOf(ap.theme);
   const exitReplay = () => {
     void controller.closeReplay();
     navigate('home');
@@ -306,7 +345,28 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
         </div>
       ) : null}
 
-      <AlignmentTrio live={live} />
+      {ap.readouts === 'minimal' ? (
+        <OneLine live={live} words={!ap.showNumbers} driver={settings.chanceDriver} />
+      ) : layout === 'grid' ? (
+        <>
+          <AlignmentBars live={live} words={!ap.showNumbers} />
+          <CascadeChips live={live} />
+        </>
+      ) : layout === 'tile' ? (
+        <>
+          <OneLine live={live} words={!ap.showNumbers} driver={settings.chanceDriver} />
+          <StepStones live={live} />
+        </>
+      ) : layout === 'window' ? (
+        <>
+          <p className="window-sentence" role="status">{plain.line}</p>
+          <OneLine live={live} words={!ap.showNumbers} driver={settings.chanceDriver} />
+        </>
+      ) : (
+        <AlignmentTrio live={live} words={!ap.showNumbers} driver={settings.chanceDriver} />
+      )}
+      {ap.readouts === 'minimal' ? null : (
+        <>
       <details className="live-details" open={details} onToggle={(e) => setDetails((e.currentTarget as HTMLDetailsElement).open)}>
         <summary>Details: states, chance and the precise terms</summary>
         <div className="stack">
@@ -317,11 +377,15 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
           </dl>
         </div>
       </details>
-      <div className="chips" style={{ marginTop: 8 }}>
-        <PeaksLine live={live} harmonicsCount={settings.harmonicsCount} />
-        <HeartLine live={live} heartExpected={heartExpected} />
-      </div>
+      {ap.readouts === 'full' ? (
+        <div className="chips" style={{ marginTop: 8 }}>
+          <PeaksLine live={live} harmonicsCount={settings.harmonicsCount} />
+          <HeartLine live={live} heartExpected={heartExpected} />
+        </div>
+      ) : null}
       <div style={{ marginTop: 8 }} className="small"><GoldenRatioInfo /></div>
+        </>
+      )}
 
       <div className="live-tabs" role="group" aria-label="Panels">
         {(['spectrum', 'details', 'signal'] as const).map((p) => (
@@ -355,7 +419,7 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   ) : null;
 
   return (
-    <div className="live" data-testid="live-session" data-state={replayDone ? 'finished' : 'running'} data-view={simple ? 'simple' : 'standard'}>
+    <div className="live" data-testid="live-session" data-state={replayDone ? 'finished' : 'running'} data-view={simple ? 'simple' : 'standard'} data-layout={layout} data-readouts={ap.readouts} data-pal={sessionPalette(ap.session, mode)}>
       <div className="live-stage" inert={eyesClosed}>
         {hurricane}
         <div className="live-top">
@@ -391,6 +455,7 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
               <span>{plain.word}</span>
             </div>
             <p className="simple-line">{plain.line}</p>
+            <WordsTrio live={live} driver={settings.chanceDriver} />
             {notes}
             <div className="simple-actions">
               {stopButton}
@@ -410,6 +475,8 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
         )}
         {!simple ? actions : null}
       </div>
+
+      {dimmed && !eyesClosed ? <div className="dim-veil" data-testid="dim-veil" aria-hidden="true" /> : null}
 
       {eyesClosed ? (
         <button

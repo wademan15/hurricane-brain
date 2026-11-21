@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { Cascade, HeartFrame, SlowFrame } from '../../engine/frames';
 import { useServices } from '../state/app';
+import { alignmentWords, chanceWords } from '../words';
 import { CHANCE_B_WAIT, inHundred, measuredLine, measuredLineB, notMeasuredText, reasonPlain, showMeasured, summarizeSignal } from '../measured';
 import { Fixed, StateIcon, Val } from './kit';
 
@@ -41,7 +42,7 @@ export function useLive(): Live {
   return { slow: slowStale ? null : l.slow, heart: heartStale ? null : l.heart, slowStale, heartStale };
 }
 
-const wait = (live: Live) => (live.slowStale ? 'stale' : 'no_frame') as 'stale' | 'no_frame';
+export const wait = (live: Live) => (live.slowStale ? 'stale' : 'no_frame') as 'stale' | 'no_frame';
 
 /** "a chain of 3 peaks", or what is missing. */
 export function chainText(c: Cascade | null): string {
@@ -56,24 +57,33 @@ export function randomDidLine(c: Cascade | null, live: Live): string {
   return `Random peaks did this well: ${inHundred(c.chance.a.p)}`;
 }
 
-function AlignCell({ kind, c, live }: { kind: 'phi' | 'oct'; c: Cascade | null; live: Live }) {
+function AlignCell({ kind, c, live, words, driver }: { kind: 'phi' | 'oct'; c: Cascade | null; live: Live; words: boolean; driver: 'a' | 'b' }) {
   const label = kind === 'phi' ? 'Golden ratio alignment' : 'Octave alignment';
   return (
     <div className={`cellbox ${kind}`} data-testid={`cell-${kind}`}>
       <div className="k"><StateIcon kind={kind === 'phi' ? 'phi' : 'octave'} /> {label}</div>
       <div className="v">
-        {c ? <Fixed m={c.closeness} /> : <span className="nm">not measured<small>{reasonPlain(wait(live))}</small></span>}
+        {c ? words ? <span className="words">{alignmentWords(c, driver)}</span> : <Fixed m={c.closeness} /> : <span className="nm">not measured<small>{reasonPlain(wait(live))}</small></span>}
       </div>
-      <div className="s">{c ? `${randomDidLine(c, live)} · ${chainText(c)}` : ''}</div>
+      <div className="s">{c ? (words ? chainText(c) : `${randomDidLine(c, live)} · ${chainText(c)}`) : ''}</div>
     </div>
   );
 }
 
 /** Chance level for one target as one line: random peaks (A), and your own usual pattern (B) once it is there. */
-function ChanceLines({ c, live, target }: { c: Cascade | null; live: Live; target: string }) {
+function ChanceLines({ c, live, target, words }: { c: Cascade | null; live: Live; target: string; words: boolean }) {
   if (!c) return <div><span className="nm">{target}: not measured<small>{reasonPlain(wait(live))}</small></span></div>;
   const a = c.chance.a.closeness;
   const b = c.chance.b.closeness;
+  if (words) {
+    return (
+      <div className="chance-row">
+        <span className="chance-target">{target}</span>
+        <span className="chance-a words" title="Random peaks (chance A)">{chanceWords(a)}</span>
+        {b.v !== null ? <span className="chance-b words" title="Your own usual pattern (chance B)"> / {chanceWords(b)}</span> : null}
+      </div>
+    );
+  }
   return (
     <div className="chance-row">
       <span className="chance-target">{target}</span>
@@ -83,19 +93,19 @@ function ChanceLines({ c, live, target }: { c: Cascade | null; live: Live; targe
   );
 }
 
-export function AlignmentTrio({ live }: { live: Live }) {
+export function AlignmentTrio({ live, words = false, driver = 'a' }: { live: Live; words?: boolean; driver?: 'a' | 'b' }) {
   const phi = live.slow?.cascades.phi ?? null;
   const oct = live.slow?.cascades.octave ?? null;
   const bReady = (phi?.chance.b.closeness.v ?? null) !== null || (oct?.chance.b.closeness.v ?? null) !== null;
   return (
     <div className="trio" role="group" aria-label="Golden ratio alignment, octave alignment and chance level, side by side">
-      <AlignCell kind="phi" c={phi} live={live} />
-      <AlignCell kind="oct" c={oct} live={live} />
+      <AlignCell kind="phi" c={phi} live={live} words={words} driver={driver} />
+      <AlignCell kind="oct" c={oct} live={live} words={words} driver={driver} />
       <div className="cellbox chance" data-testid="cell-chance">
         <div className="k">Chance (same procedure)</div>
         <div className="v chance-v">
-          <ChanceLines c={phi} live={live} target="Golden" />
-          <ChanceLines c={oct} live={live} target="Octave" />
+          <ChanceLines c={phi} live={live} target="Golden" words={words} />
+          <ChanceLines c={oct} live={live} target="Octave" words={words} />
         </div>
         <div className="s">
           {bReady ? 'Random peaks / your own usual pattern' : `Random peaks. Your own usual pattern: not measured (${CHANCE_B_WAIT})`}

@@ -7,7 +7,7 @@
  * The page asks the worker to cache what it has already loaded (see main.tsx warm-up).
  * Nothing is sent anywhere: no analytics, no third-party requests.
  */
-const CACHE = 'hurricane-brain-v2';
+const CACHE = 'hurricane-brain-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

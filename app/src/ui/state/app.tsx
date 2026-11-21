@@ -2,10 +2,10 @@
  * Wiring of the app's services, and the hooks the screens use. `createServices` is the one
  * place that imports the real engine client.
  */
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AudioEngine } from '../../audio';
 import { createEngineClient } from '../../engine';
-import { createStorage, type AppSettings, type Storage } from '../../storage';
+import { createStorage, type Appearance, type AppSettings, type Storage } from '../../storage';
 import type { UserProfile } from '../../training';
 import { SessionController } from '../session/controller';
 import type { FrameHub } from '../session/hub';
@@ -93,6 +93,14 @@ export function useProfiles(): ProfileEntry[] {
 }
 
 /** The active person's name and age group (a default when there is no profile yet). */
+/** The active person's look, every default filled in. */
+export function useAppearance(): Appearance {
+  const { profile } = useServices();
+  const p = useProfile();
+  const s = useSettings();
+  return useMemo(() => profile.appearance(p?.userId), [profile, p?.userId, s.profileInfo, s.appearanceBase]);
+}
+
 export function useProfileInfo() {
   const { profile } = useServices();
   const p = useProfile();

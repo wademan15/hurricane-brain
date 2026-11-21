@@ -115,7 +115,7 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     const sw = await page.evaluate(async () => { const r = await navigator.serviceWorker.ready; return { scope: r.scope, state: r.active && r.active.state }; });
     check('service worker is registered and active', sw.state === 'activated', JSON.stringify(sw));
     await page.waitForTimeout(2500);
-    const cached = await page.evaluate(async () => { const c = await caches.open('hurricane-brain-v2'); return (await c.keys()).map((r) => new URL(r.url).pathname); });
+    const cached = await page.evaluate(async () => { const c = await caches.open('hurricane-brain-v3'); return (await c.keys()).map((r) => new URL(r.url).pathname); });
     check('cache holds the engine worker, the wasm and the audio worklet', ['/assets/worker-', '/assets/hb_wasm_bg-', '/assets/worklet-'].every((p) => cached.some((x) => x.startsWith(p))), cached.filter((x) => x.startsWith('/assets/')).join(' '));
     await ctx.setOffline(true);
     await page.reload();
@@ -159,7 +159,7 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     // ---- Settings: the label bug, theme, the single privacy sentence ----
     await go(page, '#/settings');
     await page.screenshot({ path: OUT + `${tag}-60-settings.png` });
-    await page.getByRole('heading', { name: 'Visuals' }).scrollIntoViewIfNeeded();
+    await page.getByRole('heading', { name: 'Picture and screen' }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: OUT + `${tag}-60b-settings-visuals.png` });
     await axe(page, `${tag} settings`);
     check(`${tag}: settings has no horizontal overflow`, !(await overflow(page)));
@@ -185,15 +185,15 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     await page.waitForTimeout(150);
     check(`${tag}: Escape closes the dialog and focus returns to the button that opened it`, (await page.locator('dialog[open]').count()) === 0 && (await page.evaluate(() => document.activeElement.textContent)) === 'Delete everything');
     // theme
-    await page.getByRole('group', { name: 'Theme' }).getByRole('button', { name: 'Light' }).click();
+    await page.getByRole('group', { name: 'Light or dark', exact: true }).getByRole('button', { name: 'Light', exact: true }).click();
     await page.waitForTimeout(200);
-    check(`${tag}: the light theme can be chosen`, (await page.evaluate(() => document.documentElement.dataset.theme)) === 'light');
+    check(`${tag}: the light theme can be chosen`, (await page.evaluate(() => document.documentElement.dataset.mode)) === 'light');
     if (tag === 'mob') await page.screenshot({ path: OUT + `${tag}-61-settings-light.png`, fullPage: true });
     await axe(page, `${tag} settings (light theme)`);
     await go(page, '#/home');
     await axe(page, `${tag} home (light theme)`);
     await go(page, '#/settings');
-    await page.getByRole('group', { name: 'Theme' }).getByRole('button', { name: 'Dark (default)' }).click();
+    await page.getByRole('group', { name: 'Light or dark', exact: true }).getByRole('button', { name: 'Follow device' }).click();
     check(`${tag}: root font size is a percentage of the browser's`, await page.evaluate(() => /%|rem|em/.test(document.documentElement.style.fontSize) || getComputedStyle(document.documentElement).fontSize === '17px'));
 
     // ---- live screen, child-friendly view (the default for a child profile) ----
@@ -237,7 +237,7 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
 
     // ---- live screen, standard view ----
     await go(page, '#/settings');
-    await page.getByRole('group', { name: 'Simple live view' }).getByRole('button', { name: 'Off' }).click();
+    await page.getByRole('group', { name: 'Kid version of the session screen' }).getByRole('button', { name: 'Off' }).click();
     await go(page, '#/home');
     await startReplay(page);
     await page.waitForTimeout(14000);

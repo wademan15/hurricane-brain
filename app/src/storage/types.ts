@@ -13,6 +13,56 @@ export type AgeGroup = 'child' | 'teen' | 'adult';
 export interface ProfileInfo {
   name: string;
   ageGroup: AgeGroup | null;
+  /** This person's look. Only what they changed is stored; the rest comes from `resolveAppearance`. */
+  appearance?: Partial<Appearance>;
+}
+
+export type ThemeId = 'still-water' | 'dawn-journal' | 'calm-instrument' | 'night-garden';
+export const THEME_IDS: ThemeId[] = ['still-water', 'dawn-journal', 'calm-instrument', 'night-garden'];
+
+/** Everything under Settings, Appearance. None of it changes a measurement (docs/design/theming.md). */
+export interface Appearance {
+  theme: ThemeId;
+  /** Light or dark for the app. 'system' follows the device. */
+  mode: 'system' | 'light' | 'dark';
+  /** The live session screen: always dark, match the mode, or warm dark. */
+  session: 'dark' | 'match' | 'candle';
+  /** Dim the session screen to near black after this long without a touch or key: off, 30 s, 2 min. */
+  dim: 'off' | '30' | '120';
+  readouts: 'minimal' | 'standard' | 'full';
+  /** Off shows plain words derived from the measured values instead of the values. */
+  showNumbers: boolean;
+  textSize: 'device' | 'larger' | 'largest';
+  highContrast: boolean;
+  /** Adds shape or text to anything told apart by colour. */
+  reduceColour: boolean;
+  /** The kid version of the session screen: automatic means on for a child's profile. */
+  kidView: 'auto' | 'on' | 'off';
+  /** Show the engine's field names in the picture's readout. */
+  technicalNames: boolean;
+  /** A grown-up gate (a sum) in front of Settings. */
+  lock: boolean;
+}
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  theme: 'still-water',
+  mode: 'system',
+  session: 'dark',
+  dim: '30',
+  readouts: 'standard',
+  showNumbers: true,
+  textSize: 'device',
+  highContrast: false,
+  reduceColour: false,
+  kidView: 'auto',
+  technicalNames: false,
+  lock: false,
+};
+
+/** Defaults, then the base carried over from older settings, then what this person chose. A child's profile starts in Night Garden. */
+export function resolveAppearance(ageGroup: AgeGroup | null | undefined, base?: Partial<Appearance>, own?: Partial<Appearance>): Appearance {
+  const start: Partial<Appearance> = ageGroup === 'child' ? { theme: 'night-garden' } : {};
+  return { ...DEFAULT_APPEARANCE, ...start, ...base, ...own };
 }
 
 /** One member of a cascade as the engine reported it. */
@@ -229,14 +279,27 @@ export interface AppSettings {
   engineOverrides: Record<string, number>;
   replaySpeed: 1 | 4 | 'fast';
   keepScreenOn: boolean;
-  /** Colour theme: dark (default), light, or follow the device. The live screen stays dark. */
-  theme: 'dark' | 'light' | 'system';
-  /** Text size multiplier on top of the browser's own font size setting. */
-  textSize: 'normal' | 'large' | 'larger';
-  /** The simple live view (picture, one sentence, big controls). 'auto' is on for a child profile. */
-  childView: 'auto' | 'on' | 'off';
-  /** Show the engine's field names in the picture's readout (off for everyone by default). */
-  showFieldNames: boolean;
+  /** Appearance carried over from the round-3 global settings; each person's own choices sit on top. */
+  appearanceBase: Partial<Appearance>;
+}
+
+/** Settings of round 3 that moved into the per-person Appearance. */
+export interface LegacyAppearanceSettings {
+  theme?: 'dark' | 'light' | 'system';
+  textSize?: 'normal' | 'large' | 'larger';
+  childView?: 'auto' | 'on' | 'off';
+  showFieldNames?: boolean;
+}
+
+/** Move the old global look settings into `appearanceBase`, and drop them. Pure; safe to run twice. */
+export function migrateSettings<T extends Partial<AppSettings> & LegacyAppearanceSettings>(s: T): Omit<T, keyof LegacyAppearanceSettings> {
+  const { theme, textSize, childView, showFieldNames, ...rest } = s;
+  const base: Partial<Appearance> = { ...(rest.appearanceBase ?? {}) };
+  if (theme && base.mode === undefined && theme !== 'dark') base.mode = theme;
+  if (textSize && base.textSize === undefined && textSize !== 'normal') base.textSize = textSize === 'large' ? 'larger' : 'largest';
+  if (childView && base.kidView === undefined && childView !== 'auto') base.kidView = childView;
+  if (showFieldNames && base.technicalNames === undefined) base.technicalNames = true;
+  return { ...rest, appearanceBase: base } as Omit<T, keyof LegacyAppearanceSettings>;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -261,8 +324,5 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   engineOverrides: {},
   replaySpeed: 1,
   keepScreenOn: true,
-  theme: 'dark',
-  textSize: 'normal',
-  childView: 'auto',
-  showFieldNames: false,
+  appearanceBase: {},
 };

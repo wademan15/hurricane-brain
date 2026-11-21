@@ -10,7 +10,7 @@
  *   relied on (spec 5.4): `needsIaf`.
  */
 import type { Program, UserProfile } from '../../training';
-import type { AgeGroup, AppSettings } from '../../storage';
+import type { AgeGroup, Appearance } from '../../storage';
 
 export const CHILD_ENGINE_PARAMS: Record<string, number> = { quality_sd_max_uv: 200 };
 
@@ -35,6 +35,6 @@ export function needsIaf(p: Program, ageGroup: AgeGroup | null | undefined, prof
 export const NEEDS_IAF_TEXT = 'For a child, run the Calibration program first. It finds the alpha rhythm that the bands and the chance level are tuned to.';
 
 /** Whether the simple live view is on, from the setting and the person. */
-export function simpleViewOn(settings: Pick<AppSettings, 'childView'>, ageGroup: AgeGroup | null | undefined): boolean {
-  return settings.childView === 'on' || (settings.childView === 'auto' && isChild(ageGroup));
+export function simpleViewOn(appearance: Pick<Appearance, 'kidView'>, ageGroup: AgeGroup | null | undefined): boolean {
+  return appearance.kidView === 'on' || (appearance.kidView === 'auto' && isChild(ageGroup));
 }

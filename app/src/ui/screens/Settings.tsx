@@ -3,10 +3,11 @@ import { DEFAULT_AUDIO_SETTINGS, mergeSettings, type AudioSettings } from '../..
 import { VIZ_SMOOTHING } from '../../viz';
 import { Button, Card, download, Field, Modal, Note, PageHeader, Segmented } from '../components/kit';
 import { GLOSSARY, GOLDEN_RATIO_TEXT, HEADPHONES, PHOTOSENSITIVITY, PRIVACY, PRIVACY_SENTENCE, STORE_DESCRIPTION, WELLNESS, WHAT_IT_DOES_NOT_CLAIM } from '../copy';
-import type { ResponseSpeed } from '../../storage';
+import { Storage, type ResponseSpeed } from '../../storage';
+import { AppearanceSettings, GrownUpGate, isUnlocked } from '../components/AppearanceSettings';
 import { fmtBytes } from '../measured';
 import { APP_VERSION } from '../session/controller';
-import { useAsync, useController, useProfile, useServices, useSettings } from '../state/app';
+import { useAppearance, useAsync, useController, useProfile, useServices, useSettings } from '../state/app';
 
 interface Slider {
   key: keyof AudioSettings;
@@ -91,10 +92,13 @@ function DataManagement() {
         e.target.value = '';
         if (!f) return;
         try {
-          const p = await storage.importProfileJson(await f.text());
+          const text = await f.text();
+          const p = await storage.importProfileJson(text);
+          const look = Storage.appearanceOf(text);
           const known = pstore.all.get().some((x) => x.profile.userId === p.userId);
           await pstore.put(p);
           if (!known) pstore.rename(p.userId, { name: 'Imported person' });
+          if (look) pstore.setAppearance(p.userId, look);
           pstore.switchTo(p.userId);
           setMsg({ tone: 'ok', text: known ? 'Profile imported. It replaced that person on this device.' : 'Profile imported as a new person. You can rename them in People.' });
         } catch (err) {
@@ -102,7 +106,7 @@ function DataManagement() {
         }
       }} />
       <div className="row">
-        <Button disabled={!profile} onClick={() => profile && download('hurricane-brain-profile.json', storage.exportProfileJson(profile), 'application/json')}>Export this person's profile</Button>
+        <Button disabled={!profile} onClick={() => profile && download('hurricane-brain-profile.json', storage.exportProfileJson(profile, pstore.info(profile.userId).appearance), 'application/json')}>Export this person's profile</Button>
         <Button onClick={() => fileRef.current?.click()}>Import a profile</Button>
         <Button variant="danger" onClick={() => setConfirm(true)}>Delete everything</Button>
       </div>
@@ -214,6 +218,21 @@ function EngineParams() {
 }
 
 export function Settings() {
+  const profile = useProfile();
+  const ap = useAppearance();
+  const [, setPassed] = useState(0);
+  if (ap.lock && profile && !isUnlocked(profile.userId)) {
+    return (
+      <div>
+        <PageHeader title="Settings" />
+        <GrownUpGate userId={profile.userId} onPass={() => setPassed((n) => n + 1)} />
+      </div>
+    );
+  }
+  return <SettingsBody />;
+}
+
+function SettingsBody() {
   const { settings } = useServices();
   const cfg = useSettings();
   const audio = mergeSettings(DEFAULT_AUDIO_SETTINGS, cfg.audio);
@@ -269,17 +288,10 @@ export function Settings() {
         </dl>
       </Card>
 
+      <AppearanceSettings />
+
       <Card>
-        <h2>Visuals</h2>
-        <Field label="Theme" hint="Dark is the default. The live session screen always stays dark, so it suits a dim room and closed eyes." group>
-          <Segmented label="Theme" value={cfg.theme} onChange={(v) => settings.update({ theme: v })} options={[{ value: 'dark', label: 'Dark (default)' }, { value: 'light', label: 'Light' }, { value: 'system', label: 'Follow device' }]} />
-        </Field>
-        <Field label="Text size" hint="Scales all text on top of your browser's own font size." group>
-          <Segmented label="Text size" value={cfg.textSize} onChange={(v) => settings.update({ textSize: v })} options={[{ value: 'normal', label: 'Normal' }, { value: 'large', label: 'Large' }, { value: 'larger', label: 'Larger' }]} />
-        </Field>
-        <Field label="Simple live view" hint="Shows the picture, one plain sentence and big buttons, with the numbers one tap away. Automatic means on for a child's profile and off for everyone else." group>
-          <Segmented label="Simple live view" value={cfg.childView} onChange={(v) => settings.update({ childView: v })} options={[{ value: 'auto', label: 'Automatic' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
-        </Field>
+        <h2>Picture and screen</h2>
         <Field label="Picture quality" hint="Lower is lighter on a phone battery. It changes resolution only, not what is shown." group>
           <Segmented label="Picture quality" value={cfg.vizQuality} onChange={(v) => settings.update({ vizQuality: v })} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]} />
         </Field>
@@ -289,10 +301,6 @@ export function Settings() {
         <Field label="Reduced motion" hint="Slower, calmer movement. The default follows your device's setting." group>
           <Segmented label="Reduced motion" value={cfg.reducedMotion} onChange={(v) => settings.update({ reducedMotion: v })} options={[{ value: 'system', label: 'Follow device' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
         </Field>
-        <label className="check">
-          <input type="checkbox" checked={cfg.showFieldNames} onChange={(e) => settings.update({ showFieldNames: e.target.checked })} />
-          <span><strong>Show technical names in the picture's readout</strong><div className="small dim">Adds the engine's field names under each row when you tap the picture. Off by default.</div></span>
-        </label>
         <label className="check">
           <input type="checkbox" checked={cfg.soundOnly} onChange={(e) => settings.update({ soundOnly: e.target.checked })} />
           <span><strong>Sound only: keep the screen dark during sessions</strong><div className="small dim">Sessions start with the screen dark. Tap the screen to look at it.</div></span>

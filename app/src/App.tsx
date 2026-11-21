@@ -12,7 +12,8 @@ import { ProgramDetail, ProgramList } from './ui/screens/Programs';
 import { Session } from './ui/screens/Session';
 import { Settings } from './ui/screens/Settings';
 import { Signatures } from './ui/screens/Signatures';
-import { useController, useProfile, useSettings } from './ui/state/app';
+import { useAppearance, useController, useProfile, useSettings } from './ui/state/app';
+import { TEXT_SIZE, useResolvedMode } from './ui/themes';
 import { useRoute } from './ui/state/router';
 
 const NAV: { to: string; label: string; icon: string }[] = [
@@ -28,7 +29,6 @@ const TITLES: Record<string, string> = {
   home: 'Home', programs: 'Programs', discover: 'Discover', signatures: 'Signatures', history: 'History', settings: 'Settings',
   ready: 'Get ready', profiles: 'People', fit: 'Fit and signal check', session: 'Session',
 };
-const TEXT_SIZE: Record<string, string> = { normal: '106.25%', large: '125%', larger: '150%' };
 
 export function App() {
   const { path, navigate } = useRoute();
@@ -49,20 +49,20 @@ export function App() {
     return () => q?.removeEventListener?.('change', apply);
   }, [settings.reducedMotion]);
 
-  // Theme and text size. The root font size is a percentage of the browser's own setting.
+  // The person's look goes on the root as attributes; theme.css does the rest. Nothing here touches a measurement.
+  const ap = useAppearance();
+  const mode = useResolvedMode(ap.mode);
   useEffect(() => {
-    const q = window.matchMedia?.('(prefers-color-scheme: light)');
-    const apply = () => {
-      const light = settings.theme === 'light' || (settings.theme === 'system' && !!q?.matches);
-      document.documentElement.dataset.theme = light ? 'light' : 'dark';
-    };
-    apply();
-    q?.addEventListener?.('change', apply);
-    return () => q?.removeEventListener?.('change', apply);
-  }, [settings.theme]);
-  useEffect(() => {
-    document.documentElement.style.fontSize = TEXT_SIZE[settings.textSize] ?? TEXT_SIZE.normal;
-  }, [settings.textSize]);
+    const r = document.documentElement;
+    r.dataset.theme = ap.theme;
+    r.dataset.mode = mode;
+    r.dataset.session = ap.session;
+    if (ap.highContrast) r.dataset.contrast = 'high';
+    else delete r.dataset.contrast;
+    if (ap.reduceColour) r.dataset.colour = 'shape';
+    else delete r.dataset.colour;
+    r.style.fontSize = TEXT_SIZE[ap.textSize] ?? TEXT_SIZE.device;
+  }, [ap.theme, mode, ap.session, ap.highContrast, ap.reduceColour, ap.textSize]);
 
   // One title per screen, and focus on the new screen's heading after a route change.
   const route = path.join('/');

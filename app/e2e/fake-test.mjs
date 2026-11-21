@@ -68,7 +68,7 @@ await page.screenshot({ path: join(outDir, '00-home.png') });
 // Settings > replay speed
 await page.evaluate(() => { window.location.hash = '#/settings'; });
 await page.waitForSelector('text=Replay speed', { timeout: 90000 });
-await page.getByRole('button', { name: speedLabel, exact: true }).click().catch(async () => { await page.getByText(speedLabel).first().click(); });
+await page.getByRole('button', { name: new RegExp(`^${{ '1': '1x', '4': '4x', fast: 'As fast' }[SPEED]}`) }).first().click();
 await page.screenshot({ path: join(outDir, '00-settings.png') });
 await page.evaluate(() => { window.location.hash = '#/home'; });
 
@@ -80,7 +80,8 @@ async function snapshotText() {
       title: t('.live-top .title'),
       phi: t('[data-testid=cell-phi]'), oct: t('[data-testid=cell-oct]'), chance: t('[data-testid=cell-chance]'),
       signal: t('[data-testid=signal-state]'), chips,
-      casPhi: t('[data-testid=cascade-phi]'), casOct: t('[data-testid=cascade-oct]'), casBoth: t('[data-testid=cascade-both]'),
+      casPhi: t('[data-testid=state-phi]'), casOct: t('[data-testid=state-oct]'), casBoth: t('[data-testid=state-both]'),
+      onPhi: document.querySelector('[data-testid=state-phi]')?.className ?? null, onOct: document.querySelector('[data-testid=state-oct]')?.className ?? null, onBoth: document.querySelector('[data-testid=state-both]')?.className ?? null,
       finished: !!document.querySelector('[data-testid=replay-finished]'),
       calm: t('.hb-calm-message'), guide: t('.live-guide'),
       page: document.querySelector('[data-testid=live-session]') ? 'live' : 'other',

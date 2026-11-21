@@ -53,3 +53,11 @@ own hypothesis, so it is always logged beside 2:1, 3:1 and the chance level.
 - **Recording** (`.hbraw`): the raw device stream plus notes (markers, session start and end); a
   recording can be replayed with no headset.
 - **Profile** (`.json`): one person's calibration, signatures, anchors and history.
+
+## Appearance (round 4)
+
+`AppSettings.appearanceBase` holds migrated legacy values; each person's own choices are in
+`profileInfo[id].appearance`. `resolveAppearance(ageGroup, appearanceBase, own)` returns the
+effective value (Night Garden and the kid screen are the defaults for a child). `migrateSettings`
+is pure and idempotent. `exportProfileJson(profile, appearance)` embeds `hbAppearance`;
+`Storage.appearanceOf(text)` reads it back on import.

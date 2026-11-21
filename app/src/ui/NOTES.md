@@ -48,3 +48,15 @@ Nothing here blocks the build. All four checks run in the real tree.
 - The get-ready step with a live headset: its component is tested and screenshotted through the Fit
   screen during a replay; the start flow itself (`state/start.ts`) needs a connected headset.
 - What the sound sounds like (no speaker).
+
+## Round 4 (themes and appearance)
+
+- Appearance is stored per profile (`settings.profileInfo[id].appearance`) and exported with the
+  profile as `hbAppearance`; the training profile format is unchanged. Legacy global settings
+  (theme, text size, child view, field names) migrate once into `appearanceBase` (`migrateSettings`).
+- Kid screen and grown-up lock: the lock is an arithmetic gate, in memory only. It is a speed bump
+  for a child, not security.
+- Words for "Show numbers off" come from `ui/words.ts`. If the signal architect changes what
+  "above chance" means, those thresholds are the one place to update.
+- Wanted from the viz owner (not done, not needed for this round): none. The hurricane and spectrum
+  follow the themes through the `--hb-*` and `--hb-storm-*` properties set in `theme.css`.

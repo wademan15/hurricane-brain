@@ -5,7 +5,7 @@
 import { parseProfile, type UserProfile } from '../training';
 import { IdbBackend, type KvBackend } from './backend';
 import { sessionSummaryCsv } from './csv';
-import { DEFAULT_APP_SETTINGS, type AppSettings, type Journal, type RecordingMeta, type StoredSession } from './types';
+import { DEFAULT_APP_SETTINGS, migrateSettings, type Appearance, type AppSettings, type Journal, type RecordingMeta, type StoredSession } from './types';
 
 /** Sessions saved before profiles, events and journals existed get safe defaults. */
 function normalizeSession(s: StoredSession): StoredSession {
@@ -33,7 +33,7 @@ export class Storage {
   // ---- settings -----------------------------------------------------------------------------
   async loadSettings(): Promise<AppSettings> {
     const s = await this.kv.get<Partial<AppSettings>>('settings', SETTINGS_KEY);
-    return { ...DEFAULT_APP_SETTINGS, ...(s ?? {}), stream: { ...DEFAULT_APP_SETTINGS.stream, ...(s?.stream ?? {}) }, version: 1 };
+    return { ...DEFAULT_APP_SETTINGS, ...migrateSettings(s ?? {}), stream: { ...DEFAULT_APP_SETTINGS.stream, ...(s?.stream ?? {}) }, version: 1 };
   }
   async saveSettings(s: AppSettings): Promise<void> {
     await this.kv.put('settings', SETTINGS_KEY, s);
@@ -54,8 +54,18 @@ export class Storage {
     for (const s of await this.listSessions(userId)) await this.deleteSession(s.id);
     await this.kv.delete('profiles', userId);
   }
-  exportProfileJson(p: UserProfile): string {
-    return JSON.stringify(p, null, 2);
+  exportProfileJson(p: UserProfile, appearance?: Partial<Appearance>): string {
+    // The look travels with the person; the training profile format is unchanged.
+    return JSON.stringify(appearance ? { ...p, hbAppearance: appearance } : p, null, 2);
+  }
+  /** The look stored in a profile file, if it has one. */
+  static appearanceOf(text: string): Partial<Appearance> | null {
+    try {
+      const a = (JSON.parse(text) as { hbAppearance?: unknown }).hbAppearance;
+      return a && typeof a === 'object' ? (a as Partial<Appearance>) : null;
+    } catch {
+      return null;
+    }
   }
   /** Parse and store a profile file. Throws with a plain message if it is not a profile. */
   async importProfileJson(text: string): Promise<UserProfile> {

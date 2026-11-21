@@ -1,6 +1,6 @@
 import type { AudioSettingsPatch } from '../../audio';
 import { createProfile, deriveSeed, ingestSession, learnSignature, type SafetyAnswers, type Questionnaire, type SessionRecord, type UserProfile } from '../../training';
-import { DEFAULT_APP_SETTINGS, type AgeGroup, type AppSettings, type Journal, type ProfileInfo } from '../../storage';
+import { DEFAULT_APP_SETTINGS, migrateSettings, resolveAppearance, type Appearance, type AgeGroup, type AppSettings, type Journal, type ProfileInfo } from '../../storage';
 
 type Listener = () => void;
 
@@ -41,7 +41,7 @@ function mergeAudio(old: AudioSettingsPatch, patch: AudioSettingsPatch): AudioSe
 export class SettingsStore extends Store<AppSettings> {
   private readonly save: (s: AppSettings) => Promise<void>;
   constructor(initial: AppSettings, save: (s: AppSettings) => Promise<void>) {
-    super({ ...DEFAULT_APP_SETTINGS, ...initial, stream: { ...DEFAULT_APP_SETTINGS.stream, ...initial.stream } });
+    super({ ...DEFAULT_APP_SETTINGS, ...migrateSettings(initial), stream: { ...DEFAULT_APP_SETTINGS.stream, ...initial.stream } });
     this.save = save;
   }
   update(patch: Partial<AppSettings>): void {
@@ -131,6 +131,19 @@ export class ProfileStore extends Store<UserProfile | null> {
     if (!p) return;
     this.settings.update({ activeProfileId: userId });
     this.set(p);
+  }
+
+  /** This person's look, with every default filled in. */
+  appearance(userId: string | null | undefined): Appearance {
+    const info = this.info(userId);
+    return resolveAppearance(info.ageGroup, this.settings.get().appearanceBase, info.appearance);
+  }
+
+  /** Change this person's look. Only what is passed changes. */
+  setAppearance(userId: string, patch: Partial<Appearance>): void {
+    const cur = this.info(userId);
+    this.settings.update({ profileInfo: { ...this.settings.get().profileInfo, [userId]: { ...cur, appearance: { ...cur.appearance, ...patch } } } });
+    this.refreshList();
   }
 
   rename(userId: string, info: Partial<ProfileInfo>): void {

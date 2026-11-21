@@ -1,97 +1,211 @@
 /* Hurricane Brain theme. Every colour, radius, spacing step, font and shadow the app uses is a
-   custom property here. A new look is a change to this file only (see ui/THEMING.md): layout
-   components and behaviour never name a colour or a pixel size of their own. */
-:root, .live {
-  color-scheme: dark;
+   custom property here. Four themes (docs/design/theming.md), each with a dark and a light palette:
+   the root carries data-theme (still-water | dawn-journal | calm-instrument | night-garden),
+   data-mode (dark | light, resolved from the person's choice), data-session (dark | match | candle),
+   data-contrast (high) and data-colour (shape). A new look is a change to this file only (see
+   ui/THEMING.md). Switching any of them changes no measurement and has no transition. */
 
-  /* colour: surfaces and text */
-  --bg: #070b12;
-  --surface: #0d1420;
-  --surface-2: #131c2d;
-  --surface-3: #1a2538;
-  --border: #243049;
-  --text: #dbe4f1;
-  --dim: #98a6bd;
-  --faint: #8593a9;   /* 5.6:1 on --surface-2: the not-measured text must stay readable */
-  --control-border: #4a5a7a; /* edges of buttons, inputs and tabs: 3:1 or more against the surface */
-  /* colour: accent and meaning */
-  --accent: #6ab7cc;
-  --accent-ink: #04141a;
-  --gold: #e2b86b;      /* golden ratio */
-  --octave: #6fc7c0;    /* octave */
-  --both: #b9a3f0;      /* both at once */
-  --state-ink: #0a111c; /* text on a filled state badge */
-  --ok: #7bc89a;
-  --warn: #e6b366;
-  --bad: #e58a78;
+/* ---- shape and type that every theme shares (a theme overrides what it needs) ---- */
+:root, .live {
   --scrim: rgba(0, 0, 0, 0.6);
-  /* colour: the live session screen (always dark, it is used with eyes closed or in a dim room) */
-  --live-bg: #03060c;
-  --live-text: #d4deec;
-  --live-dim: #aab7cb;
-  --live-subtle: #8ea0bb;
-  --live-dock-bg: #080d16;
-  --live-border: #1c2740;
-  --live-control-border: #4a5a7a;
-  --live-control-text: #a8b6cc;
-  --live-control-on-bg: #1a2538;
-  --live-control-on-text: #ffffff;
-  --live-control-on-border: #35476b;
-  --live-chip-bg: #121b2b;
-  --live-rate-bg: #131c2d;
-  --live-rate-text: #e6eef9;
-  --live-shade: #03060cdd;
-  --live-shade-clear: #03060c00;
-  --eyes-closed-text: #2a3140;
-  /* colour: drawn diagrams */
-  --diagram-unknown: #8593a9;
-  --diagram-ok: #7bc89a;
-  --diagram-bad: #e58a78;
 
   /* shape */
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 16px;
-  --radius-pill: 999px;
+  --radius: 14px; --radius-sm: 10px; --radius-md: 12px; --radius-lg: 20px; --radius-xl: 16px; --radius-pill: 999px;
   --border-w: 1px;
 
   /* spacing (a 4 px step) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 32px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 32px;
   --gutter: 16px;
 
-  /* size */
+  /* size: never under 44 px (48 and 64 for the others) */
   --tap: max(48px, 3.1rem);
   --tap-small: max(44px, 2.75rem);
   --tap-big: max(64px, 4rem);
-  --nav-h: 64px;
-  --sidebar-w: 232px;
-  --content-w: 880px;
+  --nav-h: 64px; --sidebar-w: 232px; --content-w: 880px;
 
   /* type */
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-system: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', var(--font-system);
+  --font-display: 'Inter', var(--font-system);
+  --font-num: 'Inter', var(--font-system);
+  --font: var(--font-body);
   --font-size: 106.25%; /* of the browser's own size: 17px at the default 16px */
   --line: 1.5;
+  --head-weight: 600;
 
-  /* depth */
   --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.45);
   --shadow-2: 0 10px 36px rgba(0, 0, 0, 0.55);
+  --transition: 0s; /* a tap changes the look at once; no theme animates (rule 1) */
+}
 
-  /* motion: short responses to a tap only; nothing here runs on its own */
-  --transition: 0.12s;
+/* ---- the four themes: shape and type ---- */
+:root[data-theme='dawn-journal'], .theme-scope[data-theme='dawn-journal'] {
+  --radius: 8px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px; --radius-xl: 8px;
+  --font-body: 'Inter', var(--font-system); --font-display: 'Fraunces', Georgia, 'Times New Roman', serif; --font-num: 'Inter', var(--font-system);
 }
-:root[data-theme='light'] {
-  color-scheme: light;
-  --bg: #f3f5f9; --surface: #ffffff; --surface-2: #eef1f7; --surface-3: #e3e8f1; --border: #c8d1e0; --control-border: #6f7d95;
-  --text: #16202f; --dim: #4a586f; --faint: #566379; --accent: #1b6f86; --accent-ink: #ffffff;
-  --gold: #7a5410; --octave: #176a63; --both: #5b3fa8; --state-ink: #ffffff; --ok: #1f7a46; --warn: #8a5a0b; --bad: #a53a28;
-  --scrim: rgba(0, 0, 0, 0.45);
+:root[data-theme='calm-instrument'], .theme-scope[data-theme='calm-instrument'] {
+  --radius: 8px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 8px;
+  --font-body: 'IBM Plex Sans', var(--font-system); --font-display: 'IBM Plex Sans', var(--font-system); --font-num: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
 }
+:root[data-theme='night-garden'], .theme-scope[data-theme='night-garden'] {
+  --radius: 28px; --radius-sm: 18px; --radius-md: 22px; --radius-lg: 36px; --radius-xl: 30px;
+  --font-body: 'Nunito', var(--font-system); --font-display: 'Nunito', var(--font-system); --font-num: 'Nunito', var(--font-system);
+  --head-weight: 700;
+}
+
+/* ---- the eight palettes ----
+   Selectors: the root (the app), a preview card (.theme-scope), and the live screen (.live) when
+   its data-pal says so: dark for "always dark", the mode for "match my mode". */
+/* palette: still-water dark */
+:is(:root, .theme-scope)[data-theme='still-water'][data-mode='dark'],
+:root[data-theme='still-water'] .live[data-pal='dark'] {
+  --bg: #070B12; --surface: #0D141E; --surface-2: #131C2D; --surface-3: #1A2538;
+  --border: #172131; --control-border: #55678B;
+  --text: #C9D4E3; --dim: #8D9AAE; --faint: #8593A9;
+  --accent: #5FB3B3; --accent-ink: #04141A;
+  --gold: #D9B26A; --octave: #9091E5; --both: #B9A3F0; --state-ink: #0A111C;
+  --ok: #7BC89A; --warn: #E6B366; --bad: #E58A78;
+}
+/* palette: still-water light */
+:is(:root, .theme-scope)[data-theme='still-water'][data-mode='light'],
+:root[data-theme='still-water'] .live[data-pal='light'] {
+  --bg: #F1F4F8; --surface: #FFFFFF; --surface-2: #EAEEF4; --surface-3: #DDE4EE;
+  --border: #C8D1E0; --control-border: #6F7D95;
+  --text: #16202F; --dim: #4A586F; --faint: #566379;
+  --accent: #1B6D84; --accent-ink: #FFFFFF;
+  --gold: #7A5410; --octave: #383B8E; --both: #5B3FA8; --state-ink: #FFFFFF;
+  --ok: #1F7A46; --warn: #8A5A0B; --bad: #A53A28;
+}
+/* palette: dawn-journal dark */
+:is(:root, .theme-scope)[data-theme='dawn-journal'][data-mode='dark'],
+:root[data-theme='dawn-journal'] .live[data-pal='dark'] {
+  --bg: #1C1814; --surface: #241F1A; --surface-2: #2C2620; --surface-3: #352E27;
+  --border: #3A322A; --control-border: #7D6F5E;
+  --text: #EFE6D8; --dim: #A89C8C; --faint: #A09484;
+  --accent: #D9A066; --accent-ink: #1C1308;
+  --gold: #E5C07B; --octave: #8CA7D3; --both: #C7A8E0; --state-ink: #1C1814;
+  --ok: #8CC49A; --warn: #E6B366; --bad: #E58A78;
+}
+/* palette: dawn-journal light */
+:is(:root, .theme-scope)[data-theme='dawn-journal'][data-mode='light'],
+:root[data-theme='dawn-journal'] .live[data-pal='light'] {
+  --bg: #F4EFE6; --surface: #FBF8F2; --surface-2: #EFE9DD; --surface-3: #E6DECE;
+  --border: #D6CCBA; --control-border: #837868;
+  --text: #2B2620; --dim: #6A6156; --faint: #6B6257;
+  --accent: #3F6B5A; --accent-ink: #FFFFFF;
+  --gold: #8A5F18; --octave: #404E85; --both: #6B4A9A; --state-ink: #FFFFFF;
+  --ok: #2F6F45; --warn: #8A5A0B; --bad: #A53A28;
+}
+/* palette: calm-instrument dark */
+:is(:root, .theme-scope)[data-theme='calm-instrument'][data-mode='dark'],
+:root[data-theme='calm-instrument'] .live[data-pal='dark'] {
+  --bg: #0B0F0E; --surface: #121816; --surface-2: #182120; --surface-3: #1F2B28;
+  --border: #1F2925; --control-border: #556F67;
+  --text: #D7E0DC; --dim: #8FA09A; --faint: #899A94;
+  --accent: #6FD0B0; --accent-ink: #04140E;
+  --gold: #E2B865; --octave: #809BFF; --both: #C9A8F0; --state-ink: #0B0F0E;
+  --ok: #7BC89A; --warn: #E6B366; --bad: #E58A78;
+}
+/* palette: calm-instrument light */
+:is(:root, .theme-scope)[data-theme='calm-instrument'][data-mode='light'],
+:root[data-theme='calm-instrument'] .live[data-pal='light'] {
+  --bg: #EEF2F0; --surface: #FFFFFF; --surface-2: #E5EBE8; --surface-3: #D8E1DD;
+  --border: #C3CFCA; --control-border: #6A7C75;
+  --text: #16201C; --dim: #46564F; --faint: #51625B;
+  --accent: #1B6B55; --accent-ink: #FFFFFF;
+  --gold: #7A5410; --octave: #2F3E8D; --both: #5B3FA8; --state-ink: #FFFFFF;
+  --ok: #1E7845; --warn: #8A5A0B; --bad: #A53A28;
+}
+/* palette: night-garden dark */
+:is(:root, .theme-scope)[data-theme='night-garden'][data-mode='dark'],
+:root[data-theme='night-garden'] .live[data-pal='dark'] {
+  --bg: #23213A; --surface: #2E2B4A; --surface-2: #38355A; --surface-3: #433F6A;
+  --border: transparent; --control-border: #8F89C0;
+  --text: #EDE9FF; --dim: #B4AED6; --faint: #ABA5CF;
+  --accent: #F2B89A; --accent-ink: #2A1810;
+  --gold: #F2D27A; --octave: #6EC4AC; --both: #D3B5F5; --state-ink: #23213A;
+  --ok: #8EDDA8; --warn: #F2C27A; --bad: #F29A8A;
+}
+/* palette: night-garden light */
+:is(:root, .theme-scope)[data-theme='night-garden'][data-mode='light'],
+:root[data-theme='night-garden'] .live[data-pal='light'] {
+  --bg: #F3F0FB; --surface: #FFFFFF; --surface-2: #ECE8F7; --surface-3: #E0DAF0;
+  --border: transparent; --control-border: #7A72A8;
+  --text: #2A2548; --dim: #5A5380; --faint: #5F5886;
+  --accent: #9A4A22; --accent-ink: #FFFFFF;
+  --gold: #7A5410; --octave: #144D41; --both: #6B3FB0; --state-ink: #FFFFFF;
+  --ok: #1E7845; --warn: #8A5A0B; --bad: #A53A28;
+}
+/* palette: candlelight (the warm dark of Dawn Journal, used by the live screen whatever the theme) */
+:root .live[data-pal='candle'] {
+  --bg: #1C1814; --surface: #241F1A; --surface-2: #2C2620; --surface-3: #352E27;
+  --border: #3A322A; --control-border: #7D6F5E;
+  --text: #EFE6D8; --dim: #A89C8C; --faint: #A09484;
+  --accent: #D9A066; --accent-ink: #1C1308;
+  --gold: #E5C07B; --octave: #8CA7D3; --both: #C7A8E0; --state-ink: #1C1814;
+  --ok: #8CC49A; --warn: #E6B366; --bad: #E58A78;
+}
+
+/* ---- high contrast: dim text and borders reach 7:1 (checked in test/contrast.test.ts) ---- */
+:is(:root, .theme-scope)[data-contrast='high'][data-mode='dark'], :root[data-contrast='high'] .live[data-pal='dark'], :root[data-contrast='high'] .live[data-pal='candle'] {
+  --dim: #E2E8F2; --faint: #DCE3EF; --border: #D0DAEA; --control-border: #D0DAEA;
+}
+:is(:root, .theme-scope)[data-contrast='high'][data-mode='light'], :root[data-contrast='high'] .live[data-pal='light'] {
+  --dim: #2B3344; --faint: #2F3748; --border: #3A4458; --control-border: #3A4458;
+}
+
+/* ---- the live screen: its tokens follow its palette, and the visualizer follows them ---- */
+.live {
+  --live-bg: var(--bg);
+  --live-text: var(--text);
+  --live-dim: var(--dim);
+  --live-subtle: var(--dim);
+  --live-dock-bg: var(--surface);
+  --live-border: var(--border);
+  --live-control-border: var(--control-border);
+  --live-control-text: var(--text);
+  --live-control-on-bg: var(--surface-3);
+  --live-control-on-text: var(--text);
+  --live-control-on-border: var(--control-border);
+  --live-chip-bg: var(--surface-2);
+  --live-rate-bg: var(--surface-2);
+  --live-rate-text: var(--text);
+  --live-shade: color-mix(in srgb, var(--bg) 87%, transparent);
+  --live-shade-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --eyes-closed-text: var(--bg);
+
+  /* the visualizer (src/viz/README.md, Theme tokens) */
+  --hb-bg: var(--bg);
+  --hb-ink: var(--text);
+  --hb-ink-dim: var(--dim);
+  --hb-panel-bg: color-mix(in srgb, var(--surface) 94%, transparent);
+  --hb-parts-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --hb-line: color-mix(in srgb, var(--dim) 30%, transparent);
+  --hb-focus-strong: var(--text);
+  --hb-control-border: var(--control-border);
+  --hb-gold: var(--gold);
+  --hb-octave: var(--octave);
+  --hb-font: var(--font-body);
+  --hb-font-mono: var(--font-num);
+  --hb-radius: var(--radius-sm);
+  --hb-spec-psd: var(--text);
+  --hb-spec-fit: var(--dim);
+  --hb-spec-flat: var(--text);
+  --hb-spec-peak: var(--text);
+  --hb-spec-grid: color-mix(in srgb, var(--dim) 18%, transparent);
+  --hb-spec-band: color-mix(in srgb, var(--dim) 10%, transparent);
+  --hb-storm-water: var(--bg);
+  --hb-storm-water-ripple: var(--surface);
+  --hb-storm-cloud-dark: var(--dim);
+  --hb-storm-cloud-light: var(--text);
+  --hb-storm-octave-ring: var(--octave);
+  --hb-storm-eye-wall: var(--gold);
+  --hb-storm-pulse: var(--bad);
+  --hb-storm-combined: var(--both);
+}
+
+/* diagrams */
+:root, .live, .theme-scope { --diagram-unknown: var(--faint); --diagram-ok: var(--ok); --diagram-bad: var(--bad); }
+
 /* reduced motion: set on the root by the app from the person's setting (or the system) */
 :root[data-motion='reduced'] * { transition: none !important; scroll-behavior: auto !important; }

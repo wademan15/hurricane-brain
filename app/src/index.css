@@ -1,5 +1,6 @@
 /* Hurricane Brain app shell. Dark by default, calm, large touch targets. No decorative motion:
    the only transitions are short responses to a tap or hover, and none runs on its own. */
+@import './ui/fonts.css';
 @import './ui/theme.css';
 
 * { box-sizing: border-box; }
@@ -218,3 +219,65 @@ textarea { resize: vertical; }
   .live-dock { max-height: 50vh; }
   .live-details .trio { grid-template-columns: 1fr; }
 }
+
+/* ---- Layout variants and readout levels (docs/design/theming.md). Colours come from tokens only. ---- */
+.live h1.title { font-family: var(--font-display); }
+.one-line { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 8px; font-size: 0.95rem; line-height: 1.35; }
+.one-line strong, .words-trio strong { font-variant-numeric: tabular-nums; font-family: var(--font-num); }
+.window-sentence { font-family: var(--font-display); font-size: 1.25rem; line-height: 1.35; margin: 6px 0; }
+.words-trio { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; font-size: 1.15rem; }
+.words-trio li { background: var(--live-chip-bg); border: 1px solid var(--live-border); border-radius: var(--radius-lg); padding: 12px 14px; min-height: 48px; }
+.words-trio .phi { border-color: var(--gold); } .words-trio .oct { border-color: var(--octave); }
+.bars { display: grid; gap: 8px; margin: 4px 0 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 4.5rem; align-items: center; gap: 8px; }
+.bar-label { font-size: 0.85rem; } .bar-num { font-variant-numeric: tabular-nums; font-family: var(--font-num); text-align: right; font-size: 0.85rem; }
+.bar { position: relative; height: 14px; background: var(--live-chip-bg); border: 1px solid var(--live-border); border-radius: 2px; }
+.bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); }
+.bar-row.oct .bar-fill { background: var(--octave); }
+.bar-tick { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px solid var(--live-text); }
+.bar-tick.b { border-left-style: dashed; }
+.tick-sample { display: inline-block; height: 0.9em; border-left: 2px solid var(--live-text); margin-right: 4px; vertical-align: -1px; }
+.tick-sample.b { border-left-style: dashed; margin-left: 8px; }
+.bar-row .nm small { display: block; color: var(--live-dim); }
+.bar-row .nm { grid-column: 2 / -1; font-size: 0.85rem; }
+.chips-col { display: grid; gap: 6px; margin: 4px 0 8px; }
+.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip-row .chip { background: var(--live-chip-bg); border: 1px solid var(--live-border); border-radius: var(--radius-sm, 4px); padding: 2px 8px; font-size: 0.8rem; }
+.stones-col { display: grid; gap: 10px; margin: 6px 0 8px; }
+.stones { display: grid; gap: 4px; }
+.stones-row { display: flex; gap: 10px; }
+.stone { width: 26px; height: 18px; border-radius: 50%; border: 2px solid var(--live-border); background: transparent; }
+.stones.phi .stone.on { background: var(--gold); border-color: var(--gold); }
+.stones.octave .stone.on { background: var(--octave); border-color: var(--octave); }
+/* Reduce colour reliance: filled stones and bar fills also differ by shape. */
+:root[data-colour="shape"] .stones.octave .stone { border-radius: 3px; }
+:root[data-colour="shape"] .bar-row.oct .bar-fill { background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--bg) 4px 6px); }
+/* Layout flavours */
+.live[data-layout="window"] .live-stage { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.live[data-layout="tile"] .live-dock { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.live[data-layout="grid"] .live-dock { display: block; }
+.live[data-layout="grid"] .bar-row { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) 4.5rem; }
+/* Kid screen: big words, touch targets of at least 48 px */
+:where(.live[data-view="simple"]) :is(button, .btn) { min-height: 48px; min-width: 48px; }
+.live[data-view="simple"] .simple-word { font-size: 2rem; font-family: var(--font-display); }
+/* Dim: a veil over the screen. Any touch, key or pointer move removes it. No fade, so no flicker. */
+.dim-veil { position: fixed; inset: 0; background: #000; opacity: 0.82; pointer-events: none; z-index: 40; }
+@media (max-width: 520px) {
+  .bar-row { grid-template-columns: minmax(0, 1fr) 4rem; }
+  .bar-row .bar-label { grid-column: 1 / -1; }
+}
+
+/* Theme preview cards: each carries its own data-theme and data-mode, so its tokens are its own. */
+.theme-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 6px 0; }
+.theme-card { all: unset; box-sizing: border-box; display: grid; gap: 6px; padding: 10px; min-height: var(--tap); cursor: pointer; background: var(--bg); color: var(--text); border: 2px solid var(--control-border); border-radius: var(--radius-lg); font-family: var(--font-body); }
+.theme-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.theme-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.theme-card-sample { display: block; }
+.theme-card-surface { display: grid; gap: 6px; padding: 10px; background: var(--surface); border: 1px solid var(--control-border); border-radius: var(--radius-md); }
+.theme-card .s-line { display: block; height: 6px; border-radius: 3px; background: var(--text); width: 80%; }
+.theme-card .s-line.short { width: 50%; background: var(--dim); }
+.s-dots { display: flex; gap: 6px; }
+.s-dots i { display: block; width: 14px; height: 14px; border-radius: 50%; }
+.s-accent { background: var(--accent); } .s-gold { background: var(--gold); } .s-octave { background: var(--octave); }
+.theme-card-name { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+.theme-card-feel { font-size: 0.82rem; color: var(--dim); line-height: 1.3; }

@@ -2,7 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { getProgram, createProfile } from '../../training';
-import { DEFAULT_APP_SETTINGS } from '../../storage';
+import { DEFAULT_APPEARANCE } from '../../storage';
 import { Field, Modal, Segmented } from '../components/kit';
 import { PRIVACY, PRIVACY_SENTENCE } from '../copy';
 import { CHILD_ENGINE_PARAMS, needsIaf, simpleViewOn } from '../session/child';
@@ -18,12 +18,12 @@ describe('child settings', () => {
   });
 
   it('the simple view is on for a child by default and available to anyone', () => {
-    expect(simpleViewOn({ childView: 'auto' }, 'child')).toBe(true);
-    expect(simpleViewOn({ childView: 'auto' }, 'adult')).toBe(false);
-    expect(simpleViewOn({ childView: 'auto' }, null)).toBe(false);
-    expect(simpleViewOn({ childView: 'on' }, 'adult')).toBe(true);
-    expect(simpleViewOn({ childView: 'off' }, 'child')).toBe(false);
-    expect(DEFAULT_APP_SETTINGS.childView).toBe('auto');
+    expect(simpleViewOn({ kidView: 'auto' }, 'child')).toBe(true);
+    expect(simpleViewOn({ kidView: 'auto' }, 'adult')).toBe(false);
+    expect(simpleViewOn({ kidView: 'auto' }, null)).toBe(false);
+    expect(simpleViewOn({ kidView: 'on' }, 'adult')).toBe(true);
+    expect(simpleViewOn({ kidView: 'off' }, 'child')).toBe(false);
+    expect(DEFAULT_APPEARANCE.kidView).toBe('auto');
   });
 
   it('band-based programs need the individual alpha frequency for a child, and calibration does not', () => {
