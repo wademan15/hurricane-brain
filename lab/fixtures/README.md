@@ -55,6 +55,7 @@ make the height an 8 s window sees lower than nominal, by up to about 2 dB for 0
 | `artifact_jaw_clench` | 90 s | Same plus 6 jaw clenches | Muscle gated |
 | `artifact_railed_mains60` | 90 s | One channel railed from 40 s, plus 60 Hz mains on all | Mains detected as 60 Hz, railed channel excluded |
 | `form_dissolve_120s` | 120 s | 3-member golden cascade whose outer members are present 25 to 70 s | State enters after 25 s and leaves after 70 s, with the delays reported |
+| `both_phi_octave_12db` | 120 s | Golden ratio chain 5, 8.09, 13.09 Hz and octave chain 5, 10, 20 Hz, sharing their root, 12 dB each (made by `app/e2e/make_both.py --lab`) | Five confirmed tracks; golden ratio state, octave state and the combined state all reached and held (engine test `tests/both.rs`: 163, 305 and 163 of 480 frames) |
 | `drift_band_edge` | 90 s | One rhythm drifting 7.4 to 8.6 Hz across the theta/alpha edge | One track, not two |
 | `phi3_10db_loss1pct` | 120 s | `phi3_10db` with 1 % of packets lost (NaN) | Same answer within uncertainty; some windows null |
 | `phi3_10db_phase_randomized` | 120 s | Phase-randomized copy of `phi3_10db` | Same peaks and ratios (the spectrum is kept); shows what this surrogate can and cannot test |

@@ -610,3 +610,55 @@ fn chance_b_is_available_in_a_three_minute_session_and_presets_are_valid() {
     }
     let _ = (EegStream { channels: vec![], rate_hz: 256.0, bits: 0, model: String::new() }, StreamDescription::default(), EngineConfig { streams: StreamDescription::default(), params: None, seed: 0, mains_hz: None });
 }
+
+/// Spec 8.4: the state ends only after its statistic has been under the exit level for the
+/// exit dwell (before: at the first update under it, so a member rhythm that failed
+/// persistence for a second ended the state, which then waited out the entry dwell again).
+/// Nothing confirmed at all ends it at once. The entry rule is unchanged.
+#[test]
+fn the_state_leaves_after_the_exit_dwell_not_at_the_first_dip() {
+    use hb_engine::ratios::StateMachine;
+    let (en, ex) = (Some(3.5), Some(2.5));
+    let mut sm = StateMachine::default();
+    let mut t = 0.0;
+    let mut step = |sm: &mut StateMachine, stat: Option<f64>, nothing: bool, secs: f64| {
+        let n = (secs / 0.25).round() as usize;
+        for _ in 0..n {
+            sm.update_dwell(t, stat, en, ex, 5.0, 5.0, nothing);
+            t += 0.25;
+        }
+    };
+    step(&mut sm, Some(4.0), false, 5.0);
+    assert!(!sm.active, "entered before the dwell");
+    step(&mut sm, Some(4.0), false, 0.25);
+    assert!(sm.active);
+    // Between exit and entry levels: holds (hysteresis).
+    step(&mut sm, Some(3.0), false, 20.0);
+    assert!(sm.active);
+    // Under the exit level, or not measurable, for less than the exit dwell: holds.
+    step(&mut sm, Some(0.0), false, 2.0);
+    step(&mut sm, None, false, 2.5);
+    assert!(sm.active);
+    step(&mut sm, Some(3.0), false, 1.0);
+    // The count starts again: 4.75 s more under the level still holds, the next update ends it.
+    step(&mut sm, Some(0.0), false, 5.0);
+    assert!(sm.active);
+    step(&mut sm, Some(0.0), false, 0.25);
+    assert!(!sm.active);
+    // Re-entry needs the whole entry dwell again.
+    step(&mut sm, Some(4.0), false, 5.0);
+    assert!(!sm.active);
+    step(&mut sm, Some(4.0), false, 0.25);
+    assert!(sm.active);
+    // Nothing confirmed at all: ends at once.
+    step(&mut sm, None, true, 0.25);
+    assert!(!sm.active);
+    // The rule with no exit dwell is still available and unchanged.
+    let mut old = StateMachine::default();
+    for i in 0..=20 {
+        old.update(i as f64 * 0.25, Some(4.0), en, ex, 5.0);
+    }
+    assert!(old.active);
+    old.update(5.25, Some(0.0), en, ex, 5.0);
+    assert!(!old.active);
+}

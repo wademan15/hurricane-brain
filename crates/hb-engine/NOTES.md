@@ -131,6 +131,31 @@ Still open after this round, most important first:
 8. Chance B goes back to null whenever a new track joins the scored set.
 9. Digests below are stale.
 
+## Second fake test: the combined state, November 2026 (signal architect)
+
+Spec sections 6.2, 6.4, 6.5, 6.6, 8.4 and 14 carry the reasoning and the measured numbers; regression tests are `tests/both.rs` (five, each failing on the build before) and the last test of `tests/review.rs`. Fixture: `lab/fixtures/both_phi_octave_12db` (made by `app/e2e/make_both.py --lab`).
+
+Why `states.both` never fired, in order of effect:
+
+- **Pending harmonics (engine.rs `detect_harmonics`).** An out-of-band window created a harmonic entry for any pair whose ratio rounds to 2 or more, so every such pair (golden pairs included) was "pending" and out of the cascades for 3 s in every 33. An out-of-band test now only counts against a pair that already is a candidate.
+- **Background level (spectral.rs `fit_background`).** Level from the bins the robust fit kept (`inl_line`, `inl`), matched to the quantile the kept bins' median has under the truncated chi2 law (`digamma` added to dsp/special.rs). The all-bins median made the lack-of-fit guard refuse spectra with five or six rhythms.
+- **Tracks (engine.rs `link_tracks`, tracks.rs `join_dist_at`, `TrackInt::ref_f`).** Joining distance capped at max(`track_join_hz`, `track_join_max_rel` f); peaks matched against the integrated frequency; a merge only when the two tracks' own references are within the joining distance. Dormant tracks keep `f_int` for matching.
+- **Peak location (spectral.rs `find_peaks`, `smooth_tri`).** Region, centroid and jackknife on the excess smoothed to max(`peak_smooth_hz`, `peak_smooth_rel` f); height test and candidates unchanged; no smoothing for a candidate whose region has a valley deeper than ripple (`peak_dip_alpha`); window SE = jackknife plus the rhythm's wander within the window.
+- **Exit dwell (ratios.rs `StateMachine::update_dwell`, `exit_dwell_s`).** `StateMachine::update` keeps the old rule. `count_entries` (chance B threshold) is unchanged, which is conservative.
+- **The first test signal** (3.0, 4.85, 7.85 and 6.2, 12.4, 24.8 Hz) also was not a clean test: see the docstring of `app/e2e/make_both.py`. On the final build it still gives golden 0, octave 381, both 0.
+
+Tried and rejected: 1000 surrogates for chance A (no measurable gain over 200 once the faults above were fixed; 17 ms per refresh against 10); a smoothing half-width of 1 Hz or 8% (joins 8.09 and 10 Hz); a test of the level beside a peak against muscle humps (removes real rhythms 2 Hz apart).
+
+New open items, most important first:
+
+1. A band-limited hump (25 to 45 Hz) under the muscle gate now yields a track near 33 Hz in 3 to 50% of frames (0 to 4% before). No state came on. Spec 6.2.
+2. A rhythm planted at 7.89 Hz reads 0.11 Hz low for whole recordings with a reported error of 0.05 to 0.08 Hz, before and after this round. Cause unknown. Spec 6.4.
+3. One near-miss recording in 29 (a 1.55 chain) enters the golden ratio state for 93 frames (51 before). Within the stated false-entry rate, but it is a near miss reading as aligned.
+4. Two rhythms 1.9 Hz apart that are each 1.5 Hz wide at half height (shared root, random widths) are not two peaks in an 8 s spectrum: the combined state was reached in 4 of 8 such recordings, 8 of 8 when the widths are 3.5% of the frequency.
+5. Independent rhythms at 5, 10 and 20 Hz are marked harmonic at some time in about half of the both-cascades recordings (105 of 480 frames on the fixture). The mark's false rate per pair is as measured before (0.6 to 0.8% of frames for one pair); three candidate pairs and the release rule make it visible here.
+
+Item 2 of the list above (broad rhythms) is partly answered: one track at 20 Hz in 93% of frames (39% before), integrated error 0.10 Hz rms; the window error is still 1.4 to 1.7 times too small for rhythms 1 Hz wide.
+
 ## Verified numbers (release, this machine)
 
 **Out of date after the review** for anything numeric below; kept for the record of what the first build measured.

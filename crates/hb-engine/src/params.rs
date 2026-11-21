@@ -147,6 +147,8 @@ params! {
     /// Track joining distance: this many standard errors or `track_join_hz`, whichever is larger (spec 6.5).
     track_join_se: f64 = 3.0,
     track_join_hz: f64 = 1.0,
+    /// Upper limit of the joining distance as a fraction of the frequency (never under `track_join_hz`).
+    track_join_max_rel: f64 = 0.08,
     /// Fast frames per second (spec 7). Must divide the EEG rate.
     fast_per_s: f64 = 32.0,
     /// Fast path delay limit, s (spec 7).
@@ -164,6 +166,9 @@ params! {
     control_ratio_b: f64 = 1.8,
     /// Dwell before entering an aligned state, s (spec 8.4).
     dwell_s: f64 = 5.0,
+    /// The state ends when its statistic has been under the exit level, or not measurable,
+    /// for this long without a break (spec 8.4). At once when no rhythm is confirmed at all.
+    exit_dwell_s: f64 = 5.0,
     /// One false entry allowed per this many seconds (spec 8.4: 1 per 10 minutes).
     false_entry_interval_s: f64 = 600.0,
     /// Surrogates per chance estimate (spec 8.5).
@@ -198,6 +203,14 @@ params! {
     peak_tries_per_rayleigh: f64 = 1.0,
     /// Narrowest accepted peak as a fraction of the estimator resolution 2W (a pure sine reads about 2W).
     peak_width_min_factor: f64 = 0.8,
+    /// A confirmed peak's region and centre are read from the excess smoothed to a resolution
+    /// of the larger of `peak_smooth_hz` and `peak_smooth_rel` times the frequency (spec 6.4).
+    /// Both 0 turns the smoothing off.
+    peak_smooth_hz: f64 = 0.4,
+    peak_smooth_rel: f64 = 0.06,
+    /// Two maxima inside one smoothed peak count as two rhythms when the valley between them
+    /// is deeper than estimator ripple gives at this level (spec 6.4).
+    peak_dip_alpha: f64 = 0.01,
     /// Background fit: drop bins above the line by more than this many expected log-SDs.
     bg_drop_sigma: f64 = 2.0,
     /// Background fit fails if inlier RMS residual exceeds this multiple of the expected log-SD.

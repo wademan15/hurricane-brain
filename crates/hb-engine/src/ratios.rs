@@ -728,45 +728,58 @@ pub fn static_threshold(d: &NullDist, p: &Params) -> Option<f64> {
     }
 }
 
-/// Aligned-state machine (spec 8.4): dwell before entry, hysteresis on exit.
+/// Aligned-state machine (spec 8.4): dwell before entry, hysteresis and dwell on exit.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateMachine {
     pub active: bool,
     pub since_t: Option<f64>,
     above_since: Option<f64>,
+    below_since: Option<f64>,
 }
 
 impl Default for StateMachine {
     fn default() -> Self {
-        StateMachine { active: false, since_t: None, above_since: None }
+        StateMachine { active: false, since_t: None, above_since: None, below_since: None }
     }
 }
 
 impl StateMachine {
+    /// The rule with no exit dwell: the state ends at the first update under the exit level.
     pub fn update(&mut self, t: f64, stat: Option<f64>, enter: Option<f64>, exit: Option<f64>, dwell_s: f64) {
+        self.update_dwell(t, stat, enter, exit, dwell_s, 0.0, false);
+    }
+
+    /// Entry: the statistic at or over `enter` for `dwell_s` without a break. Exit: the
+    /// statistic under `exit`, or not measurable, for `exit_dwell_s` without a break; at once
+    /// when `nothing` is set (no confirmed rhythm at all, so nothing is being measured).
+    #[allow(clippy::too_many_arguments)]
+    pub fn update_dwell(&mut self, t: f64, stat: Option<f64>, enter: Option<f64>, exit: Option<f64>, dwell_s: f64, exit_dwell_s: f64, nothing: bool) {
         if self.since_t.is_none() {
             self.since_t = Some(t);
         }
         let was = self.active;
-        match (stat, enter, exit) {
-            (Some(s), Some(en), Some(ex)) => {
-                if self.active {
-                    if s < ex {
-                        self.active = false;
-                        self.above_since = None;
-                    }
-                } else if s >= en {
+        if self.active {
+            let holds = matches!((stat, exit), (Some(s), Some(ex)) if s >= ex);
+            if holds {
+                self.below_since = None;
+            } else {
+                let since = *self.below_since.get_or_insert(t);
+                if nothing || t - since >= exit_dwell_s {
+                    self.active = false;
+                    self.above_since = None;
+                    self.below_since = None;
+                }
+            }
+        } else {
+            match (stat, enter) {
+                (Some(s), Some(en)) if s >= en => {
                     let since = *self.above_since.get_or_insert(t);
                     if t - since >= dwell_s {
                         self.active = true;
+                        self.below_since = None;
                     }
-                } else {
-                    self.above_since = None;
                 }
-            }
-            _ => {
-                self.active = false;
-                self.above_since = None;
+                _ => self.above_since = None,
             }
         }
         if was != self.active {

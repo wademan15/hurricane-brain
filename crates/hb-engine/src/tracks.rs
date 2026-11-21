@@ -40,7 +40,26 @@ pub fn join_dist(se_a: f64, se_b: f64, p: &Params) -> f64 {
     (p.track_join_se * m::sqrt(se_a * se_a + se_b * se_b)).max(p.track_join_hz)
 }
 
+/// The joining distance at frequency `f` (spec 6.5): `join_dist`, but never more than the
+/// larger of `track_join_hz` and `track_join_max_rel` of the frequency.
+///
+/// The uncertainty term alone has no upper limit. One window's centre of a rhythm a few
+/// tenths of a hertz wide can carry a jackknife error of 0.5 Hz, which makes "three standard
+/// errors" 2 Hz: wider than the gap between neighbouring rhythms in the theta range. A track
+/// whose own rhythm was absent for a window then took its neighbour's peak, and tracks walked
+/// from rhythm to rhythm (fake test 2: one track read 3.1, 3.6, 4.2, 4.7, 5.0, 5.5, 6.1,
+/// 6.7 Hz over 50 s across three planted rhythms).
+pub fn join_dist_at(f: f64, se_a: f64, se_b: f64, p: &Params) -> f64 {
+    join_dist(se_a, se_b, p).min(p.track_join_hz.max(p.track_join_max_rel * f))
+}
+
 impl TrackInt {
+    /// Where this track's rhythm is taken to be when a new peak is matched to it: the
+    /// integrated frequency (steady) if there is one, else the last window's centre.
+    pub fn ref_f(&self) -> (f64, f64) {
+        self.f_int.unwrap_or((self.last_f, self.last_se))
+    }
+
     pub fn new(id: u32, t: f64, o: &Obs, nsites: usize) -> Self {
         TrackInt {
             id,

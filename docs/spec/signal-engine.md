@@ -170,7 +170,11 @@ So the fit has two stages:
 1. The robust power law, as above. Its exponent and offset are the ones reported in the frame: they describe the best single power law.
 2. A robust polynomial in log power against log frequency (provisional: a quadratic, 3 coefficients), fitted the same way, starting from the bins the power law kept. Outside the fitted range the curve continues as a straight line along its tangent. Nothing is extrapolated as a polynomial. The spectrum is flattened by this curve, and the fast path and the muscle measure read the background from it.
 
-Both stages model the estimator's own smoothing and the high-pass filter, and set their level so that the median of the flattened spectrum is the median of the chi-squared law in 6.1.
+Both stages model the estimator's own smoothing and the high-pass filter, and set their level so that the median of the flattened spectrum over the bins the robust fit kept is the median the chi-squared law in 6.1 has once cut off at the drop limit.
+
+Decision (second fake test): the level is set from the kept bins, not from all fit bins. The median of all fit bins is robust to a few peak bins only. Five or six rhythms at 12 dB lift a third of the bins between 2 and 45 Hz; the level then came out 15 to 25% high, every valley between the rhythms read as under the background, and the lack-of-fit test below refused the fit. On six planted rhythms (three seeds, 120 s) 74% of site spectra were null with reason "bad fit"; on one lab recording with a golden ratio chain and an octave chain, 141 of 210. After the change: 0.5%, and 1 of 210. On background alone little moves: false peaks per window 0.40 to 0.48% for power laws, a knee at 5 or 10 Hz and noise floors (0.36 to 0.41% before), 0.69% for a knee at 15 Hz (0.80%), against a stated 1%; with a filter edge inside the fitted range 1.6% (low-pass at 30 Hz, 1.2% before) and 2.9% (high-pass at 4 Hz, 2.3% before), the known shortfall of the quadratic, a little larger. No track was confirmed in 40 minutes of any of these shapes, as before.
+
+What this costs, measured, and still open: the old level was also what kept a broad muscle hump out. A hump from 25 to 45 Hz lifted the level, the lack-of-fit test refused about half the windows, and in the others its ripples stayed under the height threshold. With the level set from the kept bins those windows are fitted, and the ripples on the hump are confirmed as peaks near 33 Hz: on synthetic humps (Gaussian at 35 Hz, 6 Hz standard deviation, band-limited, on top of a 10 Hz rhythm) a track that is no rhythm is present in 3 to 17% of frames at a 3 µV hump and 40 to 50% at 6 µV, against 0 to 4% before. No golden ratio or octave state came on in any of them. Real muscle activity is broadband and also raises 65 to 95 Hz, where the gate of 5.3 catches it; the lab's jaw clench recording got better, not worse (stray-track frames 135 before, 21 now). But a hump that stays under the gate is now a possible false track, and the width test of 6.3 does not catch it, because a ripple on a hump is as narrow as a rhythm. A test of the level beside the peak was tried and rejected: it cannot tell a hump from several real rhythms 2 Hz apart, and removed them (the both-cascades recording fell from 164 frames in the combined state to 0). This needs a rule of its own and is the first open item of this section.
 
 The fit error has two parts, and either one makes the site null with reason "bad fit":
 
@@ -203,8 +207,8 @@ A peak that stops passing is dropped after a hold of 2 s (provisional). During t
 
 For each confirmed peak the engine reports a centre frequency and a standard error.
 
-- Centre frequency: centroid of the flattened peak above half height (provisional; a Gaussian fit is the alternative).
-- Standard error: jackknife over the tapers or segments. This costs almost nothing and is honest about each individual window.
+- Centre frequency: centroid, above half height, of the peak's power above the background, smoothed as described under "Decision (second fake test)" below.
+- Standard error: jackknife over the tapers or segments, plus the rhythm's own wander within the window (same decision).
 
 **An important correction to the plan.** The plan assumed 4 to 8 s windows give about 0.1 Hz precision. A quick simulation (`lab/precision_and_chance_sketch.py`) says that is too optimistic for realistic brain rhythms, which are 0.5 to 2 Hz wide and wander. With a simple centroid estimator and a strong rhythm, 10 dB above background:
 
@@ -237,13 +241,27 @@ The integrated frequency is therefore the plain mean, and its variance pools two
 | 1 Hz, 10 dB and above | 1.2 to 1.6 | 0.8 to 1.25 |
 | 1 Hz, 6 dB | 1.4 to 2.7 | 0.8 to 1.3 |
 
-Still open: for rhythms 1 Hz wide and wider the centre itself is biased, by about +0.1 Hz at 5 Hz in the integrated value and by up to −5% in single windows for rhythms 1.5 Hz wide. The reported error does not cover a bias. The centre estimator (the first candidate list in 10.1) has to be settled in the bake-off with this as a test. The reported peak width has the same cause and reads about 1.2 Hz for a rhythm whose true width at half height is 2.4 Hz.
+**Decision (second fake test): where a peak is, and where its centre is.** One 8 s spectrum of a rhythm 1 Hz wide is jagged: seven tapers leave each bin 38% uncertain. "The bins above half the tallest bin" was then one lump of the rhythm, not the rhythm. A 20 Hz rhythm 1 Hz wide became two tracks near 19.2 and 20.5 Hz, neither at its centre, and the octave step from 10 Hz was lost; on four synthetic recordings there was exactly one track at 20 Hz in 39% of frames. Now:
+
+1. The height test of 6.3 is made on the unsmoothed spectrum, as before. Its false-peak rate is unchanged.
+2. A peak that passes is located on the power above background smoothed with a triangle whose half-width is the larger of 0.4 Hz and 6% of the frequency (provisional). Region, half height, centroid and the jackknife all use the smoothed peak. Rhythms are wider at higher frequency, so the smoothing is too.
+3. Smoothing must not join what the spectrum shows apart. If the unsmoothed spectrum inside the smoothed region has a valley deeper than estimator ripple makes between two bins of one rhythm (the ratio of two chi-squared values, level 1%), the candidate is located without smoothing. Measured, this rule changes little (cascade steps on the both-cascades recording in 300 frames with it and 279 without); what keeps neighbours apart is mostly the size of the smoothing. With a half-width of 1 Hz, rhythms at 8.09 and 10 Hz were read as one peak near 8.5 Hz.
+4. The narrow width limit of 6.3 is judged on the unsmoothed peak. The reported width is the larger of the unsmoothed width and the smoothed width with the smoothing taken out.
+5. The window's standard error. The taper jackknife measures the estimator's noise. It cannot see the rhythm's wander inside the window, because all tapers look at the same 8 s. A rhythm of spectral standard deviation σ seen for T seconds has about 1 + 2√π σT independent stretches, so its realised centre is off by σ ÷ √(that), and this is added in quadrature (σ from the measured width, without removing the estimator's broadening, which errs wide for a narrow rhythm). Without it the smoothed centroid's error read 2 to 3 times too small against planted truth. The old, unsmoothed jackknife was inflated by its own jitter and happened to cover the wander.
+
+Measured after the change, 10 dB, 8 s windows, 120 windows per case: actual error ÷ reported window error 0.7 to 0.8 for rhythms 0.25 Hz wide, 1.0 to 1.15 at 0.5 Hz, 1.4 to 1.7 at 1 Hz (so still too small for broad rhythms, as before the change); integrated error 0.8 to 1.0 at every width, with 1 to 6% of errors beyond two standard errors. One track at 20 Hz in 93% of frames (39% before), its integrated error 0.10 Hz rms.
+
+Still open, found in this round and not fixed: on three recordings a rhythm planted at 7.89 Hz reads 0.11 to 0.12 Hz low in the integrated frequency for the whole recording, with a reported error of 0.05 to 0.08 Hz. It was so before this change too (0.106 Hz). The planted truth here is the carrier's frequency path, and other planted frequencies do not show it (8.09 Hz reads within 0.02 Hz), so I do not know the cause. A 1.4% bias is enough to move a ratio of 1.54 towards the golden ratio, and it must be found before the near-miss numbers of 8.4 are relied on for more than these recordings.
+
+Still open from the review: for rhythms 1 Hz wide and wider the centre itself is biased, by about +0.1 Hz at 5 Hz in the integrated value and by up to −5% in single windows for rhythms 1.5 Hz wide. The reported error does not cover a bias. The centre estimator (the first candidate list in 10.1) has to be settled in the bake-off with this as a test. The reported peak width has the same cause and reads about 1.2 Hz for a rhythm whose true width at half height is 2.4 Hz.
 
 ### 6.5 Peak tracks
 
-Peaks are linked across windows into tracks so that "the alpha peak" has a stable identity. A new window's peak joins the track whose predicted frequency is nearest, if within 3 standard errors or 1 Hz, whichever is larger (provisional). Each track has an id, a birth time, its history of frequency, height and width, and its integrated frequency. Two tracks that converge are merged and the event is recorded. A track that splits, such as a double alpha peak, becomes two tracks.
+Peaks are linked across windows into tracks so that "the alpha peak" has a stable identity. A new window's peak joins the track whose integrated frequency is nearest, if within the joining distance: 3 standard errors or 1 Hz, whichever is larger, and never more than the larger of 1 Hz and 8% of the frequency (provisional). Each track has an id, a birth time, its history of frequency, height and width, and its integrated frequency. Two tracks are merged, and the event recorded, only when the tracks themselves have converged: their integrated frequencies are within the joining distance of each other, and one peak serves both. A track that splits, such as a double alpha peak, becomes two tracks.
 
 Decision: a track that ends resumes. Real rhythms wax and wane. A rhythm that fades fails persistence, and its track ends after the hold time; when it returned it used to be a new track with a new id, starting again from one window's uncertainty. On the lab's 120 s cascade recordings each planted rhythm went through 3 to 6 ids, pairs were unresolved most of the time, and the three-member cascade was in the aligned state in 14 of 480 frames. Now a peak confirmed within the joining distance of a track that ended less than 30 s ago (provisional, equal to the integration time) continues that track: same id, its window estimates of the last integration time (the pause simply contributes none) and its history. While the rhythm is away the track is not output: no confirmed peak, no track. With this change (and the state rule of 8.4) the same recording is in the state in 75 of 480 frames and the five-member one in 294.
+
+Decision (second fake test): the joining distance has an upper limit, and a merge needs the tracks to have converged. Three standard errors with no limit reached 1.5 to 2 Hz for a broad or newly born track. With rhythms at 4.85, 6.2 and 7.85 Hz a track hopped from one rhythm to the next (one read 3.1, then 4.9, then 6.7 Hz), and an older track with no peak of its own in a window took a neighbour's peak and the neighbour's track was merged away. The golden ratio chain in that recording had a step in 8 of 480 frames. A peak was also matched against the track's last window, which wanders more than the track does; it is now matched against the integrated frequency. After the change every track in that recording stays within 0.5 Hz of its own rhythm, and on the synthetic test (four rhythms, three seeds) no track moves more than 0.9 Hz in its life.
 
 Tracks are named by frequency only. Band names (delta 1 to 4, theta 4 to 8, alpha 8 to 13, beta 13 to 30, gamma 30 to 45 Hz) are labels for display and training targets. They are never used to force one peak per band.
 
@@ -263,7 +281,7 @@ The rule now:
 
 1. **Candidate.** The upper track is a candidate harmonic of the lower when it sits inside the band where the harmonic would be (n times as wide as the lower rhythm) or within the error of the two centres, and never further than twice the tolerance from the integer ratio. The phase test is made at exactly n times the lower frequency.
 2. **Evidence adds over time.** Each window gives a locking vector: its length is the locking and its angle is the phase at which the upper rhythm sits against n times the lower one's phase. A waveform's harmonic keeps that angle from window to window. Two rhythms that are not locked do not. The engine averages the vectors over the last integration time and marks the pair when unlocked rhythms would reach that length with probability at most 1% (judged against the shifted copies' level); the mark comes off when that probability rises above 20%. One decisive window (the old rule, or locking that survives the shifts) also sets the mark at once.
-3. **Pending.** A pair at an integer ratio is kept out of octave alignment and cascades until 12 tests have been made (3 s). Until it has been tested it has not been shown not to be a harmonic.
+3. **Pending.** A pair at an integer ratio is kept out of octave alignment and cascades until 12 tests have been made (3 s). Until it has been tested it has not been shown not to be a harmonic. Decision (second fake test): only a pair that has been inside a harmonic's band can be pending. A window with the upper track outside the band counts against a pair that is already a candidate; it does not make one. In the build before, it did: every pair whose ratio rounds to 2 or more, which is every pair from 1.5 upward and so every golden ratio pair, was entered as "tested once", held out of the cascades as pending for 3 s, forgotten after 30 s and entered again. A steady golden ratio pair lost its step for 3 s in every 33, the state fell each time and waited out its dwell again: on a clean synthetic pair the state was on in 134 of 440 frames. Now 440 of 440, and the pair is never marked.
 4. **Family.** Two harmonics of one fundamental (2f and 3f) are one waveform. Their pair is kept out of scoring too, so it cannot count as a 1.5 control pair or as anything else.
 
 Measured after the change: the lab's harmonic recording is marked in 297 of 297 frames in which the harmonic is tracked, with no octave step and no octave state; the pulse train is marked in 656 of 657; synthetic harmonics of a wandering rhythm are marked in 100% of frames at moderate wander and 95% at strong wander (27% before). The cost: two independent rhythms an octave apart are marked in 0.6 to 0.8% of frames (4 of 16 files at some moment), and keep their octave step in 99%. Still open: "the two frequencies move together" is used only through the candidate band, not as a test of its own; and two rhythms that really are phase-locked at 2:1 are, by this rule, one waveform. The engine cannot tell those apart and says "harmonic".
@@ -350,7 +368,7 @@ The rule now, in plain words: **the state is entered when the evidence is at lea
 1. **Statistic.** For each pair, ln Λ as in T3 (amended). For a chain of tracks of rising frequency, the evidence of its steps is added, because independent steps multiply likelihood ratios. The statistic is the largest total over all chains. For two tracks it is that pair's ln Λ. A cascade of k good steps scores about k times one pair, so a longer cascade is easier to recognise than a shorter one, as it should be.
 2. **Fixed floor.** Entry needs the statistic to be at least 2 (provisional; the bake-off's value for T3). Whatever chance says, the state needs evidence for the target.
 3. **Adaptive part.** Entry also needs the statistic to be above the chance threshold of T4, computed from the surrogates by the same chain statistic. This is where the threshold adapts to the person and the moment: it rises with the number of confirmed peaks (more peaks, more accidental pairs), and it uses the person's own bands and, when a baseline exists, their own usual ratios through q. It can only raise the bar above the fixed floor, never lower it. The frame reports the threshold in force (`enter_at`), so the UI can show "evidence 7.3, needed 3.9".
-4. **Exit** one unit below entry; **dwell** 5 s; the same in the null, as below.
+4. **Exit** one unit below entry, after an exit dwell of 5 s; **dwell** before entry 5 s; the null as below.
 
 With five tracks and a single aligned pair this means no state: one pair among ten is what chance produces, and the rule says so (the percentile shown beside it says the same). A second step changes that at once.
 
@@ -364,7 +382,28 @@ Whatever rule wins, state changes use:
 
 - **Dwell.** The statistic must stay above the entry threshold for a minimum time (provisional: 5 s) before the state is entered.
 - **Hysteresis.** The exit threshold is lower than the entry threshold, so the state does not flicker.
-- **The same rule in the null.** Dwell and hysteresis are applied to the surrogates too, so the published false alarm rate includes them.
+- **Exit dwell.** Decision (second fake test): the state ends when the statistic has been under the exit threshold, or not measurable, for 5 s without a break (provisional, equal to the entry dwell). Before, it ended at the first update under the threshold. A member rhythm that failed persistence for one second ended the state, which then needed 5 s over the entry threshold to return: the entry was slow and the exit instant, so a steady cascade was reported as on about a third of the time. While the state is held this way the frame's statistic is still the measured one (or null), so the hold is visible in the data. When no rhythm is confirmed at all the state ends at once. The cost is stated too: the state outlasts a cascade that really ended by up to 5 s more.
+- **The same rule in the null.** Entry dwell and hysteresis are applied to the surrogates too, so the published false alarm rate includes them. The exit dwell is not applied to the surrogates: it can only join two entries into one, so the count of false entries with it is never higher than the count the threshold was set by.
+
+**Measured after the second fake test** (frames in the state; before → after; all changes of 6.2, 6.4, 6.5, 6.6 and the exit dwell together):
+
+| Recording | Before | After |
+| --- | --- | --- |
+| Both cascades, shared root at 5 Hz, 12 dB (480 frames) | golden 92, octave 55, both 14 | golden 163, octave 305, both 163 |
+| Three-member golden cascade, 10 dB (480) | 75, in four spans (first on at 70 s in the app) | 279, in two spans, first on at 45 s |
+| The same with 1% packet loss | 90, in four spans | 300, in one span |
+| Its phase-randomized copy | 191, in six spans | 352, in one span |
+| Form and dissolve, cascade present 25 to 70 s (480) | 85; on 47.5 to 66 s and again 76.5 to 78.75 s | 146; one span, 47.5 to 83.75 s |
+| Five-member golden cascade, 15 dB (480) | 294, in three spans | 397, in one span from 21 s |
+| Three-member octave cascade, 10 dB (480) | 88 | 300 |
+| Unrelated peaks in bands; near misses at 1.5, 1.55, 1.7, 1.8; background; white noise | 0 | 0 |
+| Harmonic recording: octave step, octave state | 0, 0 (marked in 297) | 0, 0 (marked in 297) |
+
+On other seeds of the same designs (120 s each, made with the lab's generator): the combined state was reached in 8 of 8 recordings with the two chains sharing a root and rhythm widths of 3.5% of the frequency, in 8 of 8 with separate roots and six rhythms, and in 4 of 8 with a shared root and the generator's random widths, where the 8.09 and 10 Hz rhythms are each up to 1.5 Hz wide at half height, overlap, and are not two peaks in an 8 s spectrum. Eight three-member golden cascades at 10 dB: state on in 177 to 358 of 480 frames (25 to 109 before, on the four of them I ran on the old build).
+
+False entries, same builds. 48 synthetic files of unrelated theta, alpha and beta peaks: 7 entries in 7,200 s (8 before), one per 17 minutes against the stated one per 10. Tuning curve, 16 files per ratio: no file at 1.5, 1.55, 1.7, 1.8 or 2.0, all 16 at 1.618, as before. Twenty-nine near-miss and random-band recordings (eight more seeds of the 1.55 chain, eight of a 7.89 and 12.16 Hz pair, four of a 1.7 chain, four of five unrelated rhythms, and the lab's five): one enters the state, a 1.55 chain, for 93 frames; the same recording entered before the change too, for 51. In that stretch the engine read 6.87 ± 0.05 and 11.12 ± 0.15 Hz where 7.01 and 10.82 Hz were planted, two errors of two to three standard errors at once. That is one entry in about 48 minutes of near misses, inside the stated rate; and the longer stay is the exit dwell.
+
+**The entry delay on the steady preset is not a fault.** In the form-and-dissolve recording the cascade starts at 25 s and the state starts at 47.5 s. A rhythm needs a full 8 s window, then a second window 8 s later for persistence (2 of 3), and then the statistic has to stay over the threshold for the 5 s dwell: 21 s at the least. The exit, 13.75 s after the cascade stopped at 70 s, is the 8 s window emptying, the peak's hold, and the 5 s exit dwell. The "quicker" preset shortens the integration time, not these.
 
 **Review: what the false alarm rate means under each chance level.** Under chance B the null is a time series, dwell and hysteresis are applied to it, and "at most one false entry per 10 minutes" is a rate in time. Under chance A the null is a set of fixed peak placements with no time in it. The engine sets the threshold at the level that a fraction integration time ÷ 10 minutes = 5% of unrelated placements exceed (with a confidence margin; measured 3.3%). Peaks that are unrelated but steady do not come and go: such a pair is either over the threshold for as long as it lasts or never. So under chance A the honest statement is "about 1 in 30 pairs of unrelated steady peaks reads as aligned for the whole time", not "one false entry per 10 minutes", and the UI text must say it that way.
 
@@ -619,7 +658,9 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Integration time for ratio scoring | 30 s | 6.4 |
 | Weight of window errors in the integrated error | 0.5 degrees of freedom | 6.4 |
 | Window error factor before two windows of history | 2 | 6.4 |
-| Track joining distance | 3 standard errors or 1 Hz | 6.5 |
+| Track joining distance | 3 standard errors or 1 Hz, whichever is larger; never more than the larger of 1 Hz and 8% of the frequency | 6.5 |
+| Peak location: smoothing half-width | the larger of 0.4 Hz and 6% of the frequency | 6.4 |
+| Peak location: two peaks, not one, when the valley is deeper than ripple at | 1% | 6.4 |
 | A track resumes if its rhythm returns within | 30 s (the integration time) | 6.5 |
 | Harmonic test: mark at, release above | probability 1%, 20% | 6.6 |
 | Harmonic test: tests before a pair may be scored | 12 (3 s) | 6.6 |
@@ -637,6 +678,7 @@ Every number here is a starting value. Each lives in one parameter file, is reco
 | Intrinsic tolerance τ | 0.01 | 8.4 |
 | Control ratios | 1.5 and 1.8; 3:1 is logged as a fifth target | 8.1 |
 | Dwell before entering a state | 5 s | 8.4 |
+| Dwell before leaving a state | 5 s (at once when no rhythm is confirmed) | 8.4 |
 | Lowest entry threshold of a state (evidence) | 2; exit 1 below entry | 8.4 |
 | Excess alignment level | 5% of surrogates | 8.5 |
 | False entries allowed | 1 per 10 minutes | 8.4 |

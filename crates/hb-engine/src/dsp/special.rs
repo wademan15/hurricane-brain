@@ -114,6 +114,18 @@ pub fn poisson_cdf(k: usize, lambda: f64) -> f64 {
 }
 
 /// Trigamma function psi'(x) for x > 0.
+/// Digamma function for x > 0 (recurrence to x >= 6, then the asymptotic series).
+pub fn digamma(mut x: f64) -> f64 {
+    let mut acc = 0.0;
+    while x < 6.0 {
+        acc -= 1.0 / x;
+        x += 1.0;
+    }
+    let i = 1.0 / x;
+    let i2 = i * i;
+    acc + m::ln(x) - 0.5 * i - i2 * (1.0 / 12.0 - i2 * (1.0 / 120.0 - i2 * (1.0 / 252.0)))
+}
+
 pub fn trigamma(mut x: f64) -> f64 {
     let mut r = 0.0;
     while x < 10.0 {

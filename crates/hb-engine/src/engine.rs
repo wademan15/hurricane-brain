@@ -9,7 +9,7 @@ use crate::params::Params;
 use crate::prng::Rng;
 use crate::ratios::{self, Baselines, NullDist, ScoreCtx, ScoreTrack, StateMachine};
 use crate::spectral::{self, analyse_site, BgFit, Member, Multitaper, Peak, SiteAnalysis, SiteSpec};
-use crate::tracks::{join_dist, Obs, TrackInt};
+use crate::tracks::{join_dist_at, Obs, TrackInt};
 use crate::types::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -1437,7 +1437,7 @@ impl Engine {
                         continue;
                     }
                     if let Some((_, prev)) = hist.iter().find(|(uu, _)| *uu == back) {
-                        if prev.iter().any(|q| (q.f - pk.f).abs() <= join_dist(q.se, pk.se, &p)) {
+                        if prev.iter().any(|q| (q.f - pk.f).abs() <= join_dist_at(pk.f, q.se, pk.se, &p)) {
                             count += 1;
                         }
                     }
@@ -1463,7 +1463,7 @@ impl Engine {
             used[i] = true;
             let (s0, ref pk0) = persistent[i];
             for j in (i + 1)..persistent.len() {
-                if !used[j] && persistent[j].0 != s0 && (persistent[j].1.f - pk0.f).abs() <= join_dist(pk0.se, persistent[j].1.se, &p) {
+                if !used[j] && persistent[j].0 != s0 && (persistent[j].1.f - pk0.f).abs() <= join_dist_at(pk0.f, pk0.se, persistent[j].1.se, &p) {
                     used[j] = true;
                 }
             }
@@ -1492,7 +1492,7 @@ impl Engine {
                 if let Ok(a) = &analyses[s] {
                     let mut best: Option<&Peak> = None;
                     for pk in &a.peaks {
-                        if (pk.f - f).abs() <= join_dist(pk.se, tr.last_se, &p) && best.is_none_or(|b| (pk.f - f).abs() < (b.f - f).abs()) {
+                        if (pk.f - f).abs() <= join_dist_at(f, pk.se, tr.last_se, &p) && best.is_none_or(|b| (pk.f - f).abs() < (b.f - f).abs()) {
                             best = Some(pk);
                         }
                     }
@@ -1577,8 +1577,9 @@ impl Engine {
         let mut cands: Vec<(f64, usize, usize)> = Vec::new();
         for (ti, tr) in self.tracks.iter().enumerate() {
             for (oi, o) in obs.iter().enumerate() {
-                let d = (o.peak.f - tr.last_f).abs();
-                if d <= join_dist(o.peak.se, tr.last_se, p) {
+                let (rf, rse) = tr.ref_f();
+                let d = (o.peak.f - rf).abs();
+                if d <= join_dist_at(rf, o.peak.se, rse, p) {
                     cands.push((d, ti, oi));
                 }
             }
@@ -1600,6 +1601,15 @@ impl Engine {
             }
             if let Some(tj) = o_tr[oi] {
                 if tj == ti || removed[tj] {
+                    continue;
+                }
+                // Review: two tracks are merged only when they have themselves converged
+                // (their own frequencies within the joining distance), not whenever one of
+                // them is without a peak this window and the other's peak is in reach. The
+                // old rule let the older track take a neighbouring rhythm's peak and removed
+                // that rhythm's own track.
+                let ((fa, sa), (fb, sb)) = (self.tracks[ti].ref_f(), self.tracks[tj].ref_f());
+                if (fa - fb).abs() > join_dist_at(fa.min(fb), sa, sb, p) {
                     continue;
                 }
                 let (ida, idb) = (self.tracks[ti].id, self.tracks[tj].id);
@@ -1641,8 +1651,9 @@ impl Engine {
             // time unresolved.
             let mut best: Option<(usize, f64)> = None;
             for (di, d) in self.dormant.iter().enumerate() {
-                let dist = (o.peak.f - d.last_f).abs();
-                if dist <= join_dist(o.peak.se, d.last_se, p) && best.is_none_or(|b| dist < b.1) {
+                let (rf, rse) = d.ref_f();
+                let dist = (o.peak.f - rf).abs();
+                if dist <= join_dist_at(rf, o.peak.se, rse, p) && best.is_none_or(|b| dist < b.1) {
                     best = Some((di, dist));
                 }
             }
@@ -1672,8 +1683,6 @@ impl Engine {
             if tr.cur.is_none() && t - tr.last_pass_t > p.peak_hold_s {
                 self.diag.events.push(TrackEvent::Ended { t, id: tr.id });
                 if p.track_resume_s > 0.0 {
-                    let mut tr = tr;
-                    tr.f_int = None;
                     self.dormant.push(tr);
                 }
                 continue;
@@ -1787,6 +1796,14 @@ impl Engine {
         }
         let keep_s = p.integration_s.max(2.0 * p.slow_window_s);
         for (k, nn, z, sur, strong) in tests {
+            // A window with the upper track outside the harmonic's band counts against a pair
+            // that is already a candidate. It never makes one: a pair that was never in a
+            // harmonic's band has nothing pending. (Before, it did, and every pair with a
+            // ratio of 1.5 or more, a golden pair included, was kept out of the cascades as
+            // "pending" for 3 s in every 33.)
+            if sur.is_none() && self.harmonics.get(&k).is_none_or(|h| h.n != nn) {
+                continue;
+            }
             let e = self.harmonics.entry(k).or_insert_with(|| fresh(nn));
             if e.n != nn {
                 *e = fresh(nn);
@@ -2048,7 +2065,7 @@ impl Engine {
             let enter = enter.map(|e| e.max(p.state_min_evidence));
             let exit = enter.map(|e| e - p.state_hysteresis);
             let stat = sc.stat[ci];
-            self.states[ci].update(t, stat.ok(), enter, exit, p.dwell_s);
+            self.states[ci].update_dwell(t, stat.ok(), enter, exit, p.dwell_s, p.exit_dwell_s, self.tracks.is_empty());
             let sm = &self.states[ci];
             st.push(AlignedState {
                 target,

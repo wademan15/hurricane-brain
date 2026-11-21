@@ -4,7 +4,7 @@
 
 use crate::dsp::dpss::dpss;
 use crate::dsp::fft::{next_pow2, Fft, C};
-use crate::dsp::special::{chi2_isf, trigamma};
+use crate::dsp::special::{chi2_isf, chi2_sf, digamma, trigamma};
 use crate::m;
 use crate::params::Params;
 use crate::types::{BandMap, BandSummary, Measured, Reason};
@@ -482,12 +482,20 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
     if !(fit_ratio <= p.bg_fit_max_ratio) {
         return Err(Reason::BadFit);
     }
-    // Level by the median of all fit bins (robust to the few peak bins).
+    // Level by the median of the fit bins the robust fit kept. (Before: of all fit bins,
+    // which is only robust to a few peak bins. Five or six rhythms lift a third of the bins,
+    // the level came out high, every valley between the rhythms read as under the
+    // background, and the lack-of-fit guard below failed the whole window.) The kept bins
+    // are the chi2 law cut off at the drop limit, so their median sits at a slightly lower
+    // quantile than one half, and that quantile is what it is matched to.
     let shape = smoothed_shape(b, nb, df, p.mt_half_bandwidth_hz, response);
-    let ratios: Vec<f64> = idx.iter().map(|&i| s[i] / shape[i]).collect();
+    let ratios: Vec<f64> = idx.iter().zip(inl_line.iter()).filter(|(_, keep)| **keep).map(|(&i, _)| s[i] / shape[i]).collect();
     let med = m::median(&ratios).ok_or(Reason::BadFit)?;
     let dof = 2.0 * k as f64;
-    let chi_med = chi2_isf(0.5, dof) / dof;
+    let kf = k as f64;
+    let drop_at = m::exp(digamma(kf) - m::ln(kf) + p.bg_drop_sigma * m::sqrt(trigamma(kf)));
+    let q_keep = 1.0 - chi2_sf(drop_at * dof, dof);
+    let chi_med = chi2_isf(1.0 - 0.5 * q_keep, dof) / dof;
     let level = med / chi_med;
     let offset = m::log10(level);
     // Fit bins on the 0.25 Hz grid are correlated over the 2W resolution: inflate.
@@ -613,7 +621,7 @@ pub fn fit_background(s: &[f64], df: f64, k: usize, p: &Params, mains: &[f64], r
         }
         let under: Vec<f64> = grid_x.iter().map(|x| m::pow(10.0, cv.log10_at_x(*x))).collect();
         let sm = smoothed(&under, df, p.mt_half_bandwidth_hz, response);
-        let ratios: Vec<f64> = idx.iter().map(|&i| s[i] / sm[i]).collect();
+        let ratios: Vec<f64> = idx.iter().zip(inl.iter()).filter(|(_, keep)| **keep).map(|(&i, _)| s[i] / sm[i]).collect();
         let med = m::median(&ratios).ok_or(Reason::BadFit)?;
         let lv = med / chi_med;
         cv.coef[0] += m::log10(lv);
@@ -761,6 +769,23 @@ fn half_region(flat: &[f64], i: usize, level: f64, min_bin: usize, max_bin: usiz
     Some((fl, fr, l, r))
 }
 
+/// `src` smoothed over bins [a, b] with a triangular kernel whose width at half height is
+/// `half(j)` bins at bin j (1 leaves the value as it is). Bins outside [lo, hi] are not used.
+fn smooth_tri(src: &[f64], a: usize, b: usize, lo: usize, hi: usize, half: &dyn Fn(usize) -> usize, out: &mut [f64]) {
+    for j in a..=b {
+        let h = half(j).max(1);
+        let (mut sw, mut sv) = (0.0, 0.0);
+        let j0 = j.saturating_sub(h - 1).max(lo);
+        let j1 = (j + h - 1).min(hi);
+        for k in j0..=j1 {
+            let w = (h - k.abs_diff(j)) as f64;
+            sw += w;
+            sv += w * src[k];
+        }
+        out[j] = if sw > 0.0 { sv / sw } else { src[j] };
+    }
+}
+
 fn centroid(flat: &[f64], l: usize, r: usize, level: f64, df: f64) -> Option<f64> {
     let (mut sw, mut sfw) = (0.0, 0.0);
     for j in l..=r {
@@ -828,47 +853,120 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
     // each bin by (f / f0)^chi relative to the rhythm's power and shift a broad low-frequency
     // rhythm upward by about chi sigma^2 / f0 (1 % at 5 Hz); the excess has no such skew.
     let excess: Vec<f64> = spec.s.iter().zip(bg.iter()).map(|(s, b)| s - b).collect();
+    // Review (fake test 2, bake-off S1Q): where a peak is, and where its centre is, are read
+    // from the excess smoothed to a resolution of max(peak_smooth_hz, peak_smooth_rel f).
+    // One 8 s spectrum of a rhythm 1 Hz wide or wider is jagged (seven tapers leave each bin
+    // 38 % uncertain), and "the region above half the tallest bin" was one lump of it: a broad
+    // rhythm became two peaks a hertz apart, neither at its centre (a 20 Hz rhythm read 19.2
+    // and 20.5 Hz, which broke the octave step to 10 Hz). The smoothed peak has one top. The
+    // height test above is made on the unsmoothed spectrum, so its false-peak rate is
+    // unchanged; only the peaks that pass are located differently.
+    let smooth_on = p.peak_smooth_hz > 0.0 || p.peak_smooth_rel > 0.0;
+    let half = |j: usize| -> usize {
+        if smooth_on {
+            (m::round(p.peak_smooth_hz.max(p.peak_smooth_rel * j as f64 * df) / df) as usize).max(1)
+        } else {
+            1
+        }
+    };
+    let mut es = excess.clone();
+    if smooth_on {
+        smooth_tri(&excess, min_bin, max_bin, min_bin, max_bin, &half, &mut es);
+    }
     for &i0 in &cands {
         if consumed.iter().any(|(a, b)| i0 >= *a && i0 <= *b) {
             continue;
         }
-        // Move to the top: from the candidate, take the highest excess inside its half-height
-        // region and repeat until the region's maximum is its own. A ripple or shoulder thus
-        // becomes the larger peak it belongs to, and a peak already taken is not taken twice.
-        let mut i = i0;
-        let mut region = None;
-        for _ in 0..16 {
-            let level = excess[i] / 2.0;
-            if !(level > 0.0) {
-                break;
+        // Move to the top: from the candidate, take the highest (smoothed) excess inside its
+        // half-height region and repeat until the region's maximum is its own. A ripple or
+        // shoulder thus becomes the larger peak it belongs to, and a peak already taken is not
+        // taken twice.
+        let climb = |src: &[f64]| -> Option<(usize, (f64, f64, usize, usize))> {
+            let mut i = i0;
+            for _ in 0..16 {
+                let level = src[i] / 2.0;
+                if !(level > 0.0) {
+                    return None;
+                }
+                let rg = half_region(src, i, level, min_bin, max_bin, df)?;
+                let (_, _, l, r) = rg;
+                let mut top = i;
+                for j in l..=r {
+                    if src[j] > src[top] {
+                        top = j;
+                    }
+                }
+                if top == i {
+                    return Some((i, rg));
+                }
+                i = top;
             }
-            let Some(rg) = half_region(&excess, i, level, min_bin, max_bin, df) else { break };
-            let (_, _, l, r) = rg;
-            let mut top = i;
-            for j in l..=r {
-                if excess[j] > excess[top] {
-                    top = j;
+            None
+        };
+        // Two rhythms or one? Smoothing must not join two rhythms that the spectrum itself
+        // shows apart (8 and 10 Hz, each 0.6 Hz wide, became one peak near 9 Hz). If the
+        // unsmoothed spectrum inside the smoothed region has a valley deeper than estimator
+        // ripple makes between two bins of one rhythm (the ratio of two chi2_2K values, level
+        // `peak_dip_alpha`), the region holds two peaks, and this candidate is located on the
+        // unsmoothed excess, as each of the two will be.
+        let mut sm = smooth_on;
+        let mut found = climb(&es);
+        if sm {
+            if let Some((_, (_, _, l, r))) = found {
+                let dip_c = m::exp(-m::sqrt(chi2_isf((2.0 * p.peak_dip_alpha).clamp(1e-9, 1.0), 1.0)) * m::sqrt(2.0 * trigamma(kf)));
+                let mut right_max = vec![0.0f64; r - l + 1];
+                let mut acc: f64 = 0.0;
+                for j in (l..=r).rev() {
+                    acc = acc.max(flat[j]);
+                    right_max[j - l] = acc;
+                }
+                let mut left: f64 = 0.0;
+                let mut split = false;
+                for j in l..=r {
+                    left = left.max(flat[j]);
+                    if flat[j] < dip_c * left.min(right_max[j - l]) {
+                        split = true;
+                        break;
+                    }
+                }
+                if split {
+                    sm = false;
+                    found = climb(&excess);
                 }
             }
-            if top == i {
-                region = Some(rg);
-                break;
-            }
-            i = top;
         }
-        let Some((fl, fr, l, r)) = region else { continue };
-        let level = excess[i] / 2.0;
+        let Some((i, (fl, fr, l, r))) = found else { continue };
+        let es: &[f64] = if sm { &es } else { &excess };
+        let smooth_on = sm;
+        let level = es[i] / 2.0;
         if consumed.iter().any(|(a, b)| l <= *b && r >= *a) {
             continue;
         }
         consumed.push((l, r));
         // Height: the flattened maximum within the peak's own region (spec 9: at the peak).
-        let h = flat[l..=r].iter().fold(flat[i0], |a, b| a.max(*b));
-        let width = fr - fl;
-        if width < min_w || width > p.peak_width_max_hz {
+        let h = flat[l..=r].iter().fold(flat[i0.clamp(l, r)], |a, b| a.max(*b));
+        // Width. The narrow limit (a line narrower than the estimator can make a rhythm) is
+        // judged on the unsmoothed peak, as before. The reported width is the larger of that
+        // and the smoothed width with the smoothing taken out in quadrature: the unsmoothed
+        // half-height region of a broad rhythm is one lump and reads about half its width.
+        let mut top_raw = l;
+        for j in l..=r {
+            if excess[j] > excess[top_raw] {
+                top_raw = j;
+            }
+        }
+        let Some((rfl, rfr, _, _)) = half_region(&excess, top_raw, excess[top_raw] / 2.0, min_bin, max_bin, df) else { continue };
+        let raw_width = rfr - rfl;
+        if raw_width < min_w {
             continue;
         }
-        let Some(f) = centroid(&excess, l, r, level, df) else { continue };
+        let wk = if smooth_on { half(i) as f64 * df } else { 0.0 };
+        let ws = fr - fl;
+        let width = raw_width.max(m::sqrt((ws * ws - wk * wk).max(0.0)));
+        if width > p.peak_width_max_hz {
+            continue;
+        }
+        let Some(f) = centroid(es, l, r, level, df) else { continue };
         // Jackknife over groups (tapers), repeating the whole estimate on each delete-one spectrum.
         let g = spec.groups;
         if g < 2 || spec.k < 2 {
@@ -877,18 +975,28 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
         let ext = (m::ceil(1.0 / df) as usize).max(1);
         let a = l.saturating_sub(ext).max(min_bin);
         let b = (r + ext).min(max_bin);
+        // The delete-one excess is needed a kernel further out than the range it is smoothed over.
+        let reach = half(b);
+        let a0 = a.saturating_sub(reach).max(min_bin);
+        let b0 = (b + reach).min(max_bin);
+        let mut e_raw = vec![0.0; n];
         let mut e_del = vec![0.0; n];
         let mut cs = Vec::with_capacity(g);
         let mut hs = Vec::with_capacity(g);
         let mut ok = true;
         for gi in 0..g {
             let mut hmax: f64 = 0.0;
-            for j in a..=b {
+            for j in a0..=b0 {
                 let sd = spec.s_del(gi, j);
-                e_del[j] = sd - bg[j];
+                e_raw[j] = sd - bg[j];
                 if j >= l && j <= r {
                     hmax = hmax.max(sd / bg[j]);
                 }
+            }
+            if smooth_on {
+                smooth_tri(&e_raw, a, b, a0, b0, &half, &mut e_del);
+            } else {
+                e_del[a..=b].copy_from_slice(&e_raw[a..=b]);
             }
             let mut im = l;
             for j in l..=r {
@@ -926,7 +1034,23 @@ pub fn find_peaks(spec: &SiteSpec, bg: &[f64], flat: &[f64], ps: &PeakSearch) ->
             let mean = v.iter().sum::<f64>() / gf;
             m::sqrt((gf - 1.0) / gf * v.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>())
         };
-        let se = jk(&cs).max(p.freq_se_floor_hz);
+        // The taper jackknife measures the estimator's own noise. It cannot see the rhythm's
+        // wander inside the window: all tapers look at the same 8 s of it, and for a rhythm
+        // narrower than the estimator's resolution every taper's spectrum is centred on the
+        // same realised frequency. A rhythm of spectral SD sigma seen for T seconds has about
+        // 1 + 2 sqrt(pi) sigma T independent stretches, so its realised centre is off the
+        // process centre by sigma / sqrt(that). sigma is taken from the measured width without
+        // removing the estimator's broadening, which errs on the wide side for a narrow rhythm.
+        // (The unsmoothed centroid's jackknife was inflated by its own jitter of the region's
+        // edges and happened to cover this; the smoothed one, alone, read 2 to 3 times too
+        // small against planted truth.)
+        let mut se = jk(&cs);
+        if smooth_on {
+            let sig = width / 2.3548;
+            let n_ind = 1.0 + 2.0 * m::sqrt(m::PI) * sig * ps.window_s;
+            se = m::sqrt(se * se + sig * sig / n_ind);
+        }
+        let se = se.max(p.freq_se_floor_hz);
         let h_se = jk(&hs);
         peaks.push(Peak { f, se, h, h_db_se: Some(h_se), width });
     }
