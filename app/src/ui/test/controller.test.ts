@@ -1,3 +1,4 @@
+import { slowFrame } from '../../training/test-fixtures';
 import { describe, expect, it, vi } from 'vitest';
 import { readRecording } from '../../device';
 import { createProfile } from '../../training';
@@ -244,7 +245,7 @@ describe('a second session in the same page load', () => {
 });
 
 describe('after a replay ends', () => {
-  it('keeps the connection and the last frames until the person exits, and can play again at another speed', async () => {
+  it('keeps the connection but shows no values (the last frames are not held) until the person exits, and can play again at another speed', async () => {
     const bytes = buildRecording({ seconds: 5, notes: [{ afterInput: 3, json: freeStart }, { afterInput: 380, json: { type: 'session_end', id: 's_free', t: 4, completed: true } }] });
     const h = makeDeps();
     const c = new SessionController(h.deps);
@@ -252,7 +253,7 @@ describe('after a replay ends', () => {
     expect(c.getState().replay?.ended).toBe(true);
     expect(c.getState().link?.kind).toBe('replay');
     expect(c.getState().finished?.mode).toBe('replay');
-    expect(c.hub.latest().slow).not.toBeNull();
+    expect(c.hub.latest().slow).toBeNull();
     const first = h.engines.length;
     await c.replayAgain(4);
     await vi.waitFor(() => expect(c.getState().replay?.ended).toBe(true), { timeout: 5000 });
@@ -369,6 +370,30 @@ describe('live stream out', () => {
     stream = { ...stream, enabled: false };
     c.applyStreamSettings();
     expect(log.at(-1)).toBe('disconnect');
+  });
+});
+
+describe('the end of a replay', () => {
+  it('shows nothing measured after the end: the hub is emptied and late engine frames are dropped', async () => {
+    const h = makeDeps();
+    const c = new SessionController(h.deps);
+    const bytes = buildRecording({ seconds: 6, notes: [{ afterInput: 3, json: freeStart }] });
+    await runReplay(c, bytes);
+    expect(c.hub.latest().slow).toBeNull();
+    expect(c.hub.latest().slowAt).toBeNull();
+    // the engine is still draining a backlog and emits a late frame: it must not bring a value back
+    const late = slowFrame(99, { bands: { alpha: 3, theta: 1, beta: 0 }, alphaTrack: { freq: 10, height: 8 }, phiExcess: 0.9, octaveExcess: 0, phiSteps: 2 });
+    (h.engines[0] as unknown as { emit: (f: unknown) => void }).emit(late);
+    expect(c.hub.latest().slow).toBeNull();
+    expect(c.hub.latest().slowAt).toBeNull();
+  });
+  it('a new replay starts receiving frames again', async () => {
+    const h = makeDeps();
+    const c = new SessionController(h.deps);
+    const bytes = buildRecording({ seconds: 6, notes: [{ afterInput: 3, json: freeStart }] });
+    await runReplay(c, bytes);
+    await c.replayAgain('fast');
+    await vi.waitFor(() => expect(c.hub.latest().slow).not.toBeNull(), { timeout: 5000 });
   });
 });
 

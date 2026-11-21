@@ -105,6 +105,35 @@ async function closeReplay(page) {
       check(`readouts ${lvl} ${vp}: golden ratio, octave and chance all present`, /Golden ratio alignment/.test(t) && /Octave alignment/.test(t) && /[Cc]hance/.test(t));
       await closeReplay(page);
     }
+    // the end of an as-fast-as-possible replay: nothing may still read as measured (rule 1), in every layout
+    for (const [id, name] of THEMES) {
+      await setAppearance(page, { theme: name, mode: 'Dark', readouts: 'Standard', kid: 'Off' });
+      await go(page, '#/home');
+      await page.getByRole('button', { name: 'As fast as possible (no sound)', exact: true }).click().catch(async () => { await page.getByRole('button', { name: /As fast as possible/ }).first().click(); });
+      await page.locator('input[type=file][aria-label="Choose a recording file"]').setInputFiles(REC);
+      await page.getByTestId('live-session').waitFor();
+      const cont = page.getByRole('button', { name: 'Continue', exact: true });
+      if (await cont.isVisible().catch(() => false)) await cont.click();
+      await page.getByTestId('replay-finished').waitFor({ timeout: 120000 });
+      await page.waitForTimeout(3000);
+      const t1 = await page.innerText('[data-testid=live-session]');
+      await page.waitForTimeout(2500);
+      const t2 = await page.innerText('[data-testid=live-session]');
+      check(`fast end ${id} ${vp}: no Holding badge and no number after the end banner`, !/Holding/.test(t1) && !/Golden ratio alignment\s*\n?\s*0\.\d+/.test(t1) && /not measured/i.test(t1), t1.slice(0, 200).replace(/\n/g, ' | '));
+      check(`fast end ${id} ${vp}: the screen does not change after the end`, t1 === t2);
+      if (id === 'still-water') await page.screenshot({ path: OUT + `fast-end-${vp}.png` });
+      await closeReplay(page);
+    }
+    // the grown-up lock does not trap a session: the kid screen can still end it
+    if (vp === '1440') {
+      await setAppearance(page, { theme: 'Night Garden', mode: 'Dark', readouts: 'Standard', kid: 'On' });
+      await page.getByText('Grown-up lock for Settings').click();
+      await replay(page);
+      const close = page.getByRole('button', { name: /Close replay/ }).first();
+      check('lock on: the kid screen still has a Close button', await close.isVisible());
+      await closeReplay(page);
+      check('lock on: the session ended and Home is showing', (await page.locator('[data-testid=live-session]').count()) === 0);
+    }
     check(`${vp}: no page errors`, errs.length === 0, errs.join(' | '));
     await ctx.close();
   }

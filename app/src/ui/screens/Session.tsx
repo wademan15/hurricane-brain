@@ -250,7 +250,8 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   }
 
   const isReplay = s ? s.mode === 'replay' : true;
-  const replayDone = !s && !!replay && (replay.ended || !!fin);
+  // Finished only when the engine has stopped sending frames (replay.ended), not when the recording's own end note was read: a backlog may still be draining.
+  const replayDone = !s && !!replay && replay.ended;
   const out = s?.output ?? null;
   const block = out?.block ?? null;
   const museState = deviceText(st.muse, 'Headset');

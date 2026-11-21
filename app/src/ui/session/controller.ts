@@ -215,6 +215,10 @@ export class SessionController {
   private finishedCtx: { runner: SessionRunner | null; stored: StoredSession; t: number } | null = null;
   private replayTimer: ReturnType<typeof setInterval> | null = null;
   private lastFrameWall = 0;
+  /** The longest quiet spell between engine frames during the open replay (ms): the end must outlast it. */
+  private maxFrameGapMs = 0;
+  /** A replay link whose recording has ended: its late frames are dropped so nothing is shown after the end banner. */
+  private replayClosed: Link | null = null;
   private replayNotes: { tUs: number; json: Record<string, unknown> }[] = [];
   private replayWanted: string | null = null;
 
@@ -293,6 +297,8 @@ export class SessionController {
     link.unsubEngine = engine.subscribe((f) => this.onFrame(link, f));
     this.link = link;
     this.hub.reset();
+    this.replayClosed = null;
+    this.maxFrameGapMs = 0;
     this.lastFrameT = -Infinity;
     this.set({ link: { kind, heartOnly }, engine: 'none', engineError: null, engineInfo: null, streams: null, gaps: 0, clockS: null });
     return link;
@@ -482,9 +488,11 @@ export class SessionController {
 
   // ---- frames -------------------------------------------------------------------------------
   private onFrame(link: Link, f: Frame): void {
-    if (this.link !== link) return;
+    if (this.link !== link || this.replayClosed === link) return;
     if (f.t > this.lastFrameT) this.lastFrameT = f.t;
-    this.lastFrameWall = performance.now();
+    const nowMs = performance.now();
+    if (link.kind === 'replay' && this.lastFrameWall > 0) this.maxFrameGapMs = Math.max(this.maxFrameGapMs, nowMs - this.lastFrameWall);
+    this.lastFrameWall = nowMs;
     const a = this.active;
     if (f.kind === 'slow' && a && !a.finishing) a.cascades.push(f);
     this.stream?.handleFrame(f);
@@ -1008,11 +1016,16 @@ export class SessionController {
     this.lastFrameWall = performance.now();
     this.replayTimer = setInterval(() => {
       if (this.link !== link) return;
-      if (performance.now() - this.lastFrameWall < settleMs) return;
+      // The engine may still be working through a backlog (as fast as possible): the recording has
+      // ended only after a quiet spell longer than any gap seen so far, not merely 0.8 s.
+      if (performance.now() - this.lastFrameWall < Math.max(settleMs, 3 * this.maxFrameGapMs)) return;
       if (this.replayTimer) clearInterval(this.replayTimer);
       this.replayTimer = null;
       if (this.active) void this.finishReplaySession();
       this.releaseAudio();
+      // From here every readout, the picture and the sound see no data: later frames are dropped.
+      this.replayClosed = link;
+      this.hub.reset();
       const r = this.state.replay;
       if (r) this.set({ replay: { ...r, ended: true } });
     }, 100);

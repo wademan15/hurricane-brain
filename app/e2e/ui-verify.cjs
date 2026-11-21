@@ -287,6 +287,8 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     const fin2 = await page.innerText('[data-testid=live-session]');
     check(`${tag}: after the replay every alignment cell is not measured, with a reason`, /Golden ratio alignment\s*\n?\s*not measured/.test(fin2) && !/Random peaks did this well: \d/.test(fin2));
     await page.getByRole('button', { name: /As fast as possible/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid=live-session]')?.getAttribute('data-state') !== 'finished' || !document.querySelector('[data-testid=replay-finished]'), null, { timeout: 30000 }).catch(() => {}); // the old banner goes when the new replay opens
+    await page.waitForTimeout(300);
     await waitFinished(page);
     check(`${tag}: replay again at full speed finishes`, true);
     await page.getByRole('button', { name: 'Exit the replay' }).first().click();
