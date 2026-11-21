@@ -281,3 +281,4 @@ textarea { resize: vertical; }
 .s-accent { background: var(--accent); } .s-gold { background: var(--gold); } .s-octave { background: var(--octave); }
 .theme-card-name { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
 .theme-card-feel { font-size: 0.82rem; color: var(--dim); line-height: 1.3; }
+.live-stage { color: var(--live-text); }

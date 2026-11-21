@@ -204,6 +204,228 @@
   --hb-storm-combined: var(--both);
 }
 
+/* ---- a light session screen keeps its picture dark: the storm is drawn on a dark window in the theme's own dark colours ---- */
+:root[data-theme='still-water'] .live[data-pal='light'] .live-stage {
+  --bg: #070B12; --surface: #0D141E; --surface-2: #131C2D; --surface-3: #1A2538;
+  --border: #172131; --control-border: #55678B;
+  --text: #C9D4E3; --dim: #8D9AAE; --faint: #8593A9;
+  --accent: #5FB3B3; --accent-ink: #04141A;
+  --gold: #D9B26A; --octave: #9091E5; --both: #B9A3F0; --state-ink: #0A111C;
+  --ok: #7BC89A; --warn: #E6B366; --bad: #E58A78;
+
+  --live-bg: var(--bg);
+  --live-text: var(--text);
+  --live-dim: var(--dim);
+  --live-subtle: var(--dim);
+  --live-dock-bg: var(--surface);
+  --live-border: var(--border);
+  --live-control-border: var(--control-border);
+  --live-control-text: var(--text);
+  --live-control-on-bg: var(--surface-3);
+  --live-control-on-text: var(--text);
+  --live-control-on-border: var(--control-border);
+  --live-chip-bg: var(--surface-2);
+  --live-rate-bg: var(--surface-2);
+  --live-rate-text: var(--text);
+  --live-shade: color-mix(in srgb, var(--bg) 87%, transparent);
+  --live-shade-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --eyes-closed-text: var(--bg);
+
+  /* the visualizer (src/viz/README.md, Theme tokens) */
+  --hb-bg: var(--bg);
+  --hb-ink: var(--text);
+  --hb-ink-dim: var(--dim);
+  --hb-panel-bg: color-mix(in srgb, var(--surface) 94%, transparent);
+  --hb-parts-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --hb-line: color-mix(in srgb, var(--dim) 30%, transparent);
+  --hb-focus-strong: var(--text);
+  --hb-control-border: var(--control-border);
+  --hb-gold: var(--gold);
+  --hb-octave: var(--octave);
+  --hb-font: var(--font-body);
+  --hb-font-mono: var(--font-num);
+  --hb-radius: var(--radius-sm);
+  --hb-spec-psd: var(--text);
+  --hb-spec-fit: var(--dim);
+  --hb-spec-flat: var(--text);
+  --hb-spec-peak: var(--text);
+  --hb-spec-grid: color-mix(in srgb, var(--dim) 18%, transparent);
+  --hb-spec-band: color-mix(in srgb, var(--dim) 10%, transparent);
+  --hb-storm-water: var(--bg);
+  --hb-storm-water-ripple: var(--surface);
+  --hb-storm-cloud-dark: var(--dim);
+  --hb-storm-cloud-light: var(--text);
+  --hb-storm-octave-ring: var(--octave);
+  --hb-storm-eye-wall: var(--gold);
+  --hb-storm-pulse: var(--bad);
+  --hb-storm-combined: var(--both);
+}
+:root[data-theme='dawn-journal'] .live[data-pal='light'] .live-stage {
+  --bg: #1C1814; --surface: #241F1A; --surface-2: #2C2620; --surface-3: #352E27;
+  --border: #3A322A; --control-border: #7D6F5E;
+  --text: #EFE6D8; --dim: #A89C8C; --faint: #A09484;
+  --accent: #D9A066; --accent-ink: #1C1308;
+  --gold: #E5C07B; --octave: #8CA7D3; --both: #C7A8E0; --state-ink: #1C1814;
+  --ok: #8CC49A; --warn: #E6B366; --bad: #E58A78;
+
+  --live-bg: var(--bg);
+  --live-text: var(--text);
+  --live-dim: var(--dim);
+  --live-subtle: var(--dim);
+  --live-dock-bg: var(--surface);
+  --live-border: var(--border);
+  --live-control-border: var(--control-border);
+  --live-control-text: var(--text);
+  --live-control-on-bg: var(--surface-3);
+  --live-control-on-text: var(--text);
+  --live-control-on-border: var(--control-border);
+  --live-chip-bg: var(--surface-2);
+  --live-rate-bg: var(--surface-2);
+  --live-rate-text: var(--text);
+  --live-shade: color-mix(in srgb, var(--bg) 87%, transparent);
+  --live-shade-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --eyes-closed-text: var(--bg);
+
+  /* the visualizer (src/viz/README.md, Theme tokens) */
+  --hb-bg: var(--bg);
+  --hb-ink: var(--text);
+  --hb-ink-dim: var(--dim);
+  --hb-panel-bg: color-mix(in srgb, var(--surface) 94%, transparent);
+  --hb-parts-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --hb-line: color-mix(in srgb, var(--dim) 30%, transparent);
+  --hb-focus-strong: var(--text);
+  --hb-control-border: var(--control-border);
+  --hb-gold: var(--gold);
+  --hb-octave: var(--octave);
+  --hb-font: var(--font-body);
+  --hb-font-mono: var(--font-num);
+  --hb-radius: var(--radius-sm);
+  --hb-spec-psd: var(--text);
+  --hb-spec-fit: var(--dim);
+  --hb-spec-flat: var(--text);
+  --hb-spec-peak: var(--text);
+  --hb-spec-grid: color-mix(in srgb, var(--dim) 18%, transparent);
+  --hb-spec-band: color-mix(in srgb, var(--dim) 10%, transparent);
+  --hb-storm-water: var(--bg);
+  --hb-storm-water-ripple: var(--surface);
+  --hb-storm-cloud-dark: var(--dim);
+  --hb-storm-cloud-light: var(--text);
+  --hb-storm-octave-ring: var(--octave);
+  --hb-storm-eye-wall: var(--gold);
+  --hb-storm-pulse: var(--bad);
+  --hb-storm-combined: var(--both);
+}
+:root[data-theme='calm-instrument'] .live[data-pal='light'] .live-stage {
+  --bg: #0B0F0E; --surface: #121816; --surface-2: #182120; --surface-3: #1F2B28;
+  --border: #1F2925; --control-border: #556F67;
+  --text: #D7E0DC; --dim: #8FA09A; --faint: #899A94;
+  --accent: #6FD0B0; --accent-ink: #04140E;
+  --gold: #E2B865; --octave: #809BFF; --both: #C9A8F0; --state-ink: #0B0F0E;
+  --ok: #7BC89A; --warn: #E6B366; --bad: #E58A78;
+
+  --live-bg: var(--bg);
+  --live-text: var(--text);
+  --live-dim: var(--dim);
+  --live-subtle: var(--dim);
+  --live-dock-bg: var(--surface);
+  --live-border: var(--border);
+  --live-control-border: var(--control-border);
+  --live-control-text: var(--text);
+  --live-control-on-bg: var(--surface-3);
+  --live-control-on-text: var(--text);
+  --live-control-on-border: var(--control-border);
+  --live-chip-bg: var(--surface-2);
+  --live-rate-bg: var(--surface-2);
+  --live-rate-text: var(--text);
+  --live-shade: color-mix(in srgb, var(--bg) 87%, transparent);
+  --live-shade-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --eyes-closed-text: var(--bg);
+
+  /* the visualizer (src/viz/README.md, Theme tokens) */
+  --hb-bg: var(--bg);
+  --hb-ink: var(--text);
+  --hb-ink-dim: var(--dim);
+  --hb-panel-bg: color-mix(in srgb, var(--surface) 94%, transparent);
+  --hb-parts-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --hb-line: color-mix(in srgb, var(--dim) 30%, transparent);
+  --hb-focus-strong: var(--text);
+  --hb-control-border: var(--control-border);
+  --hb-gold: var(--gold);
+  --hb-octave: var(--octave);
+  --hb-font: var(--font-body);
+  --hb-font-mono: var(--font-num);
+  --hb-radius: var(--radius-sm);
+  --hb-spec-psd: var(--text);
+  --hb-spec-fit: var(--dim);
+  --hb-spec-flat: var(--text);
+  --hb-spec-peak: var(--text);
+  --hb-spec-grid: color-mix(in srgb, var(--dim) 18%, transparent);
+  --hb-spec-band: color-mix(in srgb, var(--dim) 10%, transparent);
+  --hb-storm-water: var(--bg);
+  --hb-storm-water-ripple: var(--surface);
+  --hb-storm-cloud-dark: var(--dim);
+  --hb-storm-cloud-light: var(--text);
+  --hb-storm-octave-ring: var(--octave);
+  --hb-storm-eye-wall: var(--gold);
+  --hb-storm-pulse: var(--bad);
+  --hb-storm-combined: var(--both);
+}
+:root[data-theme='night-garden'] .live[data-pal='light'] .live-stage {
+  --bg: #23213A; --surface: #2E2B4A; --surface-2: #38355A; --surface-3: #433F6A;
+  --border: transparent; --control-border: #8F89C0;
+  --text: #EDE9FF; --dim: #B4AED6; --faint: #ABA5CF;
+  --accent: #F2B89A; --accent-ink: #2A1810;
+  --gold: #F2D27A; --octave: #6EC4AC; --both: #D3B5F5; --state-ink: #23213A;
+  --ok: #8EDDA8; --warn: #F2C27A; --bad: #F29A8A;
+
+  --live-bg: var(--bg);
+  --live-text: var(--text);
+  --live-dim: var(--dim);
+  --live-subtle: var(--dim);
+  --live-dock-bg: var(--surface);
+  --live-border: var(--border);
+  --live-control-border: var(--control-border);
+  --live-control-text: var(--text);
+  --live-control-on-bg: var(--surface-3);
+  --live-control-on-text: var(--text);
+  --live-control-on-border: var(--control-border);
+  --live-chip-bg: var(--surface-2);
+  --live-rate-bg: var(--surface-2);
+  --live-rate-text: var(--text);
+  --live-shade: color-mix(in srgb, var(--bg) 87%, transparent);
+  --live-shade-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --eyes-closed-text: var(--bg);
+
+  /* the visualizer (src/viz/README.md, Theme tokens) */
+  --hb-bg: var(--bg);
+  --hb-ink: var(--text);
+  --hb-ink-dim: var(--dim);
+  --hb-panel-bg: color-mix(in srgb, var(--surface) 94%, transparent);
+  --hb-parts-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --hb-line: color-mix(in srgb, var(--dim) 30%, transparent);
+  --hb-focus-strong: var(--text);
+  --hb-control-border: var(--control-border);
+  --hb-gold: var(--gold);
+  --hb-octave: var(--octave);
+  --hb-font: var(--font-body);
+  --hb-font-mono: var(--font-num);
+  --hb-radius: var(--radius-sm);
+  --hb-spec-psd: var(--text);
+  --hb-spec-fit: var(--dim);
+  --hb-spec-flat: var(--text);
+  --hb-spec-peak: var(--text);
+  --hb-spec-grid: color-mix(in srgb, var(--dim) 18%, transparent);
+  --hb-spec-band: color-mix(in srgb, var(--dim) 10%, transparent);
+  --hb-storm-water: var(--bg);
+  --hb-storm-water-ripple: var(--surface);
+  --hb-storm-cloud-dark: var(--dim);
+  --hb-storm-cloud-light: var(--text);
+  --hb-storm-octave-ring: var(--octave);
+  --hb-storm-eye-wall: var(--gold);
+  --hb-storm-pulse: var(--bad);
+  --hb-storm-combined: var(--both);
+}
+
 /* diagrams */
 :root, .live, .theme-scope { --diagram-unknown: var(--faint); --diagram-ok: var(--ok); --diagram-bad: var(--bad); }
 

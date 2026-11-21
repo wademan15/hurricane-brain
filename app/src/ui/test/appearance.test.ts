@@ -20,8 +20,8 @@ describe('appearance defaults and migration', () => {
     expect(resolveAppearance('child', {}, { theme: 'calm-instrument' }).theme).toBe('calm-instrument');
   });
   it('moves the round-3 global look settings into the base, and is idempotent', () => {
-    const old = { ...DEFAULT_APP_SETTINGS, theme: 'light', textSize: 'large', childView: 'on', showFieldNames: true } as never;
-    const once = migrateSettings(old) as typeof DEFAULT_APP_SETTINGS;
+    const old = { ...DEFAULT_APP_SETTINGS, theme: 'light', textSize: 'large', childView: 'on', showFieldNames: true } as const;
+    const once = migrateSettings(old as never) as unknown as typeof DEFAULT_APP_SETTINGS;
     expect(once.appearanceBase).toEqual({ mode: 'light', textSize: 'larger', kidView: 'on', technicalNames: true });
     expect('theme' in once).toBe(false);
     expect(migrateSettings(once)).toEqual(once);

@@ -124,7 +124,7 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     await startReplay(page);
     await page.waitForTimeout(16000);
     const txt = await page.innerText('[data-testid=live-session]');
-    check('offline: replay runs through the engine (frames arrive, a golden ratio cell shows a number)', /Golden ratio alignment\s*\n?\s*0\.\d+/.test(txt), txt.slice(0, 300).replace(/\n/g, ' | '));
+    check('offline: replay runs through the engine (frames arrive, a golden ratio cell shows a number)', /Golden ratio alignment/.test(txt) && /\d+\.\d+ [^|]*dB above background|\b0\.\d\d\b/.test(txt), txt.slice(0, 300).replace(/\n/g, ' | '));
     check('offline: no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
@@ -238,6 +238,7 @@ const waitFinished = (page) => page.waitForFunction(() => document.querySelector
     // ---- live screen, standard view ----
     await go(page, '#/settings');
     await page.getByRole('group', { name: 'Kid version of the session screen' }).getByRole('button', { name: 'Off' }).click();
+    await page.locator('.theme-cards button', { hasText: 'Still Water' }).click(); // the three-cell trio is the Still Water layout; the others are in ui-themes.cjs
     await go(page, '#/home');
     await startReplay(page);
     await page.waitForTimeout(14000);

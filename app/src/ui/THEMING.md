@@ -25,8 +25,9 @@ transition and nothing flashes.
    `:is(:root, .theme-scope)[data-theme='x'][data-mode='dark'], :root[data-theme='x'] .live[data-pal='dark']`
    (and `light`). Give every token the other palettes give, including `--gold`, `--octave`, `--both`
    and `--state-ink`.
-4. `src/ui/fonts.css` and `fonts.ts`: bundle any new font file under `public/fonts/` (woff2, latin
-   subset) and list it in both; the service worker precaches `FONT_URLS`.
+4. `src/ui/fonts.css` and `fonts.ts`: add any new font as a `@fontsource/*` package (woff2, latin
+   subset, bundled by Vite, no network use) and list its file in both; the service worker precaches
+   `FONT_URLS`. Keep the system fallback in the `--font-*` token.
 5. Add the theme to the list in `src/ui/test/contrast.test.ts` (`THEMES`). The test reads the CSS and
    fails if any text-carrying pair misses its ratio (body 4.5:1, gold and octave 4.5:1 on the
    background and surface and 1.4:1 apart, 7:1 for dim text and borders in high contrast).

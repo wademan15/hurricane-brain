@@ -205,7 +205,8 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
   // One listener for the life of the screen, reading the latest state from a ref, so a stream of
   // re-renders from the engine can never leave a gap in which Escape is not heard.
   const escRef = useRef<() => boolean>(() => false);
-  escRef.current = () => {
+  useEffect(() => {
+    escRef.current = () => {
     if (eyesClosed) {
       leaveEyesClosed();
       return true;
@@ -218,6 +219,7 @@ export function Session({ navigate }: { navigate: (to: string) => void }) {
     }
     return false;
   };
+  });
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
