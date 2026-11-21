@@ -2,6 +2,63 @@
 
 Nothing in the app was changed by this test. Tooling is in `app/e2e/`; generated recordings and screenshots are in `app/e2e/out/` (git-ignored).
 
+## Third run (21 November 2026): the combined state, on the fixed engine and the re-themed UI
+
+Nothing in the app was changed. Build: `vite build --outDir /home/user/dist-faketest` finished **02:53 UTC on 21 Nov** from the commit "Make the combined golden ratio and octave state reachable" (wasm md5 prefix a5a54b9ac35c), preview on port 4391. `app/e2e/make_both.py` was rerun (shared root: golden 5, 8.09, 13.09 Hz and octave 5, 10, 20 Hz, 12 dB, 120 s) and all 24 recordings regenerated. Default theme (Still Water).
+
+**Which numbers come from where.** State timing and in-app sound: real time (1x), one fresh browser per recording, `out/fresh3_*` (9 recordings: both_phi_octave_12db, phi5_15db, octave3_10db, background_only, random_bands, nearmiss_1.55, harmonic_8hz, plus white_noise and the 20 ms shuffle). Exact silence, bloom levels, state edges and the exit-dwell trace: offline render and engine frames, all 24 recordings, `out/audio-offline3.json`, `out/dwell3.json` (new `e2e/dwell.test.ts`). Screenshots and tap-to-inspect: 4x, all 24, `out/v3speed4/`. End-of-replay check: "as fast as possible", all 24, `out/v3fast/`. Exit-dwell pictures: a 1x run with a screenshot every second from 70 to 82 s (`out/dwellshots/`, new `e2e/fake-dwell.mjs`).
+
+### Failures and problems, first
+
+1. **The replay-finished screen did not appear in 22 of 24 runs at 4x in one page load (new, not traced).** The first two replays finished; from the third replay on in the same page load, the run reached the end of the recording (clock at 2:00) and then showed no "Replay finished" for the 90 s I waited. Re-run alone it finishes (background_only at 4x: 30 s). All readouts were "not measured" and the state badges off during the wait, so nothing stale was shown; only the finish screen is missing. Reading `controller.ts` `waitForReplayToSettle`: the end is declared after a quiet spell of 3 times the longest gap between engine frames, and my driver pauses the page for screenshots at the marks, which makes long gaps; I think this is the cause (it would be a delay of up to 3 times a stall, not a wrong value) but I did not confirm it. At "as fast as possible" and at 1x every recording finished.
+2. **The planted cascades are not held for the whole recording.** `both_phi_octave_12db`, engine frames: golden and both on 40.5 to 78.75 s only (153 of 480 frames, 32 %), octave on 29.75 to 89.75 s and again from 102.5 s. After 78.75 s the golden chain is back in the cascade numbers from 80.5 s (2 steps, excess 0.7) but the state never re-enters. Between 74 and 80 s the golden chain drops out (steps 0), and the octave chain drops out 71 to 74 s. Same pattern on phi3_10db (golden on 45.25 to 106.25, again from 111.75 s). Not a false claim; a sensitivity limit and the reason sounds have gaps.
+3. **form_dissolve_120s, against its schedule** (cascade 25 to 70 s): golden state on 48 s, off 84 s (engine frames). Entry is 23 s after the start, exit 14 s after the end. The spec (section 8.4) gives 21 s as the least entry time and 13.75 s for the exit, so this is as designed; it is still slow against the schedule.
+4. **Octave bloom flickers in the control stream while the octave state is on** (both and octave3 recordings, e.g. both recording 55 to 62 s: octave bloom 0.99, then 0.00, then 0.98 within seconds). The value is a maximum over voices; I did not check whether the synth smooths this into a slow change in the audio (rule 5 is about the sound, not the control values). Not tested at the speaker.
+5. **`pnpm --dir app test` does not exist**: `app/package.json` has no `test` script (pnpm answered EACCES). I ran the suites directly, below.
+
+### Verdict table (24 recordings), failures first
+
+| Recording | Expected | Seen | Verdict |
+|---|---|---|---|
+| (all, 4x pass) finish screen | Replay finished shows | missing in 22 of 24 at 4x after the 2nd replay in a page load; present in all 24 at fast | FAIL (see 1; cause not confirmed) |
+| both_phi_octave_12db, holding for the whole recording | states on throughout | golden and both 40.5 to 78.75 s, octave 29.75 to 89.75 s and from 102.5 s | PARTIAL (see 2) |
+| form_dissolve_120s | golden on about 25 s, off about 70 s | on 48 s, off 84 s | PARTIAL (see 3; within the spec's stated delays) |
+| both_phi_octave_12db, "Both at once" | spiral, rings, combined look, three blooms, "Both at once" | "Both at once Holding" from 41 s to 78 s in app (1x); badge and card text read "Both at once"; in-app control stream: phi bloom 0.99, octave 1.00, both 0.98; offline max blooms 0.54, 0.64, 0.34; picture is a spiral with the octave ring and a small gold ring at the eye, different from the spiral alone and the rings alone | PASS |
+| phi3_10db | golden state, spiral | on from 45 s (offline), off 106 to 112 s, 278 of 480 frames | PASS (gaps) |
+| phi5_15db | golden state | on from 21 s to the end, 397 of 480 frames, in-app phi bloom 1.00, 5 voices | PASS |
+| octave3_10db | octave state, rings | on from 34 s to the end, 344 of 480 frames, in-app octave bloom 1.00, no phi or both | PASS |
+| phi3_10db_phase_randomized | matches source | 352 frames on (source 278) | PASS |
+| phi3_10db_loss1pct | matches source | 300 frames on | PASS |
+| phi3_10db_shuffled_2s_blocks | matches source | 279 frames on (source 278), on from 50.5 s | PASS |
+| phi3_10db_shuffled_20ms_blocks | calm | exact silence offline, 0 voices and bed 0.0 in the app, picture "Calm water" | PASS |
+| phi3_10db_shuffled_samples | calm | exact silence, calm water | PASS |
+| background_only | calm, silent | exact silence, bed on in 0.0 of in-app frames, 0 voices, calm water | PASS |
+| white_noise | calm, silent | exact silence, bed 0.0, calm water | PASS |
+| phi2_6db, phi3_3db | weak: calm acceptable | no confirmed peak, calm water, exact silence | PASS (nothing claimed) |
+| harmonic_8hz | no octave credit | 4 peaks confirmed, no state, no bloom, in-app phi, octave, both 0.00 | PASS |
+| nearmiss_1.5, 1.55, 1.7, 1.8 | no state, no bloom | no state, bloom 0 in all; 1.55 reads "no chain of peaks yet" in the app (alignment 0.43, chance 28 in 100), the second-run soft fail is gone | PASS |
+| random_bands, drift_band_edge, blinks, jaw_clench, railed_mains60 | no state, no bloom | no state, bloom 0; bed on (a confirmed alpha peak) | PASS |
+
+### The four questions
+
+- **(a) "Both at once" holds on the both recording: confirmed.** In the app at 1x: Both at once Holding from 41 s to 78 s (card text "Both at once Holding 0:27" at 1:07). In the in-app control stream the both bloom reaches 0.98, with the phi bloom 0.99 and octave 1.00. The picture is distinct: spiral arms plus the octave ring plus a gold ring at the eye (screenshot `faketest3-both-at-once.png`, 4x, at 1:07; compared with the golden-only and octave-only pictures in `out/v3speed4/`). Limits: "visibly distinct" is my reading of the screenshots; the both bloom as heard was not listened to. The both state holds only 32 % of the recording (see 2).
+- **(b) Controls silent and calm: confirmed.** background_only, white_noise, the per-sample shuffle and the 20 ms shuffle: exact silence offline (all four), 0 voices and bed on in 0.0 of in-app frames (background, white noise, 20 ms shuffle at 1x), calm water in the picture. random_bands, nearmiss_1.55 and harmonic_8hz: no state, phi, octave, both bloom all 0.00 in the in-app stream; the bed is on in 14 to 41 % of frames, which follows a confirmed alpha peak (the offline render says bed on for those, off for the controls).
+- **(c) The stale-numbers finding at the end of a fast replay is gone: confirmed.** All 24 recordings at "as fast as possible": after the end every readout reads "not measured" together (golden, octave, three cascade cards, all three badges off), the finished screen shows, and two hurricane pictures 2 s apart are identical (0 changed pixels in 24 of 24). Caveat: the 4x finish-screen problem above is separate.
+- **(d) The exit dwell: nothing dishonest in the picture or the sound; the label stays "Holding" for up to 5 s by design.** Engine frames: the state stays active while its statistic is under the exit level for exactly 5.0 s (golden 73.75 to 78.75 s, octave 84.75 to 89.75 s, phi3_10db 101.25 to 106.25 s, form_dissolve 79 to 84 s) and then ends; shorter dips come back without ending it. During those frames the sound bloom follows the measured statistic: 0 when it is far under (statistic -5 and below), a small value in proportion when it is just under (octave3_10db: statistic 2.1 to 2.3, bloom 0.27 to 0.35, with 0 in some frames). Nothing is held: in the both recording the phi bloom was 0 from 73 s in the in-app stream, 5 s before the badge went off. The picture follows the measured cascade (steps and closeness), not the badge: 1 s screenshots at 74 to 78 s show only the rings (the golden chain has 0 steps) while the badge still says "Golden ratio Holding"; at 80 s the spiral is back (steps 2, closeness 0.69) while the badge says "Not holding" because the state has to wait out its 5 s entry dwell. So the label and the picture disagree for up to 5 s each time, in both directions; each is honest to its own rule, but a user will see "Holding" over calm rings. Screenshot strip: `faketest3-exit-dwell-strip.png` (70, 73, 74, 76, 77 and 80 s).
+
+### Test counts
+
+- `npx vitest run src` (all app suites): 30 files, 394 tests, 0 failed.
+- `cargo test --workspace --release`: 14 suites, 84 tests, 0 failed.
+- `pnpm --dir app test`: no such script.
+- Determinism: offline render run twice on the second run matched; this run's offline numbers for the both recording equal the in-app 1x edges within sampling (golden 41 to 79 against 40.5 to 78.75 s).
+
+### Not tested
+
+A real headset, heart and HRV, speaker output (control stream and offline render only; the both bloom has not been heard), whether the octave bloom flicker is smoothed in the audible sound, the cause of the 4x finish-screen problem, other themes than the default, the 4x timeline edges (screenshots pause the page, so state edges in `v3speed4` are coarse and I took them from 1x and the engine frames), and the 15 recordings not run in real time (in-app audio for those is from the offline render only).
+
+---
+
 ## Second run (21 November 2026): summary
 
 The first-run failures that mattered are mostly fixed: noise-only input is now exact digital silence with no bed in the audio control stream, the 5-member golden ratio cascade and the octave cascade now reach their states and bloom, the harmonic recording gets no octave credit, a second session in one page load has sound, and the live screen stays after the replay ends. **Remaining failures:** (1) the new recording with BOTH cascades never reaches "Both at once" (the golden chain is not distinguishable from chance when seven peaks are present, so only the octave side holds); (2) `nearmiss_1.55_10db` draws a golden ratio spiral (2 arms, 0.83) although its state never holds and no bloom sounds; (3) in "as fast as possible" replay the banner says "the numbers below show not measured" while the numbers still show a held golden ratio state and the picture is still dissolving 4 to 6 s after the end; (4) in `form_dissolve_120s` the golden state enters 22.5 s late, leaves 3.75 s early and re-enters 6.75 s after the cascade is gone (spurious 2 s); (5) the golden state holds only 84 of 320 slow frames in `phi3_10db` and the first entry is at 70 s, so the chord is late and intermittent (this is a sensitivity note, not a pass-rule failure).
