@@ -1,0 +1,17 @@
+{
+ "channels": [
+  "TP9",
+  "AF7",
+  "AF8",
+  "TP10"
+ ],
+ "rate_hz": 256,
+ "seed": 3000020,
+ "kind": "background_only",
+ "duration_s": 90.0,
+ "truth": {
+  "chi": 1.265895,
+  "sd_uv": 12.402991,
+  "peaks": []
+ }
+}

@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "UNLICENSED"
+version = "0.1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+# The WebAssembly build (crates/hb-wasm, run by `pnpm build:wasm` in app/). Same maths as release;
+# one codegen unit and abort-on-panic for a smaller, faster module.
+[profile.wasm-release]
+inherits = "release"
+codegen-units = 1
+panic = "abort"

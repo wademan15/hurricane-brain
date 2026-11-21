@@ -1,0 +1,173 @@
+/*
+ * Hurricane Brain visualizer styles. Every colour, font and size is a token below.
+ * Defaults are declared with zero specificity, so the app can restyle by setting any of these on
+ * :root or on any ancestor of the views. The storm's own colours (--hb-storm-*) are read by the
+ * shader when the view mounts or resizes. See README.md, "Theme tokens".
+ */
+:where(:root) {
+  /* Surfaces and text */
+  --hb-bg: #03060c;
+  --hb-ink: #c9d4e3;
+  --hb-ink-dim: #93a0b5;
+  --hb-panel-bg: rgba(10, 16, 28, 0.92);
+  --hb-line: rgba(140, 165, 200, 0.18);
+  --hb-focus: rgba(150, 180, 220, 0.5);
+  --hb-focus-strong: #c9d4e3;
+  --hb-control-border: #5a6a88;
+  --hb-probe: rgba(220, 230, 245, 0.7);
+  /* Meaning colours (golden ratio and octave are always told apart) */
+  --hb-gold: #e2b86b;
+  --hb-octave: #6fc7c0;
+  /* Type */
+  --hb-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --hb-font-mono: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  --hb-font-size: 14px;
+  --hb-font-size-small: 12px;
+  --hb-font-size-tiny: 11px;
+  --hb-font-size-title: 16px;
+  --hb-font-size-message: 15px;
+  /* Sizes */
+  --hb-gutter: 16px;
+  --hb-radius: 10px;
+  --hb-readout-width: 440px;
+  --hb-touch-target: 44px;
+  --hb-min-height: 240px;
+  /* Readout placement: the app shell can move it below its own top bar */
+  --hb-readout-top: var(--hb-gutter);
+  --hb-readout-right: var(--hb-gutter);
+  --hb-readout-bottom: auto;
+  --hb-readout-left: auto;
+  --hb-readout-max-height: calc(100% - var(--hb-readout-top) - var(--hb-gutter));
+  --hb-readout-z: 5;
+  /* Keyboard list of storm parts */
+  --hb-parts-bg: rgba(10, 16, 28, 0.94);
+  /*
+   * Storm (WebGL) colours are optional overrides, hex or rgb(): --hb-storm-water,
+   * --hb-storm-water-ripple, --hb-storm-cloud-dark, --hb-storm-cloud-light, --hb-storm-octave-ring,
+   * --hb-storm-eye-wall, --hb-storm-pulse, --hb-storm-combined. Unset = VIZ_THEME in params.ts.
+   */
+  /* Spectrum (canvas 2D) */
+  --hb-spec-psd: #a9bedb;
+  --hb-spec-fit: #7d8aa0;
+  --hb-spec-flat: #d6e2f2;
+  --hb-spec-peak: #ffffff;
+  --hb-spec-grid: rgba(140, 165, 200, 0.12);
+  --hb-spec-band: rgba(120, 140, 190, 0.07);
+}
+
+.hb-hurricane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: var(--hb-min-height);
+  overflow: hidden;
+  background: var(--hb-bg);
+  color: var(--hb-ink);
+  font: var(--hb-font-size)/1.45 var(--hb-font);
+  outline: none;
+  touch-action: manipulation;
+  cursor: crosshair;
+}
+.hb-hurricane-picture { position: absolute; inset: 0; }
+.hb-hurricane-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hb-calm-message {
+  position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+  padding: 0 var(--hb-gutter); max-width: calc(100% - 2 * var(--hb-gutter)); text-align: center;
+  color: var(--hb-ink-dim); font-size: var(--hb-font-size-message); letter-spacing: 0.02em; pointer-events: none;
+}
+.hb-gl-problem {
+  position: absolute; left: var(--hb-gutter); right: var(--hb-gutter); top: var(--hb-gutter);
+  text-align: center; color: var(--hb-ink-dim);
+}
+.hb-probe {
+  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  border: 1px solid var(--hb-probe); pointer-events: none;
+}
+.hb-sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.hb-hurricane :focus-visible { outline: 2px solid var(--hb-focus-strong, #c9d4e3); outline-offset: 2px; }
+
+/* Keyboard access to every part. Visible while focused (data-parts="focus"), always, or never. */
+.hb-parts {
+  position: absolute; left: var(--hb-gutter); bottom: var(--hb-gutter); z-index: var(--hb-readout-z);
+  max-width: calc(100% - 2 * var(--hb-gutter)); max-height: 45%; overflow: auto;
+  background: var(--hb-parts-bg); border: 1px solid var(--hb-line); border-radius: var(--hb-radius);
+  padding: 6px;
+}
+.hb-parts ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.hb-parts button {
+  width: 100%; min-height: var(--hb-touch-target); text-align: left; padding: 6px 10px; cursor: pointer;
+  background: transparent; color: var(--hb-ink); border: 1px solid transparent; border-radius: 6px;
+  font: var(--hb-font-size-small)/1.3 var(--hb-font);
+}
+.hb-parts button[aria-pressed='true'] { border-color: var(--hb-ink-dim); }
+.hb-hurricane[data-parts='focus'] .hb-parts:not(:focus-within),
+.hb-hurricane[data-parts='never'] .hb-parts {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); border: 0;
+}
+
+.hb-readout {
+  position: absolute; z-index: var(--hb-readout-z);
+  top: var(--hb-readout-top); right: var(--hb-readout-right);
+  bottom: var(--hb-readout-bottom); left: var(--hb-readout-left);
+  width: min(var(--hb-readout-width), calc(100% - 2 * var(--hb-gutter)));
+  max-height: var(--hb-readout-max-height); overflow: auto; padding: 14px var(--hb-gutter);
+  box-sizing: border-box; background: var(--hb-panel-bg); border: 1px solid var(--hb-line);
+  border-radius: var(--hb-radius); cursor: default;
+}
+.hb-readout header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hb-readout h3 { margin: 0; font-size: var(--hb-font-size-title); font-weight: 600; }
+.hb-readout h3:focus { outline: none; }
+.hb-readout h3:focus-visible { outline: 2px solid var(--hb-focus-strong, #c9d4e3); outline-offset: 2px; }
+.hb-readout header button {
+  background: none; border: 0; color: var(--hb-ink-dim); font-size: 22px; line-height: 1; cursor: pointer;
+  min-width: var(--hb-touch-target); min-height: var(--hb-touch-target); margin: -12px -12px -12px 0;
+}
+.hb-readout-summary { margin: 6px 0 10px; color: var(--hb-ink-dim); }
+.hb-readout-chance { margin: 0 0 10px; padding: 0 0 0 18px; }
+.hb-readout-chance li { margin: 2px 0; }
+.hb-readout table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+.hb-readout th {
+  text-align: left; font-weight: 500; color: var(--hb-ink-dim); font-size: var(--hb-font-size-small);
+  padding: 4px 6px 4px 0;
+}
+.hb-readout td, .hb-readout tbody th {
+  padding: 5px 6px 5px 0; border-top: 1px solid var(--hb-line); vertical-align: top;
+  text-align: left; font-weight: 400; color: var(--hb-ink); font-size: var(--hb-font-size);
+}
+.hb-readout code {
+  display: block; font: var(--hb-font-size-tiny)/1.4 var(--hb-font-mono); color: var(--hb-ink-dim);
+  word-break: break-all;
+}
+.hb-readout .hb-null { color: var(--hb-ink-dim); font-style: italic; }
+.hb-readout-alignment th:nth-child(2) { color: var(--hb-gold); }
+.hb-readout-alignment th:nth-child(3) { color: var(--hb-octave); }
+.hb-readout .hb-p { color: var(--hb-ink-dim); font-size: var(--hb-font-size-small); }
+.hb-readout-note { margin: 4px 0 0; font-size: var(--hb-font-size-small); color: var(--hb-ink-dim); }
+.hb-readout-toggle {
+  margin-top: 8px; min-height: var(--hb-touch-target); padding: 0 12px; cursor: pointer;
+  background: transparent; color: var(--hb-ink); border: 1px solid var(--hb-control-border, #5a6a88);
+  border-radius: 6px; font: var(--hb-font-size-small)/1 var(--hb-font);
+}
+
+.hb-spectrum {
+  position: relative; width: 100%; height: 100%; min-height: 220px; background: var(--hb-bg);
+  color: var(--hb-ink); font: var(--hb-font-size)/1.4 var(--hb-font);
+  display: flex; flex-direction: column;
+}
+.hb-spectrum-plot { position: relative; flex: 1 1 auto; min-height: 220px; }
+.hb-spectrum canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hb-spectrum[data-summary='hidden'] .hb-spectrum-summary {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.hb-spectrum-summary { flex: 0 0 auto; padding: 8px var(--hb-gutter); overflow-x: auto; }
+.hb-spectrum-summary table { border-collapse: collapse; font-size: var(--hb-font-size-small); font-variant-numeric: tabular-nums; }
+.hb-spectrum-summary caption { text-align: left; color: var(--hb-ink-dim); padding-bottom: 4px; }
+.hb-spectrum-summary th, .hb-spectrum-summary td {
+  text-align: left; padding: 4px 10px 4px 0; border-top: 1px solid var(--hb-line); font-weight: 400;
+}
+.hb-spectrum-summary thead th { color: var(--hb-ink-dim); }

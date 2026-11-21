@@ -1,0 +1,4 @@
+websockets>=13
+python-osc>=1.9
+# Optional: only needed for the LSL outputs. The bridge starts without it and says so.
+pylsl>=1.16

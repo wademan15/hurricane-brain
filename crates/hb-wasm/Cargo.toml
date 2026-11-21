@@ -1,0 +1,21 @@
+[package]
+name = "hb-wasm"
+description = "Hurricane Brain WebAssembly glue: hb-engine (EEG) and hb-heart (heart and breath) on one session clock, behind one wasm-bindgen class."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hb-engine = { path = "../hb-engine", default-features = false }
+hb-heart = { path = "../hb-heart" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Pinned: must equal the wasm-bindgen-cli version used by app/scripts/build-wasm.mjs.
+wasm-bindgen = "=0.2.130"
+
+[dev-dependencies]
+# Exact float parsing, so frames compared through serde_json::Value are not off by one ulp.
+serde_json = { version = "1", features = ["float_roundtrip"] }

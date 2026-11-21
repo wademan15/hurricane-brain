@@ -1,0 +1,16 @@
+{
+ "channels": [
+  "TP9",
+  "AF7",
+  "AF8",
+  "TP10"
+ ],
+ "rate_hz": 256,
+ "seed": 3000021,
+ "kind": "white_noise",
+ "duration_s": 60.0,
+ "truth": {
+  "sd_uv": 16.609287,
+  "peaks": []
+ }
+}

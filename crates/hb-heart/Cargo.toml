@@ -1,0 +1,17 @@
+[package]
+name = "hb-heart"
+description = "Hurricane Brain heart and breath engine: beat cleaning, heart rate, variability, breathing estimate, high variability state and brain-heart coupling (spec section 13)."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# Pure-Rust transcendental functions so that native and wasm32 builds give bit-identical output.
+libm = "0.2"
+
+[dev-dependencies]
+serde_json = "1"
